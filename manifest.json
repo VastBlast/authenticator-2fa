@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "Svelte Side Panel Extension",
+  "version": "1.0.0",
+  "description": "A Chrome extension with side panel built using Svelte",
+  "side_panel": {
+    "default_path": "index.html"
+  },
+  "permissions": ["sidePanel"],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
