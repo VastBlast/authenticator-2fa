@@ -46,7 +46,7 @@ export class AuthenticatorVault {
   passwordProtected = $state(false);
   busy = $state(false);
   accounts = $state.raw<AuthenticatorAccount[]>([]);
-  settings = $state<AppSettings>({ ...DEFAULT_SETTINGS });
+  settings = $state.raw<AppSettings>({ ...DEFAULT_SETTINGS });
   codes = $state<Record<string, OtpCode>>({});
   notice = $state('');
   error = $state('');
@@ -389,10 +389,10 @@ export class AuthenticatorVault {
   }
 
   private getCurrentData(): VaultData {
-    return {
-      accounts: normalizeAccountOrder(this.accounts),
+    return normalizeVaultData({
+      accounts: this.accounts,
       settings: this.settings
-    };
+    });
   }
 
   private clearStatus(): void {
@@ -402,10 +402,16 @@ export class AuthenticatorVault {
 }
 
 function normalizeVaultData(data: VaultData): VaultData {
+  // Browser extension storage structured-clones values, so persist plain objects
+  // instead of Svelte state proxies.
   return {
-    ...data,
-    accounts: normalizeAccountOrder(data.accounts)
+    accounts: normalizeAccountOrder(data.accounts),
+    settings: normalizeSettings(data.settings)
   };
+}
+
+function normalizeSettings(settings: Partial<AppSettings> | undefined): AppSettings {
+  return { ...DEFAULT_SETTINGS, ...settings };
 }
 
 function getErrorMessage(error: unknown): string {

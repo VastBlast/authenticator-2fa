@@ -3,7 +3,7 @@ import { loadStoredVault } from '../../src/lib/auth/storage';
 import type { AuthenticatorAccount } from '../../src/lib/auth/types';
 import { isEncryptedVaultRecord, isPlainVaultRecord } from '../../src/lib/auth/vaultRecords';
 import { AuthenticatorVault } from '../../src/lib/state/authenticator.svelte';
-import { installMemoryStorage } from '../helpers/storage';
+import { installMemoryStorage, installStructuredCloneChromeStorage } from '../helpers/storage';
 
 const OTPAUTH_URI = otpAuthUri('alice@example.com');
 const BOB_URI = otpAuthUri('bob@example.com');
@@ -119,6 +119,26 @@ describe('AuthenticatorVault persistence and locking', () => {
     await reopened.initialize();
 
     expect(accountLabels(reopened.sortedAccounts)).toEqual([
+      'carol@example.com',
+      'alice@example.com',
+      'bob@example.com'
+    ]);
+  });
+
+  test('reorders accounts using structured-clone storage', async () => {
+    installStructuredCloneChromeStorage();
+    const vault = new AuthenticatorVault();
+    await vault.initialize();
+    await vault.importText(MULTI_IMPORT);
+
+    const byLabel = accountsByLabel(vault.sortedAccounts);
+    await vault.reorderAccounts([
+      byLabel.get('carol@example.com')?.id ?? '',
+      byLabel.get('alice@example.com')?.id ?? '',
+      byLabel.get('bob@example.com')?.id ?? ''
+    ]);
+
+    expect(accountLabels(vault.sortedAccounts)).toEqual([
       'carol@example.com',
       'alice@example.com',
       'bob@example.com'
