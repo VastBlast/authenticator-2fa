@@ -1,4 +1,4 @@
-import { SvelteSet } from 'svelte/reactivity';
+import type {} from 'svelte';
 import { createAccount, generateOtpCode, updateAccount } from '../auth/otp';
 import {
   clearStoredVault,
@@ -18,7 +18,14 @@ import {
   unlockVaultEnvelopeWithKey
 } from '../auth/vaultCrypto';
 import { createPlainVaultRecord, isEncryptedVaultRecord, isPlainVaultRecord } from '../auth/vaultRecords';
-import { importAnyText, importEncryptedBackup } from '../auth/backup';
+import { importEncryptedBackup } from '../auth/backup';
+import { importAnyText } from '../auth/importText';
+import {
+  compareAccountOrder,
+  mergeImportedAccounts,
+  normalizeAccountOrder,
+  reorderAccountsById
+} from '../auth/vaultImport';
 import type {
   AccountDraft,
   AppSettings,
@@ -329,29 +336,18 @@ export class AuthenticatorVault {
       return { imported: 0, skipped: 0 };
     }
 
-    const existing = new SvelteSet(this.accounts.map(accountFingerprint));
-    const additions = incoming.filter((account) => !existing.has(accountFingerprint(account)));
-    const skipped = incoming.length - additions.length;
-
-    if (additions.length === 0) {
+    const merged = mergeImportedAccounts(this.accounts, incoming);
+    if (merged.imported === 0) {
       this.notice = 'No new accounts were imported.';
-      return { imported: 0, skipped };
+      return { imported: 0, skipped: merged.skipped };
     }
 
-    const existingAccounts = normalizeAccountOrder(this.accounts);
-    const accounts = [
-      ...existingAccounts,
-      ...additions.map((account, index) => ({
-        ...account,
-        sortOrder: existingAccounts.length + index
-      }))
-    ];
     await this.persistData(
-      { accounts, settings: this.settings },
-      `${additions.length} account${additions.length === 1 ? '' : 's'} imported.`
+      { accounts: merged.accounts, settings: this.settings },
+      `${merged.imported} account${merged.imported === 1 ? '' : 's'} imported.`
     );
     await this.refreshCodes();
-    return { imported: additions.length, skipped };
+    return { imported: merged.imported, skipped: merged.skipped };
   }
 
   private async persistData(data: VaultData, message?: string): Promise<void> {
@@ -410,73 +406,6 @@ function normalizeVaultData(data: VaultData): VaultData {
     ...data,
     accounts: normalizeAccountOrder(data.accounts)
   };
-}
-
-function normalizeAccountOrder(accounts: AuthenticatorAccount[]): AuthenticatorAccount[] {
-  const indexedAccounts = accounts.map((account, index) => ({ account, index }));
-  const hasSortOrder = indexedAccounts.some(({ account }) => isSortOrder(account.sortOrder));
-  const orderedAccounts = hasSortOrder
-    ? [...indexedAccounts].sort(
-        (left, right) =>
-          getSortOrder(left.account) - getSortOrder(right.account) || left.index - right.index
-      )
-    : indexedAccounts;
-
-  return orderedAccounts.map(({ account }, index) => ({
-    ...account,
-    sortOrder: index
-  }));
-}
-
-function reorderAccountsById(
-  accounts: AuthenticatorAccount[],
-  orderedIds: string[]
-): AuthenticatorAccount[] | null {
-  if (accounts.length !== orderedIds.length || new Set(orderedIds).size !== orderedIds.length) {
-    return null;
-  }
-
-  const accountsById = new Map(accounts.map((account) => [account.id, account]));
-  const reordered = orderedIds.map((id) => accountsById.get(id));
-  if (reordered.some((account) => !account)) {
-    return null;
-  }
-
-  const currentIds = accounts.map((account) => account.id);
-  if (orderedIds.every((id, index) => id === currentIds[index])) {
-    return null;
-  }
-
-  return reordered.map((account, index) => ({
-    ...(account as AuthenticatorAccount),
-    sortOrder: index
-  }));
-}
-
-function compareAccountOrder(left: AuthenticatorAccount, right: AuthenticatorAccount): number {
-  return (
-    getSortOrder(left) - getSortOrder(right) ||
-    left.createdAt.localeCompare(right.createdAt) ||
-    left.issuer.localeCompare(right.issuer) ||
-    left.label.localeCompare(right.label)
-  );
-}
-
-function getSortOrder(account: AuthenticatorAccount): number {
-  return isSortOrder(account.sortOrder) ? account.sortOrder : Number.POSITIVE_INFINITY;
-}
-
-function isSortOrder(value: unknown): value is number {
-  return typeof value === 'number' && Number.isFinite(value) && value >= 0;
-}
-
-function accountFingerprint(account: AuthenticatorAccount): string {
-  return [
-    account.type,
-    account.issuer.trim().toLowerCase(),
-    account.label.trim().toLowerCase(),
-    account.secret.trim().toUpperCase()
-  ].join('\u001f');
 }
 
 function getErrorMessage(error: unknown): string {

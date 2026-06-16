@@ -1,4 +1,13 @@
-import { savePendingPageScan } from './lib/auth/pendingScan';
+import { decodeQrDataUrlInWorker } from './lib/auth/qrWorker';
+import { getImportResultMessage, importTextIntoStoredVault } from './lib/auth/vaultImport';
+
+interface CaptureRect {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+  devicePixelRatio: number;
+}
 
 interface MessageResponse {
   ok: boolean;
@@ -12,17 +21,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message?.type === 'page-scan:capture') {
-    respond(sendResponse, captureSelection(sender.tab?.windowId, sender.tab?.id, message.rect));
+    respond(
+      sendResponse,
+      captureSelection(sender.tab?.windowId, sender.tab?.id, message.rect),
+      sender.tab?.id
+    );
     return true;
   }
 
   if (message?.type === 'page-scan:image') {
-    respond(sendResponse, reportScanReady(message.dataUrl));
+    respond(sendResponse, completePageScan(sender.tab?.id, message.dataUrl), sender.tab?.id);
     return true;
   }
 
   if (message?.type === 'page-scan:failed') {
-    respond(sendResponse, reportScanFailure(message.message));
+    respond(sendResponse, reportScanFailure(sender.tab?.id, message.message));
     return true;
   }
 
@@ -56,32 +69,41 @@ async function captureSelection(
   await sendTabMessage(tabId, { type: 'page-scan:screenshot', dataUrl, rect });
 }
 
-function respond(sendResponse: (response: MessageResponse) => void, action: Promise<void>): void {
+function respond(
+  sendResponse: (response: MessageResponse) => void,
+  action: Promise<void>,
+  failureTabId?: number
+): void {
   action
     .then(() => sendResponse({ ok: true }))
-    .catch((error) => {
+    .catch(async (error) => {
       const message = error instanceof Error ? error.message : 'Page scan failed.';
-      sendRuntimeMessage({ type: 'page-scan:failed', message });
+      if (failureTabId !== undefined) {
+        await alertPageScanResult(failureTabId, message);
+      }
+      sendRuntimeMessage({ type: 'page-scan:completed', ok: false, message });
       sendResponse({ ok: false, error: message });
     });
 }
 
-async function reportScanReady(dataUrl: string): Promise<void> {
-  await savePendingPageScan({
-    status: 'ready',
-    dataUrl,
-    createdAt: new Date().toISOString()
-  });
-  sendRuntimeMessage({ type: 'page-scan:ready', dataUrl });
+async function completePageScan(tabId: number | undefined, dataUrl: unknown): Promise<void> {
+  if (tabId === undefined || typeof dataUrl !== 'string') {
+    throw new Error('Page scan failed.');
+  }
+
+  const text = await decodeQrDataUrlInWorker(dataUrl);
+  const result = await importTextIntoStoredVault(text);
+  const message = getImportResultMessage(result);
+  await alertPageScanResult(tabId, message);
+  sendRuntimeMessage({ type: 'page-scan:completed', ok: result.imported > 0, message });
 }
 
-async function reportScanFailure(message: string): Promise<void> {
-  await savePendingPageScan({
-    status: 'failed',
-    message,
-    createdAt: new Date().toISOString()
-  });
-  sendRuntimeMessage({ type: 'page-scan:failed', message });
+async function reportScanFailure(tabId: number | undefined, message: unknown): Promise<void> {
+  const resultMessage = typeof message === 'string' && message ? message : 'Page scan failed.';
+  if (tabId !== undefined) {
+    await alertPageScanResult(tabId, resultMessage);
+  }
+  sendRuntimeMessage({ type: 'page-scan:completed', ok: false, message: resultMessage });
 }
 
 function getActiveTab(): Promise<chrome.tabs.Tab | undefined> {
@@ -121,6 +143,27 @@ function sendTabMessage(tabId: number, message: unknown): Promise<void> {
   });
 }
 
+async function alertPageScanResult(tabId: number, message: string): Promise<void> {
+  try {
+    await sendTabMessage(tabId, { type: 'page-scan:result', message });
+  } catch {
+    await executeAlert(tabId, message);
+  }
+}
+
+function executeAlert(tabId: number, message: string): Promise<void> {
+  return new Promise((resolve) => {
+    chrome.scripting.executeScript(
+      {
+        target: { tabId },
+        func: (text: string) => window.alert(text),
+        args: [message]
+      },
+      () => resolve()
+    );
+  });
+}
+
 function sendRuntimeMessage(message: unknown): void {
   chrome.runtime.sendMessage(message, () => {
     void chrome.runtime.lastError;
@@ -136,20 +179,23 @@ function settleChromeCallback(resolve: () => void, reject: (error: Error) => voi
   }
 }
 
-function isCaptureRect(value: unknown): value is {
-  left: number;
-  top: number;
-  width: number;
-  height: number;
-  devicePixelRatio: number;
-} {
+function isCaptureRect(value: unknown): value is CaptureRect {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const rect = value as Partial<Record<keyof CaptureRect, unknown>>;
   return (
-    typeof value === 'object' &&
-    value !== null &&
-    ['left', 'top', 'width', 'height', 'devicePixelRatio'].every(
-      (key) => typeof (value as Record<string, unknown>)[key] === 'number'
-    )
+    isFiniteNumber(rect.left) &&
+    isFiniteNumber(rect.top) &&
+    isFiniteNumber(rect.width) &&
+    isFiniteNumber(rect.height) &&
+    isFiniteNumber(rect.devicePixelRatio)
   );
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
 }
 
 function isRestrictedPage(url: string | undefined): boolean {

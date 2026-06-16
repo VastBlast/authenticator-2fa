@@ -62,6 +62,7 @@ function createManifest(target) {
     };
     manifest.background = {
       scripts: ['assets/background.js'],
+      type: 'module',
     };
   }
 

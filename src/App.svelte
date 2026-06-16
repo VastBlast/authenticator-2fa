@@ -20,8 +20,7 @@
   import SettingsView from './lib/components/auth/SettingsView.svelte';
   import VaultGate from './lib/components/auth/VaultGate.svelte';
   import { accountToOtpAuthUri } from './lib/auth/otpauth';
-  import { decodeQrDataUrl, decodeQrFiles, renderQrDataUrl } from './lib/auth/qr';
-  import { clearPendingPageScan, loadPendingPageScan } from './lib/auth/pendingScan';
+  import { decodeQrFiles, renderQrDataUrl } from './lib/auth/qr';
   import type { AccountDraft, AuthenticatorAccount, ImportResult } from './lib/auth/types';
   import { authenticatorVault as vault } from './lib/state/authenticator.svelte';
   import { tr } from './lib/i18n/messages';
@@ -33,6 +32,12 @@
   interface RuntimeResponse {
     ok?: boolean;
     error?: string;
+  }
+
+  interface PageScanCompletedMessage {
+    type: 'page-scan:completed';
+    ok: boolean;
+    message: string;
   }
 
   interface AccountDragRect {
@@ -106,10 +111,8 @@
     const timer = window.setInterval(() => void vault.refreshCodes(), 1000);
 
     const listener = (message: unknown) => {
-      if (isPageScanReady(message)) {
-        void importPageScan(message.dataUrl);
-      } else if (isPageScanFailed(message)) {
-        handlePageScanFailure(message.message);
+      if (isPageScanCompleted(message)) {
+        void handlePageScanCompleted(message);
       }
     };
     if (hasRuntimeMessaging()) {
@@ -145,25 +148,14 @@
 
   async function initializeApp() {
     await vault.initialize();
-    try {
-      await consumePendingPageScan();
-    } catch (error) {
-      pageScanError = getErrorMessage(error, tr('scanPageFailed'));
-    }
   }
 
   async function createVault(password: string) {
     await vault.create(password);
-    if (!vault.locked) {
-      await consumePendingPageScan();
-    }
   }
 
   async function unlockVault(password: string) {
     await vault.unlock(password);
-    if (!vault.locked) {
-      await consumePendingPageScan();
-    }
   }
 
   function openAddDialog(mode: AddMode = 'qr') {
@@ -278,7 +270,6 @@
     pageScanError = '';
     addError = '';
     vault.error = '';
-    await clearPendingPageScan();
 
     if (!hasRuntimeMessaging()) {
       pageScanError = tr('scanPageUnavailable');
@@ -289,78 +280,24 @@
     try {
       await sendRuntimeMessage({ type: 'start-page-scan' });
       pageScanState = 'waiting';
-      pageScanMessage = tr('scanPageWaiting');
-    } catch (error) {
-      pageScanState = 'idle';
-      pageScanError = getErrorMessage(error, tr('scanPageFailed'));
-    }
-  }
-
-  async function importPageScan(dataUrl: string) {
-    pageScanState = 'idle';
-    pageScanMessage = '';
-    pageScanError = '';
-    addError = '';
-
-    if (vault.locked) {
-      pageScanError = 'Unlock the vault to import the scanned QR code.';
-      return;
-    }
-
-    let text = '';
-    try {
-      text = await decodeQrDataUrl(dataUrl);
-    } catch {
-      pageScanError = tr('scanPageNoQr');
-      await clearPendingPageScan();
-      showAdd = true;
-      addMode = 'qr';
-      return;
-    }
-
-    try {
-      const result = await vault.importText(text);
-      if (result.imported === 0) {
-        pageScanError = getNoImportMessage(result);
-        await clearPendingPageScan();
-        showAdd = true;
-        addMode = 'qr';
-        return;
-      }
-      await clearPendingPageScan();
+      pageScanMessage = '';
       showAdd = false;
       view = 'codes';
+      closeExtensionWindow();
     } catch (error) {
+      pageScanState = 'idle';
       pageScanError = getErrorMessage(error, tr('scanPageFailed'));
-      await clearPendingPageScan();
-      showAdd = true;
-      addMode = 'qr';
     }
   }
 
-  async function consumePendingPageScan() {
-    const pending = await loadPendingPageScan();
-    if (!pending) {
+  function closeExtensionWindow(): void {
+    if (!/^(chrome|moz)-extension:$/.test(window.location.protocol)) {
       return;
     }
 
-    view = 'codes';
-    if (pending.status === 'failed') {
-      pageScanState = 'idle';
-      pageScanMessage = '';
-      pageScanError = pending.message || tr('scanPageFailed');
-      showAdd = true;
-      addMode = 'qr';
-      await clearPendingPageScan();
-      return;
-    }
-
-    if (!pending.dataUrl) {
-      await clearPendingPageScan();
-      return;
-    }
-
-    await importPageScan(pending.dataUrl);
+    setTimeout(() => {
+      window.close();
+    }, 0);
   }
 
   function hasRuntimeMessaging(): boolean {
@@ -382,32 +319,28 @@
     });
   }
 
-  function isPageScanReady(message: unknown): message is { type: 'page-scan:ready'; dataUrl: string } {
+  function isPageScanCompleted(message: unknown): message is PageScanCompletedMessage {
     return (
       typeof message === 'object' &&
       message !== null &&
-      (message as { type?: unknown }).type === 'page-scan:ready' &&
-      typeof (message as { dataUrl?: unknown }).dataUrl === 'string'
-    );
-  }
-
-  function isPageScanFailed(message: unknown): message is { type: 'page-scan:failed'; message: string } {
-    return (
-      typeof message === 'object' &&
-      message !== null &&
-      (message as { type?: unknown }).type === 'page-scan:failed' &&
+      (message as { type?: unknown }).type === 'page-scan:completed' &&
+      typeof (message as { ok?: unknown }).ok === 'boolean' &&
       typeof (message as { message?: unknown }).message === 'string'
     );
   }
 
-  function handlePageScanFailure(message: string) {
+  async function handlePageScanCompleted(message: PageScanCompletedMessage) {
     pageScanState = 'idle';
     pageScanMessage = '';
-    pageScanError = message || tr('scanPageFailed');
-    void clearPendingPageScan();
-    showAdd = true;
-    addMode = 'qr';
+    pageScanError = message.ok ? '' : message.message || tr('scanPageFailed');
+    if (!message.ok) {
+      vault.error = pageScanError;
+      return;
+    }
+
+    showAdd = false;
     view = 'codes';
+    await vault.initialize();
   }
 
   function getErrorMessage(error: unknown, fallback: string): string {

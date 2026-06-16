@@ -1,6 +1,9 @@
 import { createVaultEnvelope, unlockVaultEnvelope } from './vaultCrypto';
-import { exportOtpAuthText, parseImportText } from './otpauth';
-import type { AppSettings, AuthenticatorAccount, ImportResult, VaultData, VaultEnvelope } from './types';
+import { exportOtpAuthText } from './otpauth';
+import { importAnyText } from './importText';
+import type { AppSettings, AuthenticatorAccount, ImportResult, VaultEnvelope } from './types';
+
+export { importAnyText };
 
 export interface PortableBackup {
   app: '2fa-authenticator';
@@ -42,23 +45,6 @@ export async function importEncryptedBackup(fileText: string, password: string):
     skipped: 0,
     errors: []
   };
-}
-
-export function importAnyText(text: string): ImportResult {
-  const trimmed = text.trim();
-  if (!trimmed) {
-    return { accounts: [], imported: 0, skipped: 0, errors: [] };
-  }
-
-  if (trimmed.startsWith('{')) {
-    const raw = JSON.parse(trimmed) as Partial<VaultData> | Record<string, unknown>;
-    if (Array.isArray((raw as Partial<VaultData>).accounts)) {
-      const accounts = (raw as Partial<VaultData>).accounts as AuthenticatorAccount[];
-      return { accounts, imported: accounts.length, skipped: 0, errors: [] };
-    }
-  }
-
-  return parseImportText(text);
 }
 
 export function downloadBlob(blob: Blob, filename: string): void {

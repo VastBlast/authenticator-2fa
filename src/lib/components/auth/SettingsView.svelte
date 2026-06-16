@@ -2,7 +2,6 @@
   import { ArrowLeft, ChevronRight, DatabaseBackup, KeyRound, Moon, ShieldCheck, Sun, Trash2 } from '@lucide/svelte';
   import ImportExportPanel from './ImportExportPanel.svelte';
   import { authenticatorVault as vault } from '../../state/authenticator.svelte';
-  import { clearPendingPageScan } from '../../auth/pendingScan';
   import { LANGUAGES, tr } from '../../i18n/messages';
 
   interface Props {
@@ -102,7 +101,6 @@
       securityError = tr('deleteVaultConfirm');
       return;
     }
-    await clearPendingPageScan();
     await vault.resetVault();
     resetConfirmation = '';
     onback();

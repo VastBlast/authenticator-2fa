@@ -1,3 +1,8 @@
+let overlay: HTMLDivElement | null = null;
+let selection: HTMLDivElement | null = null;
+let startX = 0;
+let startY = 0;
+
 interface CaptureRect {
   left: number;
   top: number;
@@ -6,30 +11,48 @@ interface CaptureRect {
   devicePixelRatio: number;
 }
 
-let overlay: HTMLDivElement | null = null;
-let selection: HTMLDivElement | null = null;
-let startX = 0;
-let startY = 0;
-
 interface MessageResponse {
   ok: boolean;
   error?: string;
 }
 
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (message?.type === 'page-scan:start') {
+const pageScannerWindow = window as Window & { __twofaPageScannerInstalled?: boolean };
+
+if (!pageScannerWindow.__twofaPageScannerInstalled) {
+  pageScannerWindow.__twofaPageScannerInstalled = true;
+  chrome.runtime.onMessage.addListener(handleMessage);
+}
+
+function handleMessage(
+  message: unknown,
+  _sender: chrome.runtime.MessageSender,
+  sendResponse: (response: MessageResponse) => void
+) {
+  const payload = message as { type?: unknown; dataUrl?: unknown; rect?: unknown; message?: unknown };
+
+  if (payload.type === 'page-scan:start') {
     showOverlay();
     sendResponse({ ok: true });
     return undefined;
   }
 
-  if (message?.type === 'page-scan:screenshot') {
-    respond(sendResponse, cropScreenshot(message.dataUrl, message.rect));
+  if (payload.type === 'page-scan:screenshot') {
+    if (typeof payload.dataUrl !== 'string' || !isCaptureRect(payload.rect)) {
+      sendResponse({ ok: false, error: 'Page scan failed.' });
+      return undefined;
+    }
+    respond(sendResponse, cropScreenshot(payload.dataUrl, payload.rect));
     return true;
   }
 
+  if (payload.type === 'page-scan:result') {
+    sendResponse({ ok: true });
+    setTimeout(() => window.alert(getResultMessage(payload.message)), 0);
+    return undefined;
+  }
+
   return undefined;
-});
+}
 
 function showOverlay(): void {
   removeOverlay();
@@ -112,6 +135,25 @@ function getRect(currentX: number, currentY: number): CaptureRect {
   };
 }
 
+function isCaptureRect(value: unknown): value is CaptureRect {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const rect = value as Partial<Record<keyof CaptureRect, unknown>>;
+  return (
+    isFiniteNumber(rect.left) &&
+    isFiniteNumber(rect.top) &&
+    isFiniteNumber(rect.width) &&
+    isFiniteNumber(rect.height) &&
+    isFiniteNumber(rect.devicePixelRatio)
+  );
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
 async function cropScreenshot(dataUrl: string, rect: CaptureRect): Promise<void> {
   const image = new Image();
   image.src = dataUrl;
@@ -170,6 +212,10 @@ function respond(sendResponse: (response: MessageResponse) => void, action: Prom
 
 function reportFailure(message: string): void {
   sendRuntimeMessage({ type: 'page-scan:failed', message });
+}
+
+function getResultMessage(message: unknown): string {
+  return typeof message === 'string' && message ? message : 'Page scan finished.';
 }
 
 function sendRuntimeMessage(message: unknown): void {

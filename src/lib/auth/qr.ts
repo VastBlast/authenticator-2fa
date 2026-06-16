@@ -1,14 +1,8 @@
 import type { BrowserQRCodeReader } from '@zxing/browser';
 import type { DecodeHintType } from '@zxing/library';
+import { getCandidateRegions as getQrCandidateRegions, type CanvasRegion } from './qrRegions';
 
 let qrReader: BrowserQRCodeReader | null = null;
-
-interface CanvasRegion {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
 
 const NORMALIZED_QR_SIZES = [384, 512, 768, 320, 448, 256, 1024];
 const QR_DECODE_ERROR = 'No QR code could be decoded from the selected image. Try a tighter crop or a clearer screenshot.';
@@ -110,29 +104,20 @@ function drawImageToCanvas(image: HTMLImageElement): HTMLCanvasElement {
   return canvas;
 }
 
-function getCandidateRegions(source: HTMLCanvasElement): CanvasRegion[] {
-  const regions: CanvasRegion[] = [
-    { x: 0, y: 0, width: source.width, height: source.height }
-  ];
-  const brightSquare = findBrightSquareRegion(source);
-  if (brightSquare) {
-    regions.push(
-      brightSquare,
-      padRegion(brightSquare, source, 8),
-      padRegion(brightSquare, source, 16),
-      padRegion(brightSquare, source, 32),
-      padRegion(brightSquare, source, 48)
-    );
-  }
-  regions.push(...getCenteredSquareRegions(source));
-  return dedupeRegions(regions);
+function getCanvasCandidateRegions(source: HTMLCanvasElement): CanvasRegion[] {
+  const context = getCanvasContext(source);
+  return getQrCandidateRegions({
+    width: source.width,
+    height: source.height,
+    getImageData: () => context.getImageData(0, 0, source.width, source.height).data
+  });
 }
 
 function tryDecodeCanvasWithFallback(
   reader: BrowserQRCodeReader,
   source: HTMLCanvasElement
 ): string {
-  const regions = getCandidateRegions(source);
+  const regions = getCanvasCandidateRegions(source);
 
   for (const region of regions) {
     const decoded = tryDecodeRegion(reader, source, region);
@@ -209,180 +194,4 @@ function getCanvasContext(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
     throw new Error('Canvas rendering is unavailable.');
   }
   return context;
-}
-
-function findBrightSquareRegion(source: HTMLCanvasElement): CanvasRegion | null {
-  const context = getCanvasContext(source);
-  const data = context.getImageData(0, 0, source.width, source.height).data;
-  const rowThreshold = Math.max(32, source.width * 0.25);
-  const rows: number[] = [];
-
-  for (let y = 0; y < source.height; y += 1) {
-    let brightPixels = 0;
-    for (let x = 0; x < source.width; x += 1) {
-      if (isBrightPixel(data, source.width, x, y)) {
-        brightPixels += 1;
-      }
-    }
-    if (brightPixels >= rowThreshold) {
-      rows.push(y);
-    }
-  }
-
-  let best: CanvasRegion | null = null;
-  const fullBrightRegion = getBrightRegionInBand(data, source.width, 0, source.height - 1);
-  if (fullBrightRegion && isPlausibleQrSquare(fullBrightRegion, source)) {
-    best = fullBrightRegion;
-  }
-
-  for (const band of contiguousBands(rows, Math.max(48, source.height * 0.08))) {
-    const region = getBrightRegionInBand(data, source.width, band.start, band.end);
-    if (!region || !isPlausibleQrSquare(region, source)) {
-      continue;
-    }
-    if (!best || region.width * region.height > best.width * best.height) {
-      best = region;
-    }
-  }
-
-  return best;
-}
-
-function getBrightRegionInBand(
-  data: Uint8ClampedArray,
-  width: number,
-  startY: number,
-  endY: number
-): CanvasRegion | null {
-  let minX = width;
-  let minY = endY;
-  let maxX = 0;
-  let maxY = startY;
-  for (let y = startY; y <= endY; y += 1) {
-    for (let x = 0; x < width; x += 1) {
-      if (isBrightPixel(data, width, x, y)) {
-        minX = Math.min(minX, x);
-        minY = Math.min(minY, y);
-        maxX = Math.max(maxX, x);
-        maxY = Math.max(maxY, y);
-      }
-    }
-  }
-
-  if (minX > maxX) {
-    return null;
-  }
-
-  return {
-    x: minX,
-    y: minY,
-    width: maxX - minX + 1,
-    height: maxY - minY + 1
-  };
-}
-
-function isBrightPixel(data: Uint8ClampedArray, width: number, x: number, y: number): boolean {
-  const offset = (y * width + x) * 4;
-  return data[offset] > 235 && data[offset + 1] > 235 && data[offset + 2] > 235;
-}
-
-function contiguousBands(rows: number[], minHeight: number): Array<{ start: number; end: number }> {
-  const bands: Array<{ start: number; end: number }> = [];
-  let start: number | null = null;
-  let previous: number | null = null;
-
-  for (const row of rows) {
-    if (start === null) {
-      start = row;
-      previous = row;
-      continue;
-    }
-    if (previous !== null && row > previous + 1) {
-      if (previous - start + 1 >= minHeight) {
-        bands.push({ start, end: previous });
-      }
-      start = row;
-    }
-    previous = row;
-  }
-
-  if (start !== null && previous !== null && previous - start + 1 >= minHeight) {
-    bands.push({ start, end: previous });
-  }
-
-  return bands;
-}
-
-function isPlausibleQrSquare(region: CanvasRegion, source: HTMLCanvasElement): boolean {
-  const ratio = region.width / region.height;
-  const minSide = Math.min(source.width, source.height) * 0.2;
-  const maxSide = Math.max(source.width, source.height) * 0.95;
-  return (
-    ratio >= 0.75 &&
-    ratio <= 1.25 &&
-    region.width >= minSide &&
-    region.height >= minSide &&
-    region.width <= maxSide &&
-    region.height <= maxSide
-  );
-}
-
-function getCenteredSquareRegions(source: HTMLCanvasElement): CanvasRegion[] {
-  const shortSide = Math.min(source.width, source.height);
-  const sizes = [0.9, 0.75, 0.6, 0.5].map((scale) => shortSide * scale);
-  const centersX = [source.width * 0.5];
-  const centersY = [source.height * 0.4, source.height * 0.5, source.height * 0.6, source.height * 0.7];
-  const regions: CanvasRegion[] = [];
-
-  for (const size of sizes) {
-    for (const centerX of centersX) {
-      for (const centerY of centersY) {
-        regions.push(clampRegion({
-          x: centerX - size / 2,
-          y: centerY - size / 2,
-          width: size,
-          height: size
-        }, source));
-      }
-    }
-  }
-
-  return regions;
-}
-
-function padRegion(region: CanvasRegion, source: HTMLCanvasElement, padding: number): CanvasRegion {
-  return clampRegion({
-    x: region.x - padding,
-    y: region.y - padding,
-    width: region.width + padding * 2,
-    height: region.height + padding * 2
-  }, source);
-}
-
-function clampRegion(region: CanvasRegion, source: HTMLCanvasElement): CanvasRegion {
-  const x = Math.max(0, region.x);
-  const y = Math.max(0, region.y);
-  return {
-    x,
-    y,
-    width: Math.min(region.width, source.width - x),
-    height: Math.min(region.height, source.height - y)
-  };
-}
-
-function dedupeRegions(regions: CanvasRegion[]): CanvasRegion[] {
-  const seen = new Set<string>();
-  return regions.filter((region) => {
-    const key = [
-      Math.round(region.x),
-      Math.round(region.y),
-      Math.round(region.width),
-      Math.round(region.height)
-    ].join(':');
-    if (seen.has(key) || region.width < 1 || region.height < 1) {
-      return false;
-    }
-    seen.add(key);
-    return true;
-  });
 }
