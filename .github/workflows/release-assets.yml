@@ -50,6 +50,9 @@ jobs:
       - name: Test
         run: npm run test
 
+      - name: Generate icons
+        run: npm run icons
+
       - name: Build
         run: npm run build
 

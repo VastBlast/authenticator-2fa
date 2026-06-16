@@ -24,12 +24,18 @@ function createManifest(target) {
     homepage_url: 'https://github.com/VastBlast/authenticator-2fa',
     icons: {
       16: 'icons/icon16.png',
+      32: 'icons/icon32.png',
       48: 'icons/icon48.png',
-      128: 'icons/icon128.png',
+      128: 'icons/store-icon128.png',
     },
     action: {
       default_title: '__MSG_actionTitle__',
       default_popup: 'index.html',
+      default_icon: {
+        16: 'icons/icon16.png',
+        24: 'icons/icon24.png',
+        32: 'icons/icon32.png',
+      },
     },
     commands: {
       'scan-page': {

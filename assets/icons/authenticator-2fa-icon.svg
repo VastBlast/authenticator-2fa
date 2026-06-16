@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2048" height="2048" viewBox="0 0 512 512" role="img" aria-label="Multicolor abstract symbol vector">
+  <title>Multicolor abstract symbol</title>
+  <g shape-rendering="geometricPrecision" style="isolation:isolate">
+    <!-- Yellow upper-left arm -->
+    <g opacity="0.95">
+      <path d="M165 111 L240 240" fill="none" stroke="#FBBC04" stroke-width="60" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+
+    <!-- Green left horizontal arm -->
+    <g opacity="0.95">
+      <path d="M90 240 L246 240" fill="none" stroke="#34A853" stroke-width="60" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+
+    <!-- Red lower V arms -->
+    <g opacity="0.95">
+      <path d="M165 370 L240 240 L315 370" fill="none" stroke="#EA4335" stroke-width="60" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+
+    <!-- Blue upper-right and right horizontal arms -->
+    <g opacity="0.95">
+      <path d="M315 111 L240 240" fill="none" stroke="#1A73E8" stroke-width="60" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M240 240 L390 240" fill="none" stroke="#1A73E8" stroke-width="60" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+  </g>
+</svg>
