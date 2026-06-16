@@ -10,6 +10,7 @@
     "build:prod": "vite build --mode production && node scripts/build-extension.mjs",
     "preview": "vite preview",
     "icons": "node scripts/generate-icons.mjs",
+    "store:screenshots": "npm run build && node scripts/generate-store-screenshots.mjs",
     "check": "svelte-check --tsconfig ./tsconfig.json",
     "test": "npm run test:types && vitest run",
     "test:types": "tsc -p tsconfig.test.json",
