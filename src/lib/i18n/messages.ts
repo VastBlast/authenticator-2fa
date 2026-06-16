@@ -45,7 +45,6 @@ export type MessageKey =
   | 'settings'
   | 'manual'
   | 'qrImage'
-  | 'camera'
   | 'importText'
   | 'importFile'
   | 'importTitle'
@@ -77,8 +76,7 @@ export type MessageKey =
   | 'scanPageWaiting'
   | 'scanPageNoQr'
   | 'scanPageFailed'
-  | 'scanPageUnavailable'
-  | 'cameraUnavailable';
+  | 'scanPageUnavailable';
 
 export const LANGUAGES = [
   { code: 'en', label: 'English' },
@@ -110,7 +108,7 @@ const en: Record<MessageKey, string> = {
   addAccount: 'Add account',
   addManual: 'Manual',
   addQr: 'QR code',
-  addQrDescription: 'Scan, upload, or select a QR code on the current page.',
+  addQrDescription: 'Upload a QR image or select a QR code on the current page.',
   addPaste: 'Paste',
   addPasteDescription: 'Paste an otpauth link, Google Authenticator transfer text, or another supported authenticator export.',
   editAccount: 'Edit account',
@@ -141,7 +139,6 @@ const en: Record<MessageKey, string> = {
   settings: 'Settings',
   manual: 'Manual',
   qrImage: 'QR image',
-  camera: 'Camera',
   importText: 'Paste otpauth, Google migration, or backup text',
   importFile: 'Text or JSON file',
   importTitle: 'Import',
@@ -173,8 +170,7 @@ const en: Record<MessageKey, string> = {
   scanPageWaiting: 'Select the QR code area in the page.',
   scanPageNoQr: 'No QR code was found in that selection.',
   scanPageFailed: 'Page scan failed. Try a tighter selection or use QR image import.',
-  scanPageUnavailable: 'Page scan is unavailable in this browser context.',
-  cameraUnavailable: 'Camera scan is unavailable in this browser context.'
+  scanPageUnavailable: 'Page scan is unavailable in this browser context.'
 };
 
 const dictionaries: Record<string, Partial<Record<MessageKey, string>>> = {

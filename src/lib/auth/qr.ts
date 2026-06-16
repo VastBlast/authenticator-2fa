@@ -1,4 +1,4 @@
-import type { BrowserQRCodeReader, IScannerControls } from '@zxing/browser';
+import type { BrowserQRCodeReader } from '@zxing/browser';
 import type { DecodeHintType } from '@zxing/library';
 
 let qrReader: BrowserQRCodeReader | null = null;
@@ -10,7 +10,6 @@ interface CanvasRegion {
   height: number;
 }
 
-const CAMERA_SCAN_INTERVAL_MS = 250;
 const NORMALIZED_QR_SIZES = [384, 512, 768, 320, 448, 256, 1024];
 const QR_DECODE_ERROR = 'No QR code could be decoded from the selected image. Try a tighter crop or a clearer screenshot.';
 
@@ -58,75 +57,6 @@ export async function renderQrDataUrl(text: string): Promise<string> {
       light: '#ffffff'
     }
   });
-}
-
-export async function startCameraQrScan(
-  video: HTMLVideoElement,
-  onText: (text: string) => void,
-  onError: (message: string) => void
-): Promise<IScannerControls> {
-  const qrReader = await getQrReader();
-  if (!navigator.mediaDevices?.getUserMedia) {
-    throw new Error('Camera scan is unavailable in this browser context.');
-  }
-
-  const stream = await navigator.mediaDevices.getUserMedia({
-    audio: false,
-    video: {
-      facingMode: { ideal: 'environment' },
-      width: { ideal: 1920 },
-      height: { ideal: 1080 }
-    }
-  });
-
-  let stopped = false;
-  let timeoutId: number | null = null;
-  video.srcObject = stream;
-  video.muted = true;
-  video.playsInline = true;
-  await video.play();
-
-  const controls: IScannerControls = {
-    stop: () => {
-      stopped = true;
-      if (timeoutId !== null) {
-        window.clearTimeout(timeoutId);
-        timeoutId = null;
-      }
-      video.pause();
-      video.srcObject = null;
-      for (const track of stream.getTracks()) {
-        track.stop();
-      }
-    }
-  };
-
-  const scanFrame = () => {
-    if (stopped) {
-      return;
-    }
-
-    try {
-      const frame = drawVideoFrameToCanvas(video);
-      if (frame) {
-        const decoded = tryDecodeCanvasWithFallback(qrReader, frame);
-        if (decoded) {
-          controls.stop();
-          onText(decoded);
-          return;
-        }
-      }
-    } catch (error) {
-      if (!stopped && error instanceof Error) {
-        onError(error.message);
-      }
-    }
-
-    timeoutId = window.setTimeout(scanFrame, CAMERA_SCAN_INTERVAL_MS);
-  };
-
-  timeoutId = window.setTimeout(scanFrame, CAMERA_SCAN_INTERVAL_MS);
-  return controls;
 }
 
 async function getQrReader(): Promise<BrowserQRCodeReader> {
@@ -270,23 +200,6 @@ function resizeCanvas(source: HTMLCanvasElement, size: number): HTMLCanvasElemen
   const context = getCanvasContext(canvas);
   context.imageSmoothingEnabled = false;
   context.drawImage(source, 0, 0, size, size);
-  return canvas;
-}
-
-function drawVideoFrameToCanvas(video: HTMLVideoElement): HTMLCanvasElement | null {
-  if (
-    video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA ||
-    video.videoWidth < 1 ||
-    video.videoHeight < 1
-  ) {
-    return null;
-  }
-
-  const canvas = document.createElement('canvas');
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  const context = getCanvasContext(canvas);
-  context.drawImage(video, 0, 0, canvas.width, canvas.height);
   return canvas;
 }
 

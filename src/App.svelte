@@ -2,7 +2,6 @@
   import { onMount } from 'svelte';
   import {
     ArrowLeftRight,
-    Camera,
     CirclePlus,
     Download,
     ImageUp,
@@ -16,7 +15,6 @@
   } from '@lucide/svelte';
   import AccountCard from './lib/components/auth/AccountCard.svelte';
   import AccountForm from './lib/components/auth/AccountForm.svelte';
-  import CameraScanner from './lib/components/auth/CameraScanner.svelte';
   import ImportExportPanel from './lib/components/auth/ImportExportPanel.svelte';
   import VaultGate from './lib/components/auth/VaultGate.svelte';
   import { accountToOtpAuthUri } from './lib/auth/otpauth';
@@ -202,10 +200,6 @@
       const decoded = await decodeQrFiles(files);
       return vault.importText(decoded.join('\n'));
     });
-  }
-
-  async function applyAddQrText(text: string) {
-    await runAddImport(async () => vault.importText(text));
   }
 
   async function importAddText() {
@@ -710,14 +704,6 @@
             </span>
             <input class="file-input w-full" type="file" accept="image/*" disabled={addBusy} onchange={importAddQrImages} />
           </label>
-
-          <div class="rounded-box border border-base-300 bg-base-100 p-3">
-            <div class="mb-3 flex items-center gap-2">
-              <Camera size={16} aria-hidden="true" />
-              <h3 class="text-sm font-bold">{tr('camera')}</h3>
-            </div>
-            <CameraScanner tr={tr} onscan={applyAddQrText} />
-          </div>
 
           {#if pageScanMessage}
             <div class="alert alert-info py-2 text-sm" role="status">{pageScanMessage}</div>
