@@ -80,7 +80,10 @@
   </button>
 
   <button
-    class="flex min-w-0 grow items-center gap-3 px-2 py-2.5 text-left transition-colors hover:bg-base-200/70 focus-visible:bg-base-200/70 focus:outline-none"
+    class={[
+      'flex min-w-0 grow items-center gap-3 px-2 py-2.5 text-left transition-colors hover:bg-base-200/70 focus-visible:bg-base-200/70 focus:outline-none',
+      value ? 'cursor-pointer' : 'cursor-default'
+    ]}
     type="button"
     onclick={copy}
     disabled={!value}

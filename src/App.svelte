@@ -713,9 +713,9 @@
   <title>{tr('appName')}</title>
 </svelte:head>
 
+<div class="contents" data-theme={vault.settings.theme}>
 <main
   class="relative flex h-(--auth-popup-height) w-(--auth-popup-width) flex-col overflow-hidden bg-base-100 text-base-content"
-  data-theme={vault.settings.theme}
 >
   {#if !vault.initialized}
     <div class="grid h-full place-items-center">
@@ -982,3 +982,4 @@
     <button class="modal-backdrop" type="button" onclick={() => (qrAccount = null)}>close</button>
   </dialog>
 {/if}
+</div>
