@@ -6,7 +6,7 @@ Guidance for code agents working on Authenticator - 2FA.
 
 - This is a browser extension built with Svelte 5, TypeScript, Vite, Tailwind CSS, and daisyUI.
 - Product name: `Authenticator - 2FA`.
-- Extension `short_name`: `Authenticator`.
+- Extension `short_name`: must stay within the package limit of 12 characters per locale.
 - Homepage metadata: `https://github.com/VastBlast/authenticator-2fa`.
 
 ## Development Rules
@@ -39,9 +39,9 @@ Guidance for code agents working on Authenticator - 2FA.
 ## Localization
 
 - Runtime translations live in `src/lib/i18n/messages.ts`.
-- Manifest translations live in `public/_locales/*/messages.json`.
+- Manifest translations live in `assets/extension/_locales/*/messages.json`.
 - Every supported runtime language should have every `MessageKey`.
-- Keep `appName` as `Authenticator - 2FA` and `extensionShortName` as `Authenticator` unless explicitly requested otherwise.
+- Keep `appName` as `Authenticator - 2FA`. Keep manifest short names search-relevant and within the 12-character package limit.
 
 ## Storage And Serialization
 

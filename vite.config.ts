@@ -5,6 +5,7 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   plugins: [tailwindcss(), svelte()],
+  publicDir: 'assets/extension',
   build: {
     outDir: 'dist/app',
     emptyOutDir: true,

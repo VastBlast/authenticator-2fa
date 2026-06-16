@@ -24,6 +24,7 @@ const MANIFEST_LOCALE_BY_LANGUAGE: Record<string, string> = {
   zh: 'zh_CN'
 };
 const BROWSER_BRAND_PATTERN = /\b(?:Chrome|Chromium|Edge|Firefox|Web Store)\b/i;
+const MANIFEST_LOCALES_DIR = join(process.cwd(), 'assets', 'extension', '_locales');
 
 describe('localized copy', () => {
   test('every supported runtime language has non-empty values for every UI key', () => {
@@ -45,7 +46,7 @@ describe('localized copy', () => {
   test('manifest locales include exported metadata', () => {
     for (const { code } of LANGUAGES) {
       const locale = MANIFEST_LOCALE_BY_LANGUAGE[code];
-      const filePath = join(process.cwd(), 'public', '_locales', locale, 'messages.json');
+      const filePath = join(MANIFEST_LOCALES_DIR, locale, 'messages.json');
       expect(existsSync(filePath), locale).toBe(true);
 
       const messages = JSON.parse(readFileSync(filePath, 'utf8')) as Record<
@@ -63,7 +64,7 @@ describe('localized copy', () => {
   test('manifest short names stay within extension package limits', () => {
     for (const { code } of LANGUAGES) {
       const locale = MANIFEST_LOCALE_BY_LANGUAGE[code];
-      const filePath = join(process.cwd(), 'public', '_locales', locale, 'messages.json');
+      const filePath = join(MANIFEST_LOCALES_DIR, locale, 'messages.json');
       const messages = JSON.parse(readFileSync(filePath, 'utf8')) as Record<
         string,
         { message?: unknown }

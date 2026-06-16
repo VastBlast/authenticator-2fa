@@ -4,7 +4,7 @@ Browser extension for generating and managing two-factor authentication codes.
 
 **Privacy:** Authenticator - 2FA strictly does not track users, collect analytics, or collect user data. Account secrets and codes stay stored locally on the user's device and are not sent to a remote service.
 
-![Authenticator - 2FA promo](store-assets/promotional/marquee-promo-tile.png)
+![Authenticator - 2FA promo](assets/store/promotional/marquee-promo-tile.png)
 
 ## Features
 
@@ -37,10 +37,11 @@ npm run package
 
 ## Store Assets
 
-Store screenshots, promo tiles, and listing text are kept outside the extension bundle:
+Project assets are grouped under `assets/` by lifecycle:
 
-- `store-assets/`
-- `store-listing/`
+- `assets/brand/` source artwork for generated extension icons
+- `assets/extension/` static files copied into extension packages
+- `assets/store/` store icons, screenshots, and promo tiles kept outside the extension bundle
 
 Regenerate screenshots and promo tiles with:
 
@@ -49,6 +50,7 @@ npm run store:screenshots
 ```
 
 This command uses synthetic demo accounts and a local browser to render store-ready images.
+Temporary store listing text drafts can live in `.tmp/store-listing/`, which is ignored by git.
 
 ## Releases
 

@@ -5,8 +5,9 @@ import { extname, join, normalize, relative, resolve } from 'node:path';
 import sharp from 'sharp';
 
 const appDir = resolve('dist/app');
-const screenshotDir = resolve('store-assets/screenshots');
-const promoDir = resolve('store-assets/promotional');
+const screenshotDir = resolve('assets/store/screenshots');
+const promoDir = resolve('assets/store/promotional');
+const storeIconDir = resolve('assets/store/icons');
 const screenshotViewport = { width: 1280, height: 800 };
 const vaultKey = 'vastblast.2fa-authenticator.vault';
 
@@ -144,6 +145,25 @@ async function handleRequest(url, response) {
 
     response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
     response.end(renderPromoPage(tile));
+    return;
+  }
+
+  if (path.startsWith('/store-icons/')) {
+    const filePath = resolve(storeIconDir, `.${decodeURIComponent(path.replace('/store-icons', ''))}`);
+    if (!filePath.startsWith(`${storeIconDir}/`)) {
+      response.writeHead(403);
+      response.end('Forbidden');
+      return;
+    }
+
+    try {
+      const body = await readFile(filePath);
+      response.writeHead(200, { 'content-type': getContentType(filePath) });
+      response.end(body);
+    } catch {
+      response.writeHead(404);
+      response.end('Not found');
+    }
     return;
   }
 
@@ -337,7 +357,7 @@ function renderDemoPage(scenario) {
   <body class="${scenario.frameHeight ? 'tall-frame' : ''}">
     <section class="copy">
       <div class="brand">
-        <img src="/icons/store-icon128.png" alt="" />
+        <img src="/store-icons/store-icon128.png" alt="" />
         <span>Authenticator - 2FA</span>
       </div>
       <h1>${escapeHtml(scenario.title)}</h1>
@@ -510,13 +530,13 @@ function renderPromoPage(tile) {
     </style>
   </head>
   <body>
-    ${isMarquee ? '<img src="/icons/store-icon128.png" alt="" />' : ''}
+    ${isMarquee ? '<img src="/store-icons/store-icon128.png" alt="" />' : ''}
     <section class="copy">
-      ${isMarquee ? '' : '<img src="/icons/store-icon128.png" alt="" />'}
+      ${isMarquee ? '' : '<img src="/store-icons/store-icon128.png" alt="" />'}
       <h1>${escapeHtml(tile.title)}</h1>
       <p>${escapeHtml(tile.body)}</p>
     </section>
-    ${isMarquee ? '<div class="mark" aria-hidden="true"><img src="/icons/store-icon128.png" alt="" /></div>' : ''}
+    ${isMarquee ? '<div class="mark" aria-hidden="true"><img src="/store-icons/store-icon128.png" alt="" /></div>' : ''}
   </body>
 </html>`;
 }
