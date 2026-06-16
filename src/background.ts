@@ -1,3 +1,5 @@
+import { savePendingPageScan } from './lib/auth/pendingScan';
+
 interface MessageResponse {
   ok: boolean;
   error?: string;
@@ -15,15 +17,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message?.type === 'page-scan:image') {
-    sendRuntimeMessage({ type: 'page-scan:ready', dataUrl: message.dataUrl });
-    sendResponse({ ok: true });
-    return undefined;
+    respond(sendResponse, reportScanReady(message.dataUrl));
+    return true;
   }
 
   if (message?.type === 'page-scan:failed') {
-    sendRuntimeMessage({ type: 'page-scan:failed', message: message.message });
-    sendResponse({ ok: true });
-    return undefined;
+    respond(sendResponse, reportScanFailure(message.message));
+    return true;
   }
 
   return undefined;
@@ -64,6 +64,24 @@ function respond(sendResponse: (response: MessageResponse) => void, action: Prom
       sendRuntimeMessage({ type: 'page-scan:failed', message });
       sendResponse({ ok: false, error: message });
     });
+}
+
+async function reportScanReady(dataUrl: string): Promise<void> {
+  await savePendingPageScan({
+    status: 'ready',
+    dataUrl,
+    createdAt: new Date().toISOString()
+  });
+  sendRuntimeMessage({ type: 'page-scan:ready', dataUrl });
+}
+
+async function reportScanFailure(message: string): Promise<void> {
+  await savePendingPageScan({
+    status: 'failed',
+    message,
+    createdAt: new Date().toISOString()
+  });
+  sendRuntimeMessage({ type: 'page-scan:failed', message });
 }
 
 function getActiveTab(): Promise<chrome.tabs.Tab | undefined> {

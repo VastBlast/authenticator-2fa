@@ -32,7 +32,7 @@
   }
 </script>
 
-<section class="grid min-h-dvh place-items-center py-6">
+<section class="grid place-items-center py-4">
   <div class="grid w-full max-w-sm gap-5">
     <div class="grid gap-3">
       <div class="grid size-14 place-items-center rounded-box bg-primary text-primary-content shadow-sm">

@@ -64,6 +64,7 @@
     }
 
     await run(async () => {
+      status = 'Reading import file.';
       const result = await onimport(text);
       setImportStatus(result);
     });
@@ -78,6 +79,7 @@
     }
 
     await run(async () => {
+      status = 'Reading QR image.';
       const decoded = await decodeQrFiles(files);
       const result = await onimport(decoded.join('\n'));
       setImportStatus(result, ` from QR image${decoded.length === 1 ? '' : 's'}`);
@@ -125,7 +127,8 @@
 
   function setImportStatus(result: ImportResult, source = ''): void {
     if (result.imported === 0) {
-      error = result.errors[0] ?? 'No accounts found to import.';
+      error = result.errors[0] ?? (result.skipped > 0 ? 'No new accounts were imported.' : 'No accounts found to import.');
+      status = '';
       return;
     }
 
@@ -134,7 +137,7 @@
   }
 </script>
 
-<section class="grid gap-4 rounded-box border border-base-300 bg-base-100 p-3 shadow-sm">
+<section class="grid gap-4">
   <div class="grid gap-1">
     <h2 class="text-base font-bold leading-tight">{tr('importTitle')}</h2>
     <p class="text-sm leading-snug text-base-content/65">{tr('importText')}</p>

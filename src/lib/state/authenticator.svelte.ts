@@ -1,5 +1,6 @@
+import { SvelteSet } from 'svelte/reactivity';
 import { createAccount, generateOtpCode, updateAccount } from '../auth/otp';
-import { loadVaultEnvelope, saveVaultEnvelope } from '../auth/storage';
+import { clearVaultEnvelope, loadVaultEnvelope, saveVaultEnvelope } from '../auth/storage';
 import { createVaultEnvelope, encryptVaultData, unlockVaultEnvelope } from '../auth/vaultCrypto';
 import { importAnyText, importEncryptedBackup } from '../auth/backup';
 import type {
@@ -147,19 +148,74 @@ export class AuthenticatorVault {
 
   async importText(text: string): Promise<ImportResult> {
     const result = importAnyText(text);
-    await this.mergeAccounts(result.accounts);
-    return result;
+    const merged = await this.mergeAccounts(result.accounts);
+    return {
+      ...result,
+      imported: merged.imported,
+      skipped: result.skipped + merged.skipped
+    };
   }
 
   async importEncryptedBackupText(text: string, password: string): Promise<ImportResult> {
     const result = await importEncryptedBackup(text, password);
-    await this.mergeAccounts(result.accounts);
-    return result;
+    const merged = await this.mergeAccounts(result.accounts);
+    return {
+      ...result,
+      imported: merged.imported,
+      skipped: result.skipped + merged.skipped
+    };
   }
 
   async replaceSettings(settings: AppSettings): Promise<void> {
     this.settings = settings;
     await this.persist('Settings saved.');
+  }
+
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    if (!this.envelope) {
+      this.error = 'No vault exists yet.';
+      return;
+    }
+
+    this.busy = true;
+    this.clearStatus();
+    try {
+      try {
+        await unlockVaultEnvelope(this.envelope, currentPassword);
+      } catch {
+        throw new Error('Current password is incorrect.');
+      }
+
+      const data = { accounts: this.accounts, settings: this.settings };
+      const unlocked = await createVaultEnvelope(data, newPassword);
+      this.key = unlocked.key;
+      this.envelope = unlocked.envelope;
+      await saveVaultEnvelope(unlocked.envelope);
+      this.notice = 'Vault password changed.';
+    } catch (error) {
+      this.error = getErrorMessage(error);
+    } finally {
+      this.busy = false;
+    }
+  }
+
+  async resetVault(): Promise<void> {
+    this.busy = true;
+    this.clearStatus();
+    try {
+      await clearVaultEnvelope();
+      this.key = null;
+      this.envelope = null;
+      this.accounts = [];
+      this.codes = {};
+      this.settings = { ...DEFAULT_SETTINGS };
+      this.hasVault = false;
+      this.locked = true;
+    } catch (error) {
+      this.error = getErrorMessage(error);
+    } finally {
+      this.busy = false;
+    }
   }
 
   async refreshCodes(now = Date.now()): Promise<void> {
@@ -172,23 +228,25 @@ export class AuthenticatorVault {
     this.codes = Object.fromEntries(entries.map((entry) => [entry.accountId, entry]));
   }
 
-  private async mergeAccounts(incoming: AuthenticatorAccount[]): Promise<void> {
+  private async mergeAccounts(incoming: AuthenticatorAccount[]): Promise<{ imported: number; skipped: number }> {
     if (incoming.length === 0) {
       this.notice = 'No accounts were found to import.';
-      return;
+      return { imported: 0, skipped: 0 };
     }
 
-    const existing = new Set(this.accounts.map(accountFingerprint));
+    const existing = new SvelteSet(this.accounts.map(accountFingerprint));
     const additions = incoming.filter((account) => !existing.has(accountFingerprint(account)));
+    const skipped = incoming.length - additions.length;
 
     if (additions.length === 0) {
       this.notice = 'No new accounts were imported.';
-      return;
+      return { imported: 0, skipped };
     }
 
     this.accounts = [...this.accounts, ...additions];
     await this.persist(`${additions.length} account${additions.length === 1 ? '' : 's'} imported.`);
     await this.refreshCodes();
+    return { imported: additions.length, skipped };
   }
 
   private async persist(message: string): Promise<void> {

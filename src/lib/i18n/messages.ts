@@ -12,6 +12,11 @@ export type MessageKey =
   | 'accounts'
   | 'transfer'
   | 'addAccount'
+  | 'addManual'
+  | 'addQr'
+  | 'addQrDescription'
+  | 'addPaste'
+  | 'addPasteDescription'
   | 'editAccount'
   | 'save'
   | 'cancel'
@@ -36,6 +41,7 @@ export type MessageKey =
   | 'showQr'
   | 'import'
   | 'export'
+  | 'importExport'
   | 'settings'
   | 'manual'
   | 'qrImage'
@@ -51,6 +57,11 @@ export type MessageKey =
   | 'plainWarning'
   | 'appearance'
   | 'preferences'
+  | 'security'
+  | 'currentPassword'
+  | 'changePassword'
+  | 'deleteVault'
+  | 'deleteVaultConfirm'
   | 'codeDisplay'
   | 'language'
   | 'theme'
@@ -93,6 +104,11 @@ const en: Record<MessageKey, string> = {
   accounts: 'Codes',
   transfer: 'Transfer',
   addAccount: 'Add account',
+  addManual: 'Manual',
+  addQr: 'QR code',
+  addQrDescription: 'Scan, upload, or select a QR code on the current page.',
+  addPaste: 'Paste',
+  addPasteDescription: 'Paste an otpauth link, Google Authenticator transfer text, or another supported authenticator export.',
   editAccount: 'Edit account',
   save: 'Save',
   cancel: 'Cancel',
@@ -117,6 +133,7 @@ const en: Record<MessageKey, string> = {
   showQr: 'Show QR',
   import: 'Import',
   export: 'Export',
+  importExport: 'Import/export',
   settings: 'Settings',
   manual: 'Manual',
   qrImage: 'QR image',
@@ -132,6 +149,11 @@ const en: Record<MessageKey, string> = {
   plainWarning: 'Plain otpauth exports contain live secrets.',
   appearance: 'Appearance',
   preferences: 'Preferences',
+  security: 'Security',
+  currentPassword: 'Current password',
+  changePassword: 'Change password',
+  deleteVault: 'Delete vault and password',
+  deleteVaultConfirm: 'Type DELETE to remove all saved accounts.',
   codeDisplay: 'Code display',
   language: 'Language',
   theme: 'Theme',
