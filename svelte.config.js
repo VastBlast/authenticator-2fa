@@ -4,6 +4,7 @@ export default {
   preprocess: vitePreprocess(),
   compilerOptions: {
     runes: true,
+    fragments: 'tree',
     compatibility: {
       componentApi: 5
     }

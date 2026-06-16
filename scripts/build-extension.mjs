@@ -66,6 +66,9 @@ function createManifest(target) {
       gecko: {
         id: 'authenticator@example.local',
         strict_min_version: '126.0',
+        data_collection_permissions: {
+          required: ['none'],
+        },
       },
     };
     manifest.background = {
