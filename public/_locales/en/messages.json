@@ -3,7 +3,7 @@
     "message": "Authenticator - 2FA"
   },
   "extensionShortName": {
-    "message": "Authenticator"
+    "message": "2FA Auth"
   },
   "extensionDescription": {
     "message": "Encrypted 2FA codes for secure sign-ins."

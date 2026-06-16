@@ -59,4 +59,19 @@ describe('localized copy', () => {
       }
     }
   });
+
+  test('manifest short names stay within extension package limits', () => {
+    for (const { code } of LANGUAGES) {
+      const locale = MANIFEST_LOCALE_BY_LANGUAGE[code];
+      const filePath = join(process.cwd(), 'public', '_locales', locale, 'messages.json');
+      const messages = JSON.parse(readFileSync(filePath, 'utf8')) as Record<
+        string,
+        { message?: unknown }
+      >;
+      const shortName = messages.extensionShortName?.message;
+
+      expect(shortName, `${locale}.extensionShortName`).toEqual(expect.any(String));
+      expect([...String(shortName)].length, `${locale}.extensionShortName`).toBeLessThanOrEqual(12);
+    }
+  });
 });

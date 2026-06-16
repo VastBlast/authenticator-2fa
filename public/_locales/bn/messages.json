@@ -3,7 +3,7 @@
     "message": "প্রমাণীকরণকারী - 2FA"
   },
   "extensionShortName": {
-    "message": "প্রমাণীকরণকারী"
+    "message": "2FA Auth"
   },
   "extensionDescription": {
     "message": "নিরাপদ সাইন-ইনের জন্য এনক্রিপ্টেড 2FA কোড।"
