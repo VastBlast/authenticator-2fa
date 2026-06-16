@@ -1,10 +1,15 @@
 import { beforeEach, describe, expect, test } from 'vitest';
 import { loadStoredVault } from '../../src/lib/auth/storage';
+import type { AuthenticatorAccount } from '../../src/lib/auth/types';
 import { isEncryptedVaultRecord, isPlainVaultRecord } from '../../src/lib/auth/vaultRecords';
 import { AuthenticatorVault } from '../../src/lib/state/authenticator.svelte';
 import { installMemoryStorage } from '../helpers/storage';
 
-const OTPAUTH_URI = 'otpauth://totp/Example:alice@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Example';
+const OTPAUTH_URI = otpAuthUri('alice@example.com');
+const BOB_URI = otpAuthUri('bob@example.com');
+const CAROL_URI = otpAuthUri('carol@example.com');
+const DANA_URI = otpAuthUri('dana@example.com');
+const MULTI_IMPORT = [OTPAUTH_URI, BOB_URI, CAROL_URI].join('\n');
 const PASSWORD = 'correct horse battery staple';
 
 describe('AuthenticatorVault persistence and locking', () => {
@@ -67,6 +72,94 @@ describe('AuthenticatorVault persistence and locking', () => {
     expect(duplicate.skipped).toBe(1);
     expect(vault.accounts).toHaveLength(1);
     expect(vault.notice).toBe('No new accounts were imported.');
+  });
+
+  test('assigns imported accounts a stable manual order', async () => {
+    const vault = new AuthenticatorVault();
+    await vault.initialize();
+
+    await vault.importText(MULTI_IMPORT);
+
+    expect(accountLabels(vault.sortedAccounts)).toEqual([
+      'alice@example.com',
+      'bob@example.com',
+      'carol@example.com'
+    ]);
+    expect(vault.sortedAccounts.map((account) => account.sortOrder)).toEqual([0, 1, 2]);
+
+    const stored = await loadStoredVault();
+    if (!isPlainVaultRecord(stored)) {
+      throw new Error('Expected a plain vault record.');
+    }
+    expect(stored.data.accounts.map((account) => account.sortOrder)).toEqual([0, 1, 2]);
+  });
+
+  test('reorders accounts and restores that order after reopening', async () => {
+    const vault = new AuthenticatorVault();
+    await vault.initialize();
+    await vault.importText(MULTI_IMPORT);
+
+    const byLabel = accountsByLabel(vault.sortedAccounts);
+    await vault.reorderAccounts([
+      byLabel.get('carol@example.com')?.id ?? '',
+      byLabel.get('alice@example.com')?.id ?? '',
+      byLabel.get('bob@example.com')?.id ?? ''
+    ]);
+
+    expect(vault.notice).toBe('Account order updated.');
+    expect(accountLabels(vault.sortedAccounts)).toEqual([
+      'carol@example.com',
+      'alice@example.com',
+      'bob@example.com'
+    ]);
+    expect(vault.sortedAccounts.map((account) => account.sortOrder)).toEqual([0, 1, 2]);
+
+    const reopened = new AuthenticatorVault();
+    await reopened.initialize();
+
+    expect(accountLabels(reopened.sortedAccounts)).toEqual([
+      'carol@example.com',
+      'alice@example.com',
+      'bob@example.com'
+    ]);
+  });
+
+  test('ignores incomplete, duplicate, or unknown reorder requests', async () => {
+    const vault = new AuthenticatorVault();
+    await vault.initialize();
+    await vault.importText(MULTI_IMPORT);
+    const originalIds = vault.sortedAccounts.map((account) => account.id);
+
+    await vault.reorderAccounts([originalIds[1], originalIds[0]]);
+    expect(vault.sortedAccounts.map((account) => account.id)).toEqual(originalIds);
+
+    await vault.reorderAccounts([originalIds[1], originalIds[1], originalIds[2]]);
+    expect(vault.sortedAccounts.map((account) => account.id)).toEqual(originalIds);
+
+    await vault.reorderAccounts([originalIds[1], originalIds[0], 'missing-account']);
+    expect(vault.sortedAccounts.map((account) => account.id)).toEqual(originalIds);
+  });
+
+  test('appends newly imported accounts after the current manual order', async () => {
+    const vault = new AuthenticatorVault();
+    await vault.initialize();
+    await vault.importText(MULTI_IMPORT);
+
+    const byLabel = accountsByLabel(vault.sortedAccounts);
+    await vault.reorderAccounts([
+      byLabel.get('carol@example.com')?.id ?? '',
+      byLabel.get('alice@example.com')?.id ?? '',
+      byLabel.get('bob@example.com')?.id ?? ''
+    ]);
+    await vault.importText(DANA_URI);
+
+    expect(accountLabels(vault.sortedAccounts)).toEqual([
+      'carol@example.com',
+      'alice@example.com',
+      'bob@example.com',
+      'dana@example.com'
+    ]);
+    expect(vault.sortedAccounts.map((account) => account.sortOrder)).toEqual([0, 1, 2, 3]);
   });
 
   test('settings persist without enabling password protection', async () => {
@@ -184,3 +277,15 @@ describe('AuthenticatorVault persistence and locking', () => {
     expect(reopened.accounts).toHaveLength(1);
   });
 });
+
+function otpAuthUri(label: string): string {
+  return `otpauth://totp/${encodeURIComponent(`Example:${label}`)}?secret=JBSWY3DPEHPK3PXP&issuer=Example`;
+}
+
+function accountLabels(accounts: AuthenticatorAccount[]): string[] {
+  return accounts.map((account) => account.label);
+}
+
+function accountsByLabel(accounts: AuthenticatorAccount[]): Map<string, AuthenticatorAccount> {
+  return new Map(accounts.map((account) => [account.label, account]));
+}

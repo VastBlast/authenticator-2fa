@@ -48,15 +48,7 @@ export class AuthenticatorVault {
   private encryptedVault: VaultEnvelope | null = null;
   private plainVault: PlainVaultRecord | null = null;
 
-  sortedAccounts = $derived.by(() =>
-    [...this.accounts].sort((left, right) => {
-      if (left.pinned !== right.pinned) {
-        return left.pinned ? -1 : 1;
-      }
-      const issuerSort = left.issuer.localeCompare(right.issuer);
-      return issuerSort || left.label.localeCompare(right.label);
-    })
-  );
+  sortedAccounts = $derived.by(() => [...this.accounts].sort(compareAccountOrder));
 
   async initialize(): Promise<void> {
     this.busy = true;
@@ -141,12 +133,13 @@ export class AuthenticatorVault {
     await this.refreshCodes();
   }
 
-  async togglePinned(id: string): Promise<void> {
-    const account = this.accounts.find((item) => item.id === id);
-    if (!account) {
+  async reorderAccounts(orderedIds: string[]): Promise<void> {
+    const accounts = reorderAccountsById(this.sortedAccounts, orderedIds);
+    if (!accounts) {
       return;
     }
-    await this.updateAccount(id, { pinned: !account.pinned });
+
+    await this.persistData({ accounts, settings: this.settings }, 'Account order updated.');
   }
 
   async advanceHotp(id: string): Promise<void> {
@@ -345,7 +338,14 @@ export class AuthenticatorVault {
       return { imported: 0, skipped };
     }
 
-    const accounts = [...this.accounts, ...additions];
+    const existingAccounts = normalizeAccountOrder(this.accounts);
+    const accounts = [
+      ...existingAccounts,
+      ...additions.map((account, index) => ({
+        ...account,
+        sortOrder: existingAccounts.length + index
+      }))
+    ];
     await this.persistData(
       { accounts, settings: this.settings },
       `${additions.length} account${additions.length === 1 ? '' : 's'} imported.`
@@ -355,25 +355,27 @@ export class AuthenticatorVault {
   }
 
   private async persistData(data: VaultData, message: string): Promise<void> {
+    const normalizedData = normalizeVaultData(data);
+
     if (this.passwordProtected) {
       if (!this.key || !this.encryptedVault) {
         throw new Error('Unlock the vault before making changes.');
       }
 
-      const envelope = await encryptVaultData(data, this.key, this.encryptedVault);
+      const envelope = await encryptVaultData(normalizedData, this.key, this.encryptedVault);
       await saveStoredVault(envelope);
       await this.saveSessionKey(this.key, envelope);
       this.encryptedVault = envelope;
       this.plainVault = null;
     } else {
-      const plainVault = createPlainVaultRecord(data, this.plainVault);
+      const plainVault = createPlainVaultRecord(normalizedData, this.plainVault);
       await saveStoredVault(plainVault);
       this.plainVault = plainVault;
       this.encryptedVault = null;
       this.key = null;
     }
 
-    this.applyUnlockedData(data);
+    this.applyUnlockedData(normalizedData);
     this.hasVault = true;
     this.locked = false;
     this.notice = message;
@@ -384,13 +386,13 @@ export class AuthenticatorVault {
   }
 
   private applyUnlockedData(data: VaultData): void {
-    this.accounts = data.accounts;
+    this.accounts = normalizeAccountOrder(data.accounts);
     this.settings = { ...DEFAULT_SETTINGS, ...data.settings };
   }
 
   private getCurrentData(): VaultData {
     return {
-      accounts: this.accounts,
+      accounts: normalizeAccountOrder(this.accounts),
       settings: this.settings
     };
   }
@@ -399,6 +401,71 @@ export class AuthenticatorVault {
     this.notice = '';
     this.error = '';
   }
+}
+
+function normalizeVaultData(data: VaultData): VaultData {
+  return {
+    ...data,
+    accounts: normalizeAccountOrder(data.accounts)
+  };
+}
+
+function normalizeAccountOrder(accounts: AuthenticatorAccount[]): AuthenticatorAccount[] {
+  const indexedAccounts = accounts.map((account, index) => ({ account, index }));
+  const hasSortOrder = indexedAccounts.some(({ account }) => isSortOrder(account.sortOrder));
+  const orderedAccounts = hasSortOrder
+    ? [...indexedAccounts].sort(
+        (left, right) =>
+          getSortOrder(left.account) - getSortOrder(right.account) || left.index - right.index
+      )
+    : indexedAccounts;
+
+  return orderedAccounts.map(({ account }, index) => ({
+    ...account,
+    sortOrder: index
+  }));
+}
+
+function reorderAccountsById(
+  accounts: AuthenticatorAccount[],
+  orderedIds: string[]
+): AuthenticatorAccount[] | null {
+  if (accounts.length !== orderedIds.length || new Set(orderedIds).size !== orderedIds.length) {
+    return null;
+  }
+
+  const accountsById = new Map(accounts.map((account) => [account.id, account]));
+  const reordered = orderedIds.map((id) => accountsById.get(id));
+  if (reordered.some((account) => !account)) {
+    return null;
+  }
+
+  const currentIds = accounts.map((account) => account.id);
+  if (orderedIds.every((id, index) => id === currentIds[index])) {
+    return null;
+  }
+
+  return reordered.map((account, index) => ({
+    ...(account as AuthenticatorAccount),
+    sortOrder: index
+  }));
+}
+
+function compareAccountOrder(left: AuthenticatorAccount, right: AuthenticatorAccount): number {
+  return (
+    getSortOrder(left) - getSortOrder(right) ||
+    left.createdAt.localeCompare(right.createdAt) ||
+    left.issuer.localeCompare(right.issuer) ||
+    left.label.localeCompare(right.label)
+  );
+}
+
+function getSortOrder(account: AuthenticatorAccount): number {
+  return isSortOrder(account.sortOrder) ? account.sortOrder : Number.POSITIVE_INFINITY;
+}
+
+function isSortOrder(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0;
 }
 
 function accountFingerprint(account: AuthenticatorAccount): string {

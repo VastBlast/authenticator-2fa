@@ -30,7 +30,6 @@ export type MessageKey =
   | 'digits'
   | 'period'
   | 'counter'
-  | 'pinned'
   | 'totp'
   | 'hotp'
   | 'steam'
@@ -40,9 +39,9 @@ export type MessageKey =
   | 'noResults'
   | 'copy'
   | 'copied'
+  | 'reorderAccount'
+  | 'reorderAccounts'
   | 'next'
-  | 'pin'
-  | 'unpin'
   | 'edit'
   | 'delete'
   | 'showQr'
@@ -131,7 +130,6 @@ const en: Record<MessageKey, string> = {
   digits: 'Digits',
   period: 'Period',
   counter: 'Counter',
-  pinned: 'Pinned',
   totp: 'Time-based',
   hotp: 'Counter-based',
   steam: 'Steam',
@@ -141,9 +139,9 @@ const en: Record<MessageKey, string> = {
   noResults: 'No matching accounts.',
   copy: 'Copy',
   copied: 'Copied to clipboard',
+  reorderAccount: 'Drag to reorder',
+  reorderAccounts: 'Reorder accounts',
   next: 'Next code',
-  pin: 'Pin to top',
-  unpin: 'Unpin',
   edit: 'Edit',
   delete: 'Delete',
   showQr: 'Show QR',

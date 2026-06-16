@@ -1,13 +1,11 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onDestroy, onMount } from 'svelte';
   import {
     ClipboardPaste,
     Download,
     ImageUp,
     KeyRound,
     Pencil,
-    Pin,
-    PinOff,
     Plus,
     QrCode,
     ScanLine,
@@ -37,6 +35,25 @@
     error?: string;
   }
 
+  interface AccountDragRect {
+    id: string;
+    top: number;
+    height: number;
+  }
+
+  interface AccountDragState {
+    accountId: string;
+    pointerId: number;
+    startPointerY: number;
+    currentPointerY: number;
+    pointerOffsetY: number;
+    startIndex: number;
+    currentIndex: number;
+    itemHeight: number;
+    scrollTopAtStart: number;
+    itemRects: AccountDragRect[];
+  }
+
   const ADD_MODES: { mode: AddMode; key: 'addQr' | 'addManual' | 'addPaste'; icon: typeof ScanLine }[] = [
     { mode: 'qr', key: 'addQr', icon: ScanLine },
     { mode: 'manual', key: 'addManual', icon: KeyRound },
@@ -45,6 +62,14 @@
 
   let view = $state<View>('codes');
   let query = $state('');
+  let dragAccounts = $state.raw<AuthenticatorAccount[] | null>(null);
+  let dragState = $state.raw<AccountDragState | null>(null);
+  let keyboardDraggingAccountId = $state<string | null>(null);
+  let accountListElement = $state<HTMLUListElement | null>(null);
+  let scrollContainerElement = $state<HTMLDivElement | null>(null);
+  let activeDragHandle: HTMLElement | null = null;
+  let autoScrollFrame = 0;
+  let previousBodyUserSelect: string | null = null;
   let showAdd = $state(false);
   let addMode = $state<AddMode>('qr');
   let addImportText = $state('');
@@ -61,16 +86,19 @@
   let pageScanMessage = $state('');
   let pageScanError = $state('');
 
+  const orderedAccounts = $derived.by(() => dragAccounts ?? vault.sortedAccounts);
   const filteredAccounts = $derived.by(() => {
     const needle = query.trim().toLowerCase();
     if (!needle) {
-      return vault.sortedAccounts;
+      return orderedAccounts;
     }
-    return vault.sortedAccounts.filter(
+    return orderedAccounts.filter(
       (account) =>
         account.label.toLowerCase().includes(needle) || account.issuer.toLowerCase().includes(needle)
     );
   });
+  const reorderDisabled = $derived(query.trim().length > 0 || filteredAccounts.length < 2);
+  const activeDragAccountId = $derived(dragState?.accountId ?? keyboardDraggingAccountId);
   const pageScanBusy = $derived(pageScanState !== 'idle');
 
   onMount(() => {
@@ -94,6 +122,9 @@
         chrome.runtime.onMessage.removeListener(listener);
       }
     };
+  });
+  onDestroy(() => {
+    cleanupAccountDrag();
   });
 
   // Auto-dismiss transient status messages so they never pile up on screen.
@@ -401,6 +432,345 @@
     deleting = null;
   }
 
+  function startAccountDrag(account: AuthenticatorAccount, event: PointerEvent) {
+    const scrollContainer = scrollContainerElement;
+    if (reorderDisabled || !accountListElement || !scrollContainer) {
+      return;
+    }
+
+    if (event.pointerType === 'mouse' && event.button !== 0) {
+      return;
+    }
+
+    const rows = getAccountRows();
+    const startIndex = rows.findIndex((row) => row.dataset.accountId === account.id);
+    const row = rows[startIndex];
+    if (!row) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    keyboardDraggingAccountId = null;
+    dragAccounts = null;
+
+    const rowRect = row.getBoundingClientRect();
+    const scrollRect = scrollContainer.getBoundingClientRect();
+    const itemRects = rows.map((item) => {
+      const rect = item.getBoundingClientRect();
+      return {
+        id: item.dataset.accountId ?? '',
+        top: rect.top - scrollRect.top + scrollContainer.scrollTop,
+        height: rect.height
+      };
+    });
+
+    activeDragHandle = event.currentTarget as HTMLElement;
+    activeDragHandle.setPointerCapture?.(event.pointerId);
+    previousBodyUserSelect = document.body.style.userSelect;
+    document.body.style.userSelect = 'none';
+    dragState = {
+      accountId: account.id,
+      pointerId: event.pointerId,
+      startPointerY: event.clientY,
+      currentPointerY: event.clientY,
+      pointerOffsetY: event.clientY - rowRect.top,
+      startIndex,
+      currentIndex: startIndex,
+      itemHeight: rowRect.height,
+      scrollTopAtStart: scrollContainer.scrollTop,
+      itemRects
+    };
+
+    window.addEventListener('pointermove', handleAccountDragMove, { passive: false });
+    window.addEventListener('pointerup', finishAccountDrag, { passive: false });
+    window.addEventListener('pointercancel', cancelAccountDrag);
+    startAutoScroll();
+  }
+
+  function handleAccountDragMove(event: PointerEvent) {
+    if (!dragState || event.pointerId !== dragState.pointerId) {
+      return;
+    }
+
+    event.preventDefault();
+    updatePointerDrag(event.clientY);
+  }
+
+  function updatePointerDrag(clientY: number) {
+    if (!dragState) {
+      return;
+    }
+
+    const toIndex = getPointerAccountIndex(clientY, dragState);
+    dragState = {
+      ...dragState,
+      currentPointerY: clientY,
+      currentIndex: toIndex === -1 ? dragState.currentIndex : toIndex
+    };
+  }
+
+  function finishAccountDrag(event: PointerEvent) {
+    if (!dragState || event.pointerId !== dragState.pointerId) {
+      return;
+    }
+
+    event.preventDefault();
+    const state = dragState;
+    const accounts =
+      state.currentIndex === state.startIndex
+        ? null
+        : moveAccountInList(vault.sortedAccounts, state.startIndex, state.currentIndex);
+    if (accounts) {
+      dragAccounts = accounts;
+    }
+    cleanupPointerDrag();
+    if (accounts) {
+      void commitAccountOrder(accounts);
+    }
+  }
+
+  function cancelAccountDrag() {
+    cleanupPointerDrag();
+  }
+
+  function cleanupAccountDrag() {
+    cleanupPointerDrag();
+    keyboardDraggingAccountId = null;
+    dragAccounts = null;
+  }
+
+  function cleanupPointerDrag() {
+    const pointerId = dragState?.pointerId;
+    window.removeEventListener('pointermove', handleAccountDragMove);
+    window.removeEventListener('pointerup', finishAccountDrag);
+    window.removeEventListener('pointercancel', cancelAccountDrag);
+    if (autoScrollFrame) {
+      window.cancelAnimationFrame(autoScrollFrame);
+      autoScrollFrame = 0;
+    }
+    if (
+      activeDragHandle &&
+      pointerId !== undefined &&
+      activeDragHandle.hasPointerCapture?.(pointerId)
+    ) {
+      activeDragHandle.releasePointerCapture(pointerId);
+    }
+    if (typeof document !== 'undefined' && previousBodyUserSelect !== null) {
+      document.body.style.userSelect = previousBodyUserSelect;
+    }
+    previousBodyUserSelect = null;
+    activeDragHandle = null;
+    dragState = null;
+  }
+
+  function startAutoScroll() {
+    if (autoScrollFrame) {
+      window.cancelAnimationFrame(autoScrollFrame);
+    }
+    autoScrollFrame = window.requestAnimationFrame(runAutoScroll);
+  }
+
+  function runAutoScroll() {
+    if (!dragState || !scrollContainerElement) {
+      autoScrollFrame = 0;
+      return;
+    }
+
+    const velocity = getAutoScrollVelocity(dragState.currentPointerY);
+    if (velocity !== 0) {
+      scrollContainerElement.scrollTop += velocity;
+      updatePointerDrag(dragState.currentPointerY);
+    }
+
+    autoScrollFrame = window.requestAnimationFrame(runAutoScroll);
+  }
+
+  function getAutoScrollVelocity(clientY: number): number {
+    if (!scrollContainerElement) {
+      return 0;
+    }
+
+    const rect = scrollContainerElement.getBoundingClientRect();
+    const threshold = 56;
+    const maxVelocity = 18;
+    const topDistance = clientY - rect.top;
+    const bottomDistance = rect.bottom - clientY;
+
+    if (topDistance < threshold && scrollContainerElement.scrollTop > 0) {
+      return -Math.ceil(Math.min(maxVelocity, ((threshold - topDistance) / threshold) * maxVelocity));
+    }
+
+    const maxScrollTop = scrollContainerElement.scrollHeight - scrollContainerElement.clientHeight;
+    if (bottomDistance < threshold && scrollContainerElement.scrollTop < maxScrollTop) {
+      return Math.ceil(Math.min(maxVelocity, ((threshold - bottomDistance) / threshold) * maxVelocity));
+    }
+
+    return 0;
+  }
+
+  function handleAccountDragKey(account: AuthenticatorAccount, event: KeyboardEvent) {
+    if (reorderDisabled) {
+      return;
+    }
+
+    if (event.key === ' ' || event.key === 'Enter') {
+      event.preventDefault();
+      event.stopPropagation();
+
+      if (keyboardDraggingAccountId === account.id) {
+        const accounts = dragAccounts;
+        keyboardDraggingAccountId = null;
+        if (accounts) {
+          void commitAccountOrder(accounts);
+        }
+      } else {
+        cleanupPointerDrag();
+        keyboardDraggingAccountId = account.id;
+        dragAccounts = orderedAccounts;
+      }
+      return;
+    }
+
+    if (event.key === 'Escape' && keyboardDraggingAccountId === account.id) {
+      event.preventDefault();
+      event.stopPropagation();
+      keyboardDraggingAccountId = null;
+      dragAccounts = null;
+      return;
+    }
+
+    if (
+      keyboardDraggingAccountId !== account.id ||
+      !['ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight'].includes(event.key)
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    const accounts = dragAccounts ?? orderedAccounts;
+    const fromIndex = accounts.findIndex((item) => item.id === account.id);
+    const delta = event.key === 'ArrowUp' || event.key === 'ArrowLeft' ? -1 : 1;
+    const toIndex = Math.max(0, Math.min(accounts.length - 1, fromIndex + delta));
+    if (fromIndex === -1 || fromIndex === toIndex) {
+      return;
+    }
+
+    dragAccounts = moveAccountInList(accounts, fromIndex, toIndex);
+  }
+
+  function handleAccountDragBlur(account: AuthenticatorAccount) {
+    if (keyboardDraggingAccountId !== account.id || !dragAccounts) {
+      return;
+    }
+
+    const accounts = dragAccounts;
+    keyboardDraggingAccountId = null;
+    void commitAccountOrder(accounts);
+  }
+
+  async function commitAccountOrder(accounts: AuthenticatorAccount[]) {
+    dragAccounts = accounts;
+    try {
+      await persistAccountOrder(accounts);
+    } finally {
+      dragAccounts = null;
+    }
+  }
+
+  async function persistAccountOrder(accounts: AuthenticatorAccount[]) {
+    if (reorderDisabled) {
+      return;
+    }
+
+    try {
+      await vault.reorderAccounts(accounts.map((account) => account.id));
+    } catch (error) {
+      vault.error = getErrorMessage(error, 'Unable to update account order.');
+    }
+  }
+
+  function getPointerAccountIndex(clientY: number, state: AccountDragState): number {
+    if (!scrollContainerElement || state.itemRects.length === 0) {
+      return -1;
+    }
+
+    const scrollRect = scrollContainerElement.getBoundingClientRect();
+    const draggedCenter =
+      clientY -
+      scrollRect.top +
+      scrollContainerElement.scrollTop -
+      state.pointerOffsetY +
+      state.itemHeight / 2;
+
+    const downwardSwitchRatio = 0.56;
+    const upwardSwitchRatio = 0.44;
+    let targetIndex = state.startIndex;
+
+    for (let index = state.startIndex + 1; index < state.itemRects.length; index += 1) {
+      const rect = state.itemRects[index];
+      if (draggedCenter > rect.top + rect.height * downwardSwitchRatio) {
+        targetIndex = index;
+      }
+    }
+
+    for (let index = state.startIndex - 1; index >= 0; index -= 1) {
+      const rect = state.itemRects[index];
+      if (draggedCenter < rect.top + rect.height * upwardSwitchRatio) {
+        targetIndex = index;
+      }
+    }
+
+    return targetIndex;
+  }
+
+  function getAccountRows(): HTMLElement[] {
+    return Array.from(accountListElement?.querySelectorAll<HTMLElement>('[data-account-id]') ?? []);
+  }
+
+  function getAccountDragStyle(account: AuthenticatorAccount): string {
+    if (!dragState) {
+      return '';
+    }
+
+    const index = dragState.itemRects.findIndex((rect) => rect.id === account.id);
+    if (index === -1) {
+      return '';
+    }
+
+    if (account.id === dragState.accountId) {
+      const scrollDelta =
+        (scrollContainerElement?.scrollTop ?? dragState.scrollTopAtStart) - dragState.scrollTopAtStart;
+      const offset = dragState.currentPointerY - dragState.startPointerY + scrollDelta;
+      return `position: relative; z-index: 30; transform: translate3d(0, ${offset}px, 0); transition: none; will-change: transform;`;
+    }
+
+    const offset = getDisplacedAccountOffset(index, dragState);
+    return `transform: translate3d(0, ${offset}px, 0); transition: transform 150ms cubic-bezier(0.2, 0, 0, 1); will-change: transform;`;
+  }
+
+  function getDisplacedAccountOffset(index: number, state: AccountDragState): number {
+    if (state.currentIndex > state.startIndex && index > state.startIndex && index <= state.currentIndex) {
+      return -state.itemHeight;
+    }
+    if (state.currentIndex < state.startIndex && index >= state.currentIndex && index < state.startIndex) {
+      return state.itemHeight;
+    }
+    return 0;
+  }
+
+  function moveAccountInList(
+    accounts: AuthenticatorAccount[],
+    fromIndex: number,
+    toIndex: number
+  ): AuthenticatorAccount[] {
+    const next = [...accounts];
+    const [moved] = next.splice(fromIndex, 1);
+    next.splice(toIndex, 0, moved);
+    return next;
+  }
+
   function accountTitle(account: AuthenticatorAccount): string {
     return account.issuer ? `${account.issuer} · ${account.label}` : account.label;
   }
@@ -431,7 +801,7 @@
   {:else}
     <AppBar onsettings={() => (view = 'settings')} />
 
-    <div class="flex grow flex-col overflow-y-auto pb-20">
+    <div class="flex grow flex-col overflow-y-auto pb-20" bind:this={scrollContainerElement}>
       {#if vault.accounts.length > 0}
         <div class="sticky top-0 z-10 bg-base-100/95 px-3 py-2 backdrop-blur">
           <label class="input input-sm w-full items-center gap-2">
@@ -442,9 +812,23 @@
       {/if}
 
       {#if filteredAccounts.length > 0}
-        <ul class="divide-y divide-base-200">
+        <ul
+          class="divide-y divide-base-200"
+          aria-label={tr('reorderAccounts')}
+          bind:this={accountListElement}
+        >
           {#each filteredAccounts as account (account.id)}
-            <AccountRow {account} code={vault.codes[account.id]} onactions={(item) => (actionsFor = item)} />
+            <AccountRow
+              {account}
+              code={vault.codes[account.id]}
+              reorderDisabled={reorderDisabled}
+              dragging={activeDragAccountId === account.id}
+              dragStyle={getAccountDragStyle(account)}
+              onactions={(item) => (actionsFor = item)}
+              onreorderstart={startAccountDrag}
+              onreorderkey={handleAccountDragKey}
+              onreorderblur={handleAccountDragBlur}
+            />
           {/each}
         </ul>
       {:else if vault.accounts.length === 0}
@@ -500,15 +884,6 @@
         <p class="truncate font-semibold">{accountTitle(account)}</p>
       </div>
       <ul class="menu w-full gap-0.5 p-2 text-base">
-        <li>
-          <button type="button" onclick={() => { vault.togglePinned(account.id); actionsFor = null; }}>
-            {#if account.pinned}
-              <PinOff size={18} aria-hidden="true" />{tr('unpin')}
-            {:else}
-              <Pin size={18} aria-hidden="true" />{tr('pin')}
-            {/if}
-          </button>
-        </li>
         <li>
           <button type="button" onclick={() => { void showQr(account); actionsFor = null; }}>
             <QrCode size={18} aria-hidden="true" />{tr('showQr')}

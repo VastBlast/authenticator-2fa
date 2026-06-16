@@ -19,7 +19,6 @@
   let digits = $state(formInitial?.digits ?? 6);
   let period = $state(formInitial?.period ?? 30);
   let counter = $state(formInitial?.counter ?? 0);
-  let pinned = $state(formInitial?.pinned ?? false);
 
   const isSteam = $derived(type === 'steam');
   const isHotp = $derived(type === 'hotp');
@@ -34,8 +33,7 @@
       algorithm,
       digits: isSteam ? 5 : Number(digits),
       period: Number(period),
-      counter: Number(counter),
-      pinned
+      counter: Number(counter)
     });
   }
 
@@ -93,11 +91,6 @@
       {/if}
     </label>
   </div>
-
-  <label class="flex items-center justify-between gap-3 text-sm font-medium">
-    <span>{tr('pin')}</span>
-    <input class="toggle toggle-primary" type="checkbox" bind:checked={pinned} />
-  </label>
 
   <div class="modal-action mt-1 grid grid-cols-2 gap-2">
     <button class="btn btn-sm" type="button" onclick={oncancel}>{tr('cancel')}</button>

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { EllipsisVertical, Pin, RefreshCw } from '@lucide/svelte';
+  import { EllipsisVertical, GripVertical, RefreshCw } from '@lucide/svelte';
   import CountdownRing from './CountdownRing.svelte';
   import { authenticatorVault as vault } from '../../state/authenticator.svelte';
   import { tr } from '../../i18n/messages';
@@ -8,14 +8,31 @@
   interface Props {
     account: AuthenticatorAccount;
     code?: OtpCode;
+    reorderDisabled?: boolean;
+    dragging?: boolean;
+    dragStyle?: string;
     onactions: (account: AuthenticatorAccount) => void;
+    onreorderstart: (account: AuthenticatorAccount, event: PointerEvent) => void;
+    onreorderkey: (account: AuthenticatorAccount, event: KeyboardEvent) => void;
+    onreorderblur: (account: AuthenticatorAccount) => void;
   }
 
-  let { account, code, onactions }: Props = $props();
+  let {
+    account,
+    code,
+    reorderDisabled = false,
+    dragging = false,
+    dragStyle = '',
+    onactions,
+    onreorderstart,
+    onreorderkey,
+    onreorderblur
+  }: Props = $props();
 
   const value = $derived(code?.value ?? '');
   const displayCode = $derived(value ? groupDigits(value) : '••••••');
   const expiring = $derived(account.type !== 'hotp' && (code?.remaining ?? 99) <= 5);
+  const title = $derived(account.issuer ? `${account.issuer} ${account.label}` : account.label);
 
   async function copy() {
     if (!value) {
@@ -36,9 +53,34 @@
   }
 </script>
 
-<li class="flex items-center">
+<li
+  class={[
+    'flex items-center transition-colors',
+    dragging && 'bg-base-100 shadow-lg ring-1 ring-primary/30'
+  ]}
+  style={dragStyle}
+  aria-label={title}
+  data-account-id={account.id}
+>
   <button
-    class="flex min-w-0 grow items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-base-200/70 focus-visible:bg-base-200/70 focus:outline-none"
+    class={[
+      'btn btn-ghost btn-sm btn-square m-1 shrink-0 touch-none text-base-content/45',
+      reorderDisabled ? 'pointer-events-none opacity-35' : 'cursor-grab hover:text-base-content active:cursor-grabbing'
+    ]}
+    type="button"
+    disabled={reorderDisabled}
+    aria-label={`${tr('reorderAccount')}: ${title}`}
+    aria-pressed={dragging}
+    title={tr('reorderAccount')}
+    onpointerdown={(event) => onreorderstart(account, event)}
+    onkeydown={(event) => onreorderkey(account, event)}
+    onblur={() => onreorderblur(account)}
+  >
+    <GripVertical size={18} aria-hidden="true" />
+  </button>
+
+  <button
+    class="flex min-w-0 grow items-center gap-3 px-2 py-2.5 text-left transition-colors hover:bg-base-200/70 focus-visible:bg-base-200/70 focus:outline-none"
     type="button"
     onclick={copy}
     disabled={!value}
@@ -49,9 +91,6 @@
         <span class="truncate font-medium text-base-content/80">{account.issuer || account.label}</span>
         {#if account.issuer && account.label}
           <span class="truncate">{account.label}</span>
-        {/if}
-        {#if account.pinned}
-          <Pin class="shrink-0 fill-current text-base-content/45" size={13} aria-label={tr('pinned')} />
         {/if}
       </span>
       <span

@@ -12,7 +12,7 @@ export interface AuthenticatorAccount {
   digits: number;
   period: number;
   counter: number;
-  pinned: boolean;
+  sortOrder?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -26,7 +26,7 @@ export interface AccountDraft {
   digits?: number;
   period?: number;
   counter?: number;
-  pinned?: boolean;
+  sortOrder?: number;
 }
 
 export interface OtpCode {

@@ -21,7 +21,7 @@ export function createAccount(draft: AccountDraft): AuthenticatorAccount {
     digits,
     period,
     counter: Math.max(0, Math.trunc(draft.counter ?? 0)),
-    pinned: draft.pinned ?? false,
+    sortOrder: draft.sortOrder,
     createdAt: now,
     updatedAt: now
   };
@@ -41,7 +41,6 @@ export function updateAccount(
     digits: patch.type === 'steam' ? 5 : patch.digits ?? account.digits,
     period: patch.period ?? account.period,
     counter: Math.max(0, Math.trunc(patch.counter ?? account.counter)),
-    pinned: patch.pinned ?? account.pinned,
     updatedAt: new Date().toISOString()
   };
 
