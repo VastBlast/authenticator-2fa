@@ -454,9 +454,9 @@
   <title>{tr('appName')}</title>
 </svelte:head>
 
-<main class="mx-auto flex min-h-dvh w-[430px] flex-col gap-3 bg-base-100 p-3 text-base-content" data-theme={vault.settings.theme}>
+<main class="mx-auto flex h-(--auth-popup-height) w-(--auth-popup-width) flex-col gap-3 overflow-y-auto bg-base-100 p-3 text-base-content" data-theme={vault.settings.theme}>
   {#if !vault.initialized}
-    <div class="grid min-h-dvh place-items-center">
+    <div class="grid h-full place-items-center">
       <span class="loading loading-spinner loading-lg"></span>
     </div>
   {:else if vault.locked}
