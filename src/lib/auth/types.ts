@@ -71,6 +71,16 @@ export interface VaultEnvelope {
   updatedAt: string;
 }
 
+export interface PlainVaultRecord {
+  version: 1;
+  format: 'plain';
+  data: VaultData;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type StoredVault = VaultEnvelope | PlainVaultRecord;
+
 export const DEFAULT_SETTINGS: AppSettings = {
   language: 'en',
   theme: 'light',

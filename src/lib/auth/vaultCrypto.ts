@@ -35,16 +35,50 @@ export async function unlockVaultEnvelope(
 ): Promise<UnlockedVault> {
   const salt = base64ToBytes(envelope.kdf.salt);
   const key = await deriveKey(password, salt, envelope.kdf.iterations);
+  const data = await decryptVaultData(envelope, key);
+
+  return { key, data };
+}
+
+export async function unlockVaultEnvelopeWithKey(
+  envelope: VaultEnvelope,
+  key: CryptoKey
+): Promise<UnlockedVault> {
+  const data = await decryptVaultData(envelope, key);
+
+  return { key, data };
+}
+
+export async function exportVaultKey(key: CryptoKey): Promise<JsonWebKey> {
+  return crypto.subtle.exportKey('jwk', key);
+}
+
+export async function importVaultKey(key: JsonWebKey): Promise<CryptoKey> {
+  return crypto.subtle.importKey('jwk', key, { name: 'AES-GCM', length: 256 }, true, [
+    'encrypt',
+    'decrypt'
+  ]);
+}
+
+export function getVaultKeyFingerprint(envelope: VaultEnvelope): string {
+  return [
+    envelope.version,
+    envelope.createdAt,
+    envelope.kdf.name,
+    envelope.kdf.hash,
+    envelope.kdf.iterations,
+    envelope.kdf.salt
+  ].join(':');
+}
+
+async function decryptVaultData(envelope: VaultEnvelope, key: CryptoKey): Promise<VaultData> {
   const plaintext = await crypto.subtle.decrypt(
     { name: 'AES-GCM', iv: toArrayBuffer(base64ToBytes(envelope.cipher.iv)) },
     key,
     toArrayBuffer(base64ToBytes(envelope.cipher.data))
   );
 
-  return {
-    key,
-    data: JSON.parse(decoder.decode(plaintext)) as VaultData
-  };
+  return JSON.parse(decoder.decode(plaintext)) as VaultData;
 }
 
 export async function encryptVaultData(
@@ -91,7 +125,7 @@ async function deriveKey(password: string, salt: Uint8Array, iterations = KDF_IT
     },
     baseKey,
     { name: 'AES-GCM', length: 256 },
-    false,
+    true,
     ['encrypt', 'decrypt']
   );
 }

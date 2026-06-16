@@ -55,6 +55,7 @@
   let currentPassword = $state('');
   let newPassword = $state('');
   let confirmNewPassword = $state('');
+  let removePasswordInput = $state('');
   let resetConfirmation = $state('');
   let securityError = $state('');
 
@@ -424,13 +425,35 @@
 
   async function changeVaultPassword() {
     securityError = '';
+    vault.error = '';
+    if (vault.passwordProtected && !currentPassword) {
+      securityError = 'Enter the current password.';
+      return;
+    }
     if (newPassword !== confirmNewPassword) {
       securityError = 'New passwords do not match.';
       return;
     }
 
-    await vault.changePassword(currentPassword, newPassword);
+    await vault.changePassword(vault.passwordProtected ? currentPassword : '', newPassword);
     if (!vault.error) {
+      currentPassword = '';
+      newPassword = '';
+      confirmNewPassword = '';
+    }
+  }
+
+  async function removeVaultPassword() {
+    securityError = '';
+    vault.error = '';
+    if (!removePasswordInput) {
+      securityError = 'Enter the current password.';
+      return;
+    }
+
+    await vault.removePassword(removePasswordInput);
+    if (!vault.error) {
+      removePasswordInput = '';
       currentPassword = '';
       newPassword = '';
       confirmNewPassword = '';
@@ -479,10 +502,12 @@
         <p class="mb-0.5 text-xs font-bold uppercase leading-none text-base-content/60">{tr('appName')}</p>
         <h1 class="truncate text-xl font-bold leading-tight">{tr('appName')}</h1>
       </div>
-      <button class="btn btn-ghost btn-sm shrink-0" type="button" onclick={() => vault.lock()}>
-        <LockKeyhole size={16} aria-hidden="true" />
-        {tr('lock')}
-      </button>
+      {#if vault.passwordProtected}
+        <button class="btn btn-ghost btn-sm shrink-0" type="button" onclick={() => void vault.lock()}>
+          <LockKeyhole size={16} aria-hidden="true" />
+          {tr('lock')}
+        </button>
+      {/if}
     </header>
 
     {#if vault.notice}
@@ -587,10 +612,16 @@
           </div>
 
           <div class="grid gap-3">
-            <label class="grid gap-1.5 text-sm font-semibold">
-              <span>{tr('currentPassword')}</span>
-              <input class="input w-full" type="password" bind:value={currentPassword} autocomplete="current-password" />
-            </label>
+            <div class={['alert py-2 text-sm', vault.passwordProtected ? 'alert-success' : 'alert-info']} role="status">
+              {vault.passwordProtected ? tr('passwordProtectionOn') : tr('passwordProtectionOff')}
+            </div>
+
+            {#if vault.passwordProtected}
+              <label class="grid gap-1.5 text-sm font-semibold">
+                <span>{tr('currentPassword')}</span>
+                <input class="input w-full" type="password" bind:value={currentPassword} autocomplete="current-password" />
+              </label>
+            {/if}
 
             <div class="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2">
               <label class="grid gap-1.5 text-sm font-semibold">
@@ -603,12 +634,24 @@
               </label>
             </div>
 
-            <button class="btn btn-primary btn-block" type="button" onclick={changeVaultPassword} disabled={vault.busy || !currentPassword || !newPassword || !confirmNewPassword}>
+            <button class="btn btn-primary btn-block" type="button" onclick={changeVaultPassword} disabled={vault.busy || (vault.passwordProtected && !currentPassword) || !newPassword || !confirmNewPassword}>
               {#if vault.busy}
                 <span class="loading loading-spinner loading-sm"></span>
               {/if}
-              {tr('changePassword')}
+              {vault.passwordProtected ? tr('changePassword') : tr('setPassword')}
             </button>
+
+            {#if vault.passwordProtected}
+              <div class="rounded-box border border-base-300 bg-base-100 p-3">
+                <label class="grid gap-1.5 text-sm font-semibold">
+                  <span>{tr('currentPassword')}</span>
+                  <input class="input w-full" type="password" bind:value={removePasswordInput} autocomplete="current-password" />
+                </label>
+                <button class="btn btn-block mt-3" type="button" onclick={removeVaultPassword} disabled={vault.busy || !removePasswordInput}>
+                  {tr('removePassword')}
+                </button>
+              </div>
+            {/if}
 
             <div class="rounded-box border border-error/30 bg-error/5 p-3">
               <label class="grid gap-1.5 text-sm font-semibold">

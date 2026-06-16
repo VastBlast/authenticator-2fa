@@ -59,7 +59,11 @@ export type MessageKey =
   | 'preferences'
   | 'security'
   | 'currentPassword'
+  | 'setPassword'
   | 'changePassword'
+  | 'removePassword'
+  | 'passwordProtectionOn'
+  | 'passwordProtectionOff'
   | 'deleteVault'
   | 'deleteVaultConfirm'
   | 'codeDisplay'
@@ -151,7 +155,11 @@ const en: Record<MessageKey, string> = {
   preferences: 'Preferences',
   security: 'Security',
   currentPassword: 'Current password',
+  setPassword: 'Set password',
   changePassword: 'Change password',
+  removePassword: 'Remove password',
+  passwordProtectionOn: 'Password protection is on.',
+  passwordProtectionOff: 'Password protection is off.',
   deleteVault: 'Delete vault and password',
   deleteVaultConfirm: 'Type DELETE to remove all saved accounts.',
   codeDisplay: 'Code display',

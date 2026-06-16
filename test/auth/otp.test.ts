@@ -1,5 +1,4 @@
-import assert from 'node:assert/strict';
-import { test } from 'node:test';
+import { expect, test } from 'vitest';
 import { encodeBase32 } from '../../src/lib/auth/base32';
 import { hotp } from '../../src/lib/auth/otp';
 import { parseGoogleAuthenticatorMigration, parseOtpAuthUri } from '../../src/lib/auth/otpauth';
@@ -10,12 +9,12 @@ test('HOTP matches RFC 4226 test vectors', async () => {
   const expected = ['755224', '287082', '359152', '969429', '338314', '254676', '287922', '162583', '399871', '520489'];
 
   for (let counter = 0; counter < expected.length; counter += 1) {
-    assert.equal(await hotp(rfcSecret, counter), expected[counter]);
+    expect(await hotp(rfcSecret, counter)).toBe(expected[counter]);
   }
 });
 
 test('TOTP matches RFC 6238 SHA-1 test vector at 59 seconds', async () => {
-  assert.equal(await hotp(rfcSecret, 1, 8, 'SHA-1'), '94287082');
+  expect(await hotp(rfcSecret, 1, 8, 'SHA-1')).toBe('94287082');
 });
 
 test('TOTP supports SHA-256 and SHA-512 secrets', async () => {
@@ -24,8 +23,8 @@ test('TOTP supports SHA-256 and SHA-512 secrets', async () => {
     new TextEncoder().encode('1234567890123456789012345678901234567890123456789012345678901234')
   );
 
-  assert.equal(await hotp(sha256Secret, 1, 8, 'SHA-256'), '46119246');
-  assert.equal(await hotp(sha512Secret, 1, 8, 'SHA-512'), '90693936');
+  expect(await hotp(sha256Secret, 1, 8, 'SHA-256')).toBe('46119246');
+  expect(await hotp(sha512Secret, 1, 8, 'SHA-512')).toBe('90693936');
 });
 
 test('otpauth parsing preserves HOTP counters', () => {
@@ -33,9 +32,9 @@ test('otpauth parsing preserves HOTP counters', () => {
     `otpauth://hotp/Example:alice@example.com?secret=${rfcSecret}&issuer=Example&counter=42&digits=8`
   );
 
-  assert.equal(account.type, 'hotp');
-  assert.equal(account.counter, 42);
-  assert.equal(account.digits, 8);
+  expect(account.type).toBe('hotp');
+  expect(account.counter).toBe(42);
+  expect(account.digits).toBe(8);
 });
 
 test('Google Authenticator migration protobuf payloads are decoded', () => {
@@ -52,13 +51,13 @@ test('Google Authenticator migration protobuf payloads are decoded', () => {
   const data = Buffer.from(payload).toString('base64');
   const [account] = parseGoogleAuthenticatorMigration(`otpauth-migration://offline?data=${encodeURIComponent(data)}`);
 
-  assert.equal(account.type, 'hotp');
-  assert.equal(account.algorithm, 'SHA-256');
-  assert.equal(account.digits, 8);
-  assert.equal(account.counter, 42);
-  assert.equal(account.issuer, 'Example');
-  assert.equal(account.label, 'alice@example.com');
-  assert.equal(account.secret, rfcSecret);
+  expect(account.type).toBe('hotp');
+  expect(account.algorithm).toBe('SHA-256');
+  expect(account.digits).toBe(8);
+  expect(account.counter).toBe(42);
+  expect(account.issuer).toBe('Example');
+  expect(account.label).toBe('alice@example.com');
+  expect(account.secret).toBe(rfcSecret);
 });
 
 function protoMessage(parts: Uint8Array[]): Uint8Array {

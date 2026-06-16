@@ -1,5 +1,5 @@
 import { resolve } from 'node:path'
-import { defineConfig } from 'vite'
+import { defineConfig } from 'vitest/config'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
 import tailwindcss from '@tailwindcss/vite'
 
@@ -20,5 +20,9 @@ export default defineConfig({
         assetFileNames: 'assets/[name].[ext]',
       },
     },
+  },
+  test: {
+    environment: 'node',
+    include: ['test/**/*.test.ts'],
   },
 })
