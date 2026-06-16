@@ -10,7 +10,7 @@ const QR_DECODE_ERROR = 'No QR code was found in that selection.';
 
 export async function decodeQrDataUrlInWorker(dataUrl: string): Promise<string> {
   if (typeof OffscreenCanvas === 'undefined' || typeof createImageBitmap === 'undefined') {
-    throw new Error('Page scan decoding is unavailable in this browser.');
+    throw new Error('Page scan decoding is unavailable here.');
   }
 
   const blob = dataUrlToBlob(dataUrl);

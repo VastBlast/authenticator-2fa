@@ -1,0 +1,17 @@
+{
+  "extensionName": {
+    "message": "Authenticator - 2FA"
+  },
+  "extensionShortName": {
+    "message": "Authenticator"
+  },
+  "extensionDescription": {
+    "message": "安全なサインインのための暗号化された2FAコード。"
+  },
+  "actionTitle": {
+    "message": "Authenticator - 2FAを開く"
+  },
+  "scanPageCommandDescription": {
+    "message": "現在のページからQRコードをスキャン"
+  }
+}

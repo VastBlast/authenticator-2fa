@@ -1,5 +1,5 @@
 {
-  "name": "2fa-authenticator-extension",
+  "name": "authenticator-2fa",
   "private": true,
   "version": "0.1.0",
   "type": "module",

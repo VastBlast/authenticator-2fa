@@ -16,29 +16,31 @@ for (const target of targets) {
 function createManifest(target) {
   const manifest = {
     manifest_version: 3,
-    name: target === 'edge' ? 'Authenticator: 2FA Client' : 'Authenticator',
-    short_name: 'Authenticator',
+    name: '__MSG_extensionName__',
+    short_name: '__MSG_extensionShortName__',
     version: packageJson.version,
-    description: 'Encrypted two-factor authenticator codes for your browser.',
+    description: '__MSG_extensionDescription__',
+    default_locale: 'en',
+    homepage_url: 'https://github.com/VastBlast/authenticator-2fa',
     icons: {
       16: 'icons/icon16.png',
       48: 'icons/icon48.png',
       128: 'icons/icon128.png',
     },
     action: {
-      default_title: 'Authenticator',
+      default_title: '__MSG_actionTitle__',
       default_popup: 'index.html',
     },
     commands: {
       'scan-page': {
-        description: 'Scan a QR code from the current page',
+        description: '__MSG_scanPageCommandDescription__',
       },
     },
     background: {
       service_worker: 'assets/background.js',
       type: 'module',
     },
-    permissions: ['storage', 'activeTab', 'scripting', 'tabs'],
+    permissions: ['storage', 'activeTab', 'scripting'],
     optional_permissions: ['clipboardWrite'],
     content_security_policy: {
       extension_pages:

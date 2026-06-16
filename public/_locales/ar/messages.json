@@ -1,0 +1,17 @@
+{
+  "extensionName": {
+    "message": "Authenticator - 2FA"
+  },
+  "extensionShortName": {
+    "message": "Authenticator"
+  },
+  "extensionDescription": {
+    "message": "رموز 2FA مشفرة لتسجيل الدخول الآمن."
+  },
+  "actionTitle": {
+    "message": "فتح Authenticator - 2FA"
+  },
+  "scanPageCommandDescription": {
+    "message": "مسح رمز QR من الصفحة الحالية"
+  }
+}

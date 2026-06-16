@@ -117,7 +117,7 @@ export function parseGoogleAuthenticatorMigration(uri: string): AuthenticatorAcc
   }
 
   if (accounts.length === 0) {
-    throw new Error('Google Authenticator migration QR contained no accounts.');
+    throw new Error('Authenticator migration QR contained no accounts.');
   }
 
   return accounts;

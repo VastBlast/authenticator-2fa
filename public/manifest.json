@@ -1,13 +1,21 @@
 {
   "manifest_version": 3,
-  "name": "Authenticator",
+  "name": "__MSG_extensionName__",
+  "short_name": "__MSG_extensionShortName__",
   "version": "0.1.0",
-  "description": "Encrypted two-factor authenticator codes for your browser.",
+  "description": "__MSG_extensionDescription__",
+  "default_locale": "en",
+  "homepage_url": "https://github.com/VastBlast/authenticator-2fa",
   "action": {
-    "default_title": "Authenticator",
+    "default_title": "__MSG_actionTitle__",
     "default_popup": "index.html"
   },
-  "permissions": ["storage", "activeTab", "scripting", "tabs"],
+  "commands": {
+    "scan-page": {
+      "description": "__MSG_scanPageCommandDescription__"
+    }
+  },
+  "permissions": ["storage", "activeTab", "scripting"],
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",

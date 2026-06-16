@@ -1,0 +1,17 @@
+{
+  "extensionName": {
+    "message": "Authenticator - 2FA"
+  },
+  "extensionShortName": {
+    "message": "Authenticator"
+  },
+  "extensionDescription": {
+    "message": "Encrypted 2FA codes for secure sign-ins."
+  },
+  "actionTitle": {
+    "message": "Open Authenticator - 2FA"
+  },
+  "scanPageCommandDescription": {
+    "message": "Scan a QR code from the current page"
+  }
+}

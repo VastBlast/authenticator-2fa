@@ -48,8 +48,8 @@ async function startPageScan(): Promise<void> {
     throw new Error('No active tab is available to scan.');
   }
 
-  if (isRestrictedPage(tab.url)) {
-    throw new Error('Page scan is unavailable on browser, extension, or store pages.');
+  if (tab.url && isRestrictedPage(tab.url)) {
+    throw new Error('Page scan is unavailable on internal or extension pages.');
   }
 
   await executeScript(tab.id, 'assets/pageScanner.js');

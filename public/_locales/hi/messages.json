@@ -1,0 +1,17 @@
+{
+  "extensionName": {
+    "message": "Authenticator - 2FA"
+  },
+  "extensionShortName": {
+    "message": "Authenticator"
+  },
+  "extensionDescription": {
+    "message": "सुरक्षित साइन-इन के लिए एन्क्रिप्टेड 2FA कोड।"
+  },
+  "actionTitle": {
+    "message": "Authenticator - 2FA खोलें"
+  },
+  "scanPageCommandDescription": {
+    "message": "मौजूदा पेज से QR कोड स्कैन करें"
+  }
+}
