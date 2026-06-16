@@ -1,23 +1,42 @@
-import { createWriteStream } from 'node:fs';
-import { readdir, readFile, stat } from 'node:fs/promises';
+import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { join, relative } from 'node:path';
-import { gzipSync } from 'node:zlib';
+import { zipSync } from 'fflate';
 
-const target = process.argv[2] ?? 'chrome';
-const sourceDir = join('dist', target);
-const output = createWriteStream(`extension-${target}.tar.gz`);
-const files = await listFiles(sourceDir);
-const chunks = [];
+const allTargets = ['chrome', 'edge', 'firefox'];
+const targets = process.argv.slice(2);
+const selectedTargets = targets.length ? targets : allTargets;
+const packageJson = JSON.parse(await readFile('package.json', 'utf8'));
+const tagName = process.env.TAG_NAME ?? `v${packageJson.version}`;
+const outputDir = process.env.ARTIFACT_DIR ?? 'artifacts';
 
-for (const file of files) {
-  const name = relative(sourceDir, file);
-  const body = await readFile(file);
-  chunks.push(`--- ${name} ---\n`);
-  chunks.push(body);
-  chunks.push('\n');
+await mkdir(outputDir, { recursive: true });
+
+for (const target of selectedTargets) {
+  if (!allTargets.includes(target)) {
+    throw new Error(`Unknown extension target: ${target}`);
+  }
+
+  const sourceDir = join('dist', target);
+  const outputFile = join(outputDir, `authenticator-2fa-${target}-${tagName}.zip`);
+  await createZip(sourceDir, outputFile);
+  console.log(`Created ${outputFile}`);
 }
 
-output.end(gzipSync(Buffer.concat(chunks.map((chunk) => (Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))))));
+async function createZip(sourceDir, outputFile) {
+  const files = (await listFiles(sourceDir))
+    .map((file) => ({
+      path: file,
+      name: relative(sourceDir, file).replaceAll('\\', '/'),
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const entries = {};
+
+  for (const file of files) {
+    entries[file.name] = await readFile(file.path);
+  }
+
+  await writeFile(outputFile, zipSync(entries, { level: 6 }));
+}
 
 async function listFiles(dir) {
   const entries = await readdir(dir);
