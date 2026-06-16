@@ -1,15 +1,15 @@
 {
   "extensionName": {
-    "message": "Authenticator - 2FA"
+    "message": "Autenticador - 2FA"
   },
   "extensionShortName": {
-    "message": "Authenticator"
+    "message": "Autenticador"
   },
   "extensionDescription": {
     "message": "Códigos 2FA cifrados para inicios de sesión seguros."
   },
   "actionTitle": {
-    "message": "Abrir Authenticator - 2FA"
+    "message": "Abrir Autenticador - 2FA"
   },
   "scanPageCommandDescription": {
     "message": "Escanear un código QR de la página actual"

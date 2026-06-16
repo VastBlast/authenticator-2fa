@@ -1,15 +1,15 @@
 {
   "extensionName": {
-    "message": "Authenticator - 2FA"
+    "message": "身份验证器 - 2FA"
   },
   "extensionShortName": {
-    "message": "Authenticator"
+    "message": "身份验证器"
   },
   "extensionDescription": {
     "message": "用于安全登录的加密 2FA 代码。"
   },
   "actionTitle": {
-    "message": "打开 Authenticator - 2FA"
+    "message": "打开身份验证器 - 2FA"
   },
   "scanPageCommandDescription": {
     "message": "从当前页面扫描 QR 码"

@@ -195,7 +195,7 @@ const en: Record<MessageKey, string> = {
 const dictionaries: Record<string, Record<MessageKey, string>> = {
   en,
   es: {
-    appName: 'Authenticator - 2FA',
+    appName: 'Autenticador - 2FA',
     tagline: 'Códigos 2FA cifrados para inicios de sesión seguros.',
     setupTitle: 'Crear bóveda cifrada',
     unlockTitle: 'Desbloquear bóveda',
@@ -282,7 +282,7 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     scanPageUnavailable: 'El escaneo de páginas no está disponible aquí.'
   },
   hi: {
-    appName: 'Authenticator - 2FA',
+    appName: 'प्रमाणक - 2FA',
     tagline: 'सुरक्षित साइन-इन के लिए एन्क्रिप्टेड 2FA कोड।',
     setupTitle: 'एन्क्रिप्टेड वॉल्ट बनाएं',
     unlockTitle: 'वॉल्ट अनलॉक करें',
@@ -369,7 +369,7 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     scanPageUnavailable: 'पेज स्कैन यहां उपलब्ध नहीं है।'
   },
   ar: {
-    appName: 'Authenticator - 2FA',
+    appName: 'المصادِق - 2FA',
     tagline: 'رموز 2FA مشفرة لتسجيل الدخول الآمن.',
     setupTitle: 'إنشاء خزنة مشفرة',
     unlockTitle: 'فتح الخزنة',
@@ -456,7 +456,7 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     scanPageUnavailable: 'مسح الصفحة غير متاح هنا.'
   },
   bn: {
-    appName: 'Authenticator - 2FA',
+    appName: 'প্রমাণীকরণকারী - 2FA',
     tagline: 'নিরাপদ সাইন-ইনের জন্য এনক্রিপ্টেড 2FA কোড।',
     setupTitle: 'এনক্রিপ্টেড ভল্ট তৈরি করুন',
     unlockTitle: 'ভল্ট খুলুন',
@@ -543,7 +543,7 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     scanPageUnavailable: 'পেজ স্ক্যান এখানে উপলব্ধ নয়।'
   },
   pt: {
-    appName: 'Authenticator - 2FA',
+    appName: 'Autenticador - 2FA',
     tagline: 'Códigos 2FA criptografados para entradas seguras.',
     setupTitle: 'Criar cofre criptografado',
     unlockTitle: 'Desbloquear cofre',
@@ -630,7 +630,7 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     scanPageUnavailable: 'O escaneamento de página não está disponível aqui.'
   },
   ru: {
-    appName: 'Authenticator - 2FA',
+    appName: 'Аутентификатор - 2FA',
     tagline: 'Зашифрованные 2FA-коды для безопасного входа.',
     setupTitle: 'Создать зашифрованное хранилище',
     unlockTitle: 'Разблокировать хранилище',
@@ -717,7 +717,7 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     scanPageUnavailable: 'Сканирование страницы здесь недоступно.'
   },
   ja: {
-    appName: 'Authenticator - 2FA',
+    appName: '認証アプリ - 2FA',
     tagline: '安全なサインインのための暗号化された2FAコード。',
     setupTitle: '暗号化ボールトを作成',
     unlockTitle: 'ボールトを解除',
@@ -804,7 +804,7 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     scanPageUnavailable: 'ページスキャンはここでは利用できません。'
   },
   fr: {
-    appName: 'Authenticator - 2FA',
+    appName: 'Authentificateur - 2FA',
     tagline: 'Codes 2FA chiffrés pour des connexions sécurisées.',
     setupTitle: 'Créer un coffre chiffré',
     unlockTitle: 'Déverrouiller le coffre',
@@ -891,7 +891,7 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     scanPageUnavailable: 'Le scan de page n’est pas disponible ici.'
   },
   de: {
-    appName: 'Authenticator - 2FA',
+    appName: 'Authentifikator - 2FA',
     tagline: 'Verschlüsselte 2FA-Codes für sichere Anmeldungen.',
     setupTitle: 'Verschlüsselten Tresor erstellen',
     unlockTitle: 'Tresor entsperren',
@@ -978,7 +978,7 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     scanPageUnavailable: 'Seitenscan ist hier nicht verfügbar.'
   },
   zh: {
-    appName: 'Authenticator - 2FA',
+    appName: '身份验证器 - 2FA',
     tagline: '用于安全登录的加密 2FA 代码。',
     setupTitle: '创建加密保险库',
     unlockTitle: '解锁保险库',

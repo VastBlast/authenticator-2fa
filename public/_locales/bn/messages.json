@@ -1,15 +1,15 @@
 {
   "extensionName": {
-    "message": "Authenticator - 2FA"
+    "message": "প্রমাণীকরণকারী - 2FA"
   },
   "extensionShortName": {
-    "message": "Authenticator"
+    "message": "প্রমাণীকরণকারী"
   },
   "extensionDescription": {
     "message": "নিরাপদ সাইন-ইনের জন্য এনক্রিপ্টেড 2FA কোড।"
   },
   "actionTitle": {
-    "message": "Authenticator - 2FA খুলুন"
+    "message": "প্রমাণীকরণকারী - 2FA খুলুন"
   },
   "scanPageCommandDescription": {
     "message": "বর্তমান পেজ থেকে QR কোড স্ক্যান করুন"
