@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Authenticator - 2FA",
   "short_name": "Authenticator",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "description": "Encrypted 2FA codes for secure sign-ins.",
   "homepage_url": "https://github.com/VastBlast/authenticator-2fa",
   "action": {
