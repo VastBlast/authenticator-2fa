@@ -2,6 +2,8 @@
 
 Browser extension for generating and managing two-factor authentication codes.
 
+**Privacy:** Authenticator - 2FA strictly does not track users, collect analytics, or collect user data. Account secrets and codes stay stored locally on the user's device and are not sent to a remote service.
+
 ![Authenticator - 2FA promo](store-assets/promotional/marquee-promo-tile.png)
 
 ## Features
@@ -12,6 +14,8 @@ Browser extension for generating and managing two-factor authentication codes.
 - Import/export otpauth text and encrypted backups.
 - Optional local vault password protection.
 - Local-first storage with no account service.
+
+**Important: Users are responsible for maintaining their own backups of 2FA codes and recovery methods. We are not responsible for lost, deleted, inaccessible, or unrecoverable 2FA codes.**
 
 ## Development
 
