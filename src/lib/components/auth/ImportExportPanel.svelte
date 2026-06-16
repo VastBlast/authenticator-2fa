@@ -15,7 +15,6 @@
 
   let { accounts, settings, tr, onimport, onimportencrypted }: Props = $props();
 
-  let activeTab = $state<'import' | 'export'>('import');
   let importText = $state('');
   let importPassword = $state('');
   let exportPassword = $state('');
@@ -24,21 +23,36 @@
   let busy = $state(false);
 
   async function runImport() {
+    if (!importText.trim()) {
+      error = 'Paste authenticator text before importing.';
+      status = '';
+      return;
+    }
+
     await run(async () => {
       const result = await onimport(importText);
-      status = `${result.imported} imported, ${result.skipped} skipped.`;
-      importText = '';
+      setImportStatus(result);
+      if (result.imported > 0) {
+        importText = '';
+      }
     });
   }
 
   async function importEncryptedFile(event: Event) {
+    if (!importPassword) {
+      error = 'Enter the backup password before selecting the encrypted backup.';
+      status = '';
+      resetFileInput(event);
+      return;
+    }
+
     const text = await readFirstFile(event);
     if (!text) {
       return;
     }
     await run(async () => {
       const result = await onimportencrypted(text, importPassword);
-      status = `${result.imported} imported.`;
+      setImportStatus(result);
       importPassword = '';
     });
   }
@@ -48,25 +62,32 @@
     if (!text) {
       return;
     }
-    importText = text;
-    await runImport();
+
+    await run(async () => {
+      const result = await onimport(text);
+      setImportStatus(result);
+    });
   }
 
   async function importQrImages(event: Event) {
     const target = event.target as HTMLInputElement;
-    if (!target.files?.length) {
+    const files = Array.from(target.files ?? []);
+    target.value = '';
+    if (files.length === 0) {
       return;
     }
 
     await run(async () => {
-      const decoded = await decodeQrFiles(target.files ?? []);
+      const decoded = await decodeQrFiles(files);
       const result = await onimport(decoded.join('\n'));
-      status = `${result.imported} imported from QR image${decoded.length === 1 ? '' : 's'}.`;
+      setImportStatus(result, ` from QR image${decoded.length === 1 ? '' : 's'}`);
     });
   }
 
   function exportOtpText() {
     downloadBlob(exportPlainOtpAuth(accounts), 'authenticator-otpauth.txt');
+    status = 'Plain otpauth export downloaded.';
+    error = '';
   }
 
   async function exportEncrypted() {
@@ -94,87 +115,119 @@
   async function readFirstFile(event: Event): Promise<string> {
     const target = event.target as HTMLInputElement;
     const file = target.files?.[0];
+    target.value = '';
     return file ? file.text() : '';
+  }
+
+  function resetFileInput(event: Event): void {
+    (event.target as HTMLInputElement).value = '';
+  }
+
+  function setImportStatus(result: ImportResult, source = ''): void {
+    if (result.imported === 0) {
+      error = result.errors[0] ?? 'No accounts found to import.';
+      return;
+    }
+
+    const skipped = result.skipped > 0 ? `, ${result.skipped} skipped` : '';
+    status = `${result.imported} imported${source}${skipped}.`;
   }
 </script>
 
-<section class="panel">
-  <div role="tablist" class="tabs tabs-box">
-    <button
-      role="tab"
-      class={['tab', activeTab === 'import' && 'tab-active']}
-      type="button"
-      onclick={() => (activeTab = 'import')}
-    >
-      {tr('import')}
-    </button>
-    <button
-      role="tab"
-      class={['tab', activeTab === 'export' && 'tab-active']}
-      type="button"
-      onclick={() => (activeTab = 'export')}
-    >
-      {tr('export')}
-    </button>
+<section class="grid gap-4 rounded-box border border-base-300 bg-base-100 p-3 shadow-sm">
+  <div class="grid gap-1">
+    <h2 class="text-base font-bold leading-tight">{tr('importTitle')}</h2>
+    <p class="text-sm leading-snug text-base-content/65">{tr('importText')}</p>
   </div>
 
-  {#if activeTab === 'import'}
-    <div class="form-stack">
-      <label class="field">
-        <span>{tr('importText')}</span>
-        <textarea class="textarea import-textarea" bind:value={importText} spellcheck="false"></textarea>
-      </label>
-      <button class="btn btn-primary" type="button" onclick={runImport} disabled={busy || !importText.trim()}>
-        <Upload size={16} aria-hidden="true" />
-        {tr('import')}
-      </button>
+  <div class="grid gap-3">
+    <label class="grid gap-1.5 text-sm font-semibold">
+      <span>{tr('manual')}</span>
+      <textarea
+        class="textarea min-h-36 w-full font-mono text-sm leading-relaxed"
+        bind:value={importText}
+        placeholder="otpauth://totp/..."
+        spellcheck="false"
+      ></textarea>
+    </label>
 
-      <div class="file-row">
-        <label class="file-action">
-          <FileText size={18} aria-hidden="true" />
-          <span>{tr('import')}</span>
-          <input type="file" accept=".txt,.json,text/plain,application/json" onchange={importTextFile} />
-        </label>
-        <label class="file-action">
-          <ImageUp size={18} aria-hidden="true" />
-          <span>{tr('qrImage')}</span>
-          <input type="file" accept="image/*" multiple onchange={importQrImages} />
-        </label>
-      </div>
+    <button class="btn btn-primary btn-block" type="button" onclick={runImport} disabled={busy || !importText.trim()}>
+      <Upload size={16} aria-hidden="true" />
+      {#if busy}
+        <span class="loading loading-spinner loading-sm"></span>
+      {/if}
+      {tr('import')}
+    </button>
 
-      <label class="field">
-        <span>{tr('backupPassword')}</span>
-        <input class="input" type="password" bind:value={importPassword} />
+    <div class="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2">
+      <label class="grid gap-1.5 text-sm font-semibold">
+        <span class="flex min-w-0 items-center gap-2">
+          <FileText size={16} aria-hidden="true" />
+          {tr('importFile')}
+        </span>
+        <input
+          class="file-input"
+          type="file"
+          accept=".txt,.json,text/plain,application/json"
+          disabled={busy}
+          onchange={importTextFile}
+        />
       </label>
-      <label class="file-action wide">
-        <FileJson size={18} aria-hidden="true" />
-        <span>{tr('importEncrypted')}</span>
-        <input type="file" accept=".json,application/json" onchange={importEncryptedFile} />
+
+      <label class="grid gap-1.5 text-sm font-semibold">
+        <span class="flex min-w-0 items-center gap-2">
+          <ImageUp size={16} aria-hidden="true" />
+          {tr('qrImage')}
+        </span>
+        <input class="file-input" type="file" accept="image/*" multiple disabled={busy} onchange={importQrImages} />
       </label>
     </div>
-  {:else}
-    <div class="form-stack">
-      <div class="alert alert-warning" role="alert">{tr('plainWarning')}</div>
-      <button class="btn" type="button" onclick={exportOtpText} disabled={accounts.length === 0}>
-        <Download size={16} aria-hidden="true" />
-        {tr('exportOtp')}
-      </button>
 
-      <label class="field">
+    <div class="grid gap-3 rounded-box border border-base-300 bg-base-200/50 p-3">
+      <label class="grid gap-1.5 text-sm font-semibold">
         <span>{tr('backupPassword')}</span>
-        <input class="input" type="password" bind:value={exportPassword} />
+        <input class="input w-full" type="password" bind:value={importPassword} autocomplete="current-password" />
       </label>
-      <button class="btn btn-primary" type="button" onclick={exportEncrypted} disabled={accounts.length === 0 || !exportPassword}>
-        <Download size={16} aria-hidden="true" />
-        {tr('exportEncrypted')}
-      </button>
+
+      <label class="grid gap-1.5 text-sm font-semibold">
+        <span class="flex min-w-0 items-center gap-2">
+          <FileJson size={16} aria-hidden="true" />
+          {tr('importEncrypted')}
+        </span>
+        <input class="file-input" type="file" accept=".json,application/json" disabled={busy} onchange={importEncryptedFile} />
+      </label>
     </div>
-  {/if}
+  </div>
 
   {#if status}
-    <div class="alert alert-success" role="status">{status}</div>
+    <div class="alert alert-success py-2 text-sm" role="status">{status}</div>
   {/if}
   {#if error}
-    <div class="alert alert-error" role="alert">{error}</div>
+    <div class="alert alert-error py-2 text-sm" role="alert">{error}</div>
   {/if}
+
+  <div class="border-t border-base-300"></div>
+
+  <div class="grid gap-1">
+    <h2 class="text-base font-bold leading-tight">{tr('exportTitle')}</h2>
+  </div>
+
+  <div class="grid gap-3">
+    <div class="alert alert-warning py-2 text-sm" role="alert">{tr('plainWarning')}</div>
+
+    <button class="btn btn-block" type="button" onclick={exportOtpText} disabled={accounts.length === 0 || busy}>
+      <Download size={16} aria-hidden="true" />
+      {tr('exportOtp')}
+    </button>
+
+    <label class="grid gap-1.5 text-sm font-semibold">
+      <span>{tr('backupPassword')}</span>
+      <input class="input w-full" type="password" bind:value={exportPassword} autocomplete="new-password" />
+    </label>
+
+    <button class="btn btn-primary btn-block" type="button" onclick={exportEncrypted} disabled={accounts.length === 0 || !exportPassword || busy}>
+      <Download size={16} aria-hidden="true" />
+      {tr('exportEncrypted')}
+    </button>
+  </div>
 </section>

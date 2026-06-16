@@ -32,36 +32,45 @@
   }
 </script>
 
-<section class="gate">
-  <div class="brand-lock">
-    {#if hasVault}
-      <LockKeyhole size={34} aria-hidden="true" />
-    {:else}
-      <KeyRound size={34} aria-hidden="true" />
-    {/if}
-  </div>
-  <h1>{hasVault ? tr('unlockTitle') : tr('setupTitle')}</h1>
-  <p>{tr('tagline')}</p>
+<section class="grid min-h-dvh place-items-center py-6">
+  <div class="grid w-full max-w-sm gap-5">
+    <div class="grid gap-3">
+      <div class="grid size-14 place-items-center rounded-box bg-primary text-primary-content shadow-sm">
+        {#if hasVault}
+          <LockKeyhole size={32} aria-hidden="true" />
+        {:else}
+          <KeyRound size={32} aria-hidden="true" />
+        {/if}
+      </div>
+      <div class="grid gap-1">
+        <h1 class="text-2xl font-bold leading-tight">{hasVault ? tr('unlockTitle') : tr('setupTitle')}</h1>
+        <p class="text-sm leading-snug text-base-content/65">{tr('tagline')}</p>
+      </div>
+    </div>
 
-  <form class="gate-form" onsubmit={submit}>
-    <label class="field">
-      <span>{hasVault ? tr('password') : tr('newPassword')}</span>
-      <input class="input" type="password" bind:value={password} autocomplete="current-password" required />
-    </label>
-
-    {#if !hasVault}
-      <label class="field">
-        <span>{tr('confirmPassword')}</span>
-        <input class="input" type="password" bind:value={confirmation} autocomplete="new-password" required />
+    <form class="grid gap-3" onsubmit={submit}>
+      <label class="grid gap-1.5 text-sm font-semibold">
+        <span>{hasVault ? tr('password') : tr('newPassword')}</span>
+        <input class="input w-full" type="password" bind:value={password} autocomplete="current-password" required />
       </label>
-    {/if}
 
-    {#if localError}
-      <div class="alert alert-error" role="alert">{localError}</div>
-    {/if}
+      {#if !hasVault}
+        <label class="grid gap-1.5 text-sm font-semibold">
+          <span>{tr('confirmPassword')}</span>
+          <input class="input w-full" type="password" bind:value={confirmation} autocomplete="new-password" required />
+        </label>
+      {/if}
 
-    <button class="btn btn-primary btn-block" type="submit" disabled={busy}>
-      {hasVault ? tr('unlock') : tr('createVault')}
-    </button>
-  </form>
+      {#if localError}
+        <div class="alert alert-error py-2 text-sm" role="alert">{localError}</div>
+      {/if}
+
+      <button class="btn btn-primary btn-block" type="submit" disabled={busy}>
+        {#if busy}
+          <span class="loading loading-spinner loading-sm"></span>
+        {/if}
+        {hasVault ? tr('unlock') : tr('createVault')}
+      </button>
+    </form>
+  </div>
 </section>

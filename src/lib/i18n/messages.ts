@@ -9,6 +9,8 @@ export type MessageKey =
   | 'createVault'
   | 'unlock'
   | 'lock'
+  | 'accounts'
+  | 'transfer'
   | 'addAccount'
   | 'editAccount'
   | 'save'
@@ -39,17 +41,28 @@ export type MessageKey =
   | 'qrImage'
   | 'camera'
   | 'importText'
+  | 'importFile'
+  | 'importTitle'
   | 'importEncrypted'
   | 'backupPassword'
+  | 'exportTitle'
   | 'exportOtp'
   | 'exportEncrypted'
   | 'plainWarning'
+  | 'appearance'
+  | 'preferences'
+  | 'codeDisplay'
   | 'language'
   | 'theme'
   | 'light'
   | 'dark'
   | 'copyWithSpaces'
   | 'scanPage'
+  | 'scanPageStart'
+  | 'scanPageWaiting'
+  | 'scanPageNoQr'
+  | 'scanPageFailed'
+  | 'scanPageUnavailable'
   | 'cameraUnavailable';
 
 export const LANGUAGES = [
@@ -77,6 +90,8 @@ const en: Record<MessageKey, string> = {
   createVault: 'Create vault',
   unlock: 'Unlock',
   lock: 'Lock',
+  accounts: 'Codes',
+  transfer: 'Transfer',
   addAccount: 'Add account',
   editAccount: 'Edit account',
   save: 'Save',
@@ -107,17 +122,28 @@ const en: Record<MessageKey, string> = {
   qrImage: 'QR image',
   camera: 'Camera',
   importText: 'Paste otpauth, Google migration, or backup text',
+  importFile: 'Text or JSON file',
+  importTitle: 'Import',
   importEncrypted: 'Import encrypted backup',
   backupPassword: 'Backup password',
+  exportTitle: 'Export',
   exportOtp: 'Export otpauth text',
   exportEncrypted: 'Export encrypted backup',
   plainWarning: 'Plain otpauth exports contain live secrets.',
+  appearance: 'Appearance',
+  preferences: 'Preferences',
+  codeDisplay: 'Code display',
   language: 'Language',
   theme: 'Theme',
   light: 'Light',
   dark: 'Dark',
   copyWithSpaces: 'Copy codes with spacing',
   scanPage: 'Scan page',
+  scanPageStart: 'Select QR on page',
+  scanPageWaiting: 'Select the QR code area in the page.',
+  scanPageNoQr: 'No QR code was found in that selection.',
+  scanPageFailed: 'Page scan failed. Try a tighter selection or use QR image import.',
+  scanPageUnavailable: 'Page scan is unavailable in this browser context.',
   cameraUnavailable: 'Camera scan is unavailable in this browser context.'
 };
 

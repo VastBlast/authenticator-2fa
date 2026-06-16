@@ -1,17 +1,29 @@
-chrome.runtime.onMessage.addListener((message, sender) => {
+interface MessageResponse {
+  ok: boolean;
+  error?: string;
+}
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type === 'start-page-scan') {
-    void startPageScan();
+    respond(sendResponse, startPageScan());
     return true;
   }
 
   if (message?.type === 'page-scan:capture') {
-    void captureSelection(sender.tab?.windowId, sender.tab?.id, message.rect);
+    respond(sendResponse, captureSelection(sender.tab?.windowId, sender.tab?.id, message.rect));
     return true;
   }
 
   if (message?.type === 'page-scan:image') {
     sendRuntimeMessage({ type: 'page-scan:ready', dataUrl: message.dataUrl });
-    return true;
+    sendResponse({ ok: true });
+    return undefined;
+  }
+
+  if (message?.type === 'page-scan:failed') {
+    sendRuntimeMessage({ type: 'page-scan:failed', message: message.message });
+    sendResponse({ ok: true });
+    return undefined;
   }
 
   return undefined;
@@ -20,7 +32,11 @@ chrome.runtime.onMessage.addListener((message, sender) => {
 async function startPageScan(): Promise<void> {
   const tab = await getActiveTab();
   if (!tab?.id) {
-    return;
+    throw new Error('No active tab is available to scan.');
+  }
+
+  if (isRestrictedPage(tab.url)) {
+    throw new Error('Page scan is unavailable on browser, extension, or store pages.');
   }
 
   await executeScript(tab.id, 'assets/pageScanner.js');
@@ -33,11 +49,21 @@ async function captureSelection(
   rect: unknown
 ): Promise<void> {
   if (!tabId || !isCaptureRect(rect)) {
-    return;
+    throw new Error('No scan area was selected.');
   }
 
   const dataUrl = await captureVisibleTab(windowId);
   await sendTabMessage(tabId, { type: 'page-scan:screenshot', dataUrl, rect });
+}
+
+function respond(sendResponse: (response: MessageResponse) => void, action: Promise<void>): void {
+  action
+    .then(() => sendResponse({ ok: true }))
+    .catch((error) => {
+      const message = error instanceof Error ? error.message : 'Page scan failed.';
+      sendRuntimeMessage({ type: 'page-scan:failed', message });
+      sendResponse({ ok: false, error: message });
+    });
 }
 
 function getActiveTab(): Promise<chrome.tabs.Tab | undefined> {
@@ -106,4 +132,12 @@ function isCaptureRect(value: unknown): value is {
       (key) => typeof (value as Record<string, unknown>)[key] === 'number'
     )
   );
+}
+
+function isRestrictedPage(url: string | undefined): boolean {
+  if (!url) {
+    return true;
+  }
+
+  return /^(chrome|edge|about|moz-extension|chrome-extension|devtools):/i.test(url);
 }

@@ -11,14 +11,20 @@ let selection: HTMLDivElement | null = null;
 let startX = 0;
 let startY = 0;
 
-chrome.runtime.onMessage.addListener((message) => {
+interface MessageResponse {
+  ok: boolean;
+  error?: string;
+}
+
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type === 'page-scan:start') {
     showOverlay();
-    return true;
+    sendResponse({ ok: true });
+    return undefined;
   }
 
   if (message?.type === 'page-scan:screenshot') {
-    void cropScreenshot(message.dataUrl, message.rect);
+    respond(sendResponse, cropScreenshot(message.dataUrl, message.rect));
     return true;
   }
 
@@ -52,6 +58,7 @@ function showOverlay(): void {
   overlay.addEventListener('pointermove', resizeSelection);
   overlay.addEventListener('pointerup', finishSelection);
   overlay.addEventListener('contextmenu', (event) => event.preventDefault());
+  document.addEventListener('keydown', cancelOnEscape, true);
   document.documentElement.append(overlay);
 }
 
@@ -77,10 +84,11 @@ function finishSelection(event: PointerEvent): void {
   removeOverlay();
 
   if (rect.width < 12 || rect.height < 12) {
+    reportFailure('No scan area was selected.');
     return;
   }
 
-  chrome.runtime.sendMessage({ type: 'page-scan:capture', rect });
+  sendRuntimeMessage({ type: 'page-scan:capture', rect });
 }
 
 function drawSelection(currentX: number, currentY: number): void {
@@ -115,7 +123,7 @@ async function cropScreenshot(dataUrl: string, rect: CaptureRect): Promise<void>
   canvas.height = Math.max(1, Math.round(rect.height * scale));
   const context = canvas.getContext('2d');
   if (!context) {
-    return;
+    throw new Error('Unable to read the selected page area.');
   }
 
   context.drawImage(
@@ -130,11 +138,42 @@ async function cropScreenshot(dataUrl: string, rect: CaptureRect): Promise<void>
     canvas.height
   );
 
-  chrome.runtime.sendMessage({ type: 'page-scan:image', dataUrl: canvas.toDataURL('image/png') });
+  sendRuntimeMessage({ type: 'page-scan:image', dataUrl: canvas.toDataURL('image/png') });
 }
 
 function removeOverlay(): void {
   overlay?.remove();
   overlay = null;
   selection = null;
+  document.removeEventListener('keydown', cancelOnEscape, true);
+}
+
+function cancelOnEscape(event: KeyboardEvent): void {
+  if (event.key !== 'Escape' || !overlay) {
+    return;
+  }
+
+  event.preventDefault();
+  removeOverlay();
+  reportFailure('Page scan cancelled.');
+}
+
+function respond(sendResponse: (response: MessageResponse) => void, action: Promise<void>): void {
+  action
+    .then(() => sendResponse({ ok: true }))
+    .catch((error) => {
+      const message = error instanceof Error ? error.message : 'Page scan failed.';
+      reportFailure(message);
+      sendResponse({ ok: false, error: message });
+    });
+}
+
+function reportFailure(message: string): void {
+  sendRuntimeMessage({ type: 'page-scan:failed', message });
+}
+
+function sendRuntimeMessage(message: unknown): void {
+  chrome.runtime.sendMessage(message, () => {
+    void chrome.runtime.lastError;
+  });
 }

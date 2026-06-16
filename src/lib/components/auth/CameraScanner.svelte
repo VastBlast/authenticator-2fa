@@ -45,14 +45,21 @@
   onDestroy(stop);
 </script>
 
-<div class="camera-panel">
-  <video class="camera-preview" bind:this={video} muted playsinline></video>
+<div class="grid gap-3">
+  <div class="relative overflow-hidden rounded-box border border-base-300 bg-base-200">
+    <video class="aspect-video min-h-44 w-full object-cover" bind:this={video} muted playsinline></video>
+    {#if !scanning}
+      <div class="pointer-events-none absolute inset-0 grid place-items-center text-base-content/45">
+        <Camera size={34} aria-hidden="true" />
+      </div>
+    {/if}
+  </div>
 
   {#if error}
-    <div class="alert alert-error" role="alert">{error}</div>
+    <div class="alert alert-error py-2 text-sm" role="alert">{error}</div>
   {/if}
 
-  <div class="dialog-actions">
+  <div class="grid">
     {#if scanning}
       <button class="btn" type="button" onclick={stop}>
         <Square size={16} aria-hidden="true" />
