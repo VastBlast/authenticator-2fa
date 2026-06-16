@@ -31,14 +31,15 @@ export function updateAccount(
   account: AuthenticatorAccount,
   patch: Partial<AccountDraft>
 ): AuthenticatorAccount {
+  const type = patch.type ?? account.type;
   const next: AuthenticatorAccount = {
     ...account,
     issuer: patch.issuer === undefined ? account.issuer : patch.issuer.trim(),
     label: patch.label === undefined ? account.label : patch.label.trim(),
     secret: patch.secret === undefined ? account.secret : normalizeBase32(patch.secret),
-    type: patch.type ?? account.type,
+    type,
     algorithm: patch.algorithm ?? account.algorithm,
-    digits: patch.type === 'steam' ? 5 : patch.digits ?? account.digits,
+    digits: type === 'steam' ? 5 : patch.digits ?? account.digits,
     period: patch.period ?? account.period,
     counter: Math.max(0, Math.trunc(patch.counter ?? account.counter)),
     updatedAt: new Date().toISOString()

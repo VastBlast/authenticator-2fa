@@ -38,11 +38,17 @@ export function readProtoFields(bytes: Uint8Array): ProtoField[] {
     }
 
     if (wireType === 5) {
+      if (offset + 4 > bytes.length) {
+        throw new Error('Invalid protobuf fixed32 field.');
+      }
       offset += 4;
       continue;
     }
 
     if (wireType === 1) {
+      if (offset + 8 > bytes.length) {
+        throw new Error('Invalid protobuf fixed64 field.');
+      }
       offset += 8;
       continue;
     }

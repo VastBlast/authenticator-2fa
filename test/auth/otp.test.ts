@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 import { encodeBase32 } from '../../src/lib/auth/base32';
-import { hotp } from '../../src/lib/auth/otp';
+import { createAccount, hotp, updateAccount } from '../../src/lib/auth/otp';
 import { parseGoogleAuthenticatorMigration, parseOtpAuthUri } from '../../src/lib/auth/otpauth';
 
 const rfcSecret = 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ';
@@ -58,6 +58,19 @@ test('Google Authenticator migration protobuf payloads are decoded', () => {
   expect(account.issuer).toBe('Example');
   expect(account.label).toBe('alice@example.com');
   expect(account.secret).toBe(rfcSecret);
+});
+
+test('updating a Steam account preserves the 5 character code length', () => {
+  const account = createAccount({
+    label: 'Steam',
+    secret: rfcSecret,
+    type: 'steam'
+  });
+
+  const updated = updateAccount(account, { label: 'Steam account', digits: 8 });
+
+  expect(updated.type).toBe('steam');
+  expect(updated.digits).toBe(5);
 });
 
 function protoMessage(parts: Uint8Array[]): Uint8Array {
