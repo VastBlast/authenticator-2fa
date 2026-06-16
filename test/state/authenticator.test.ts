@@ -98,6 +98,7 @@ describe('AuthenticatorVault persistence and locking', () => {
     const vault = new AuthenticatorVault();
     await vault.initialize();
     await vault.importText(MULTI_IMPORT);
+    const noticeBeforeReorder = vault.notice;
 
     const byLabel = accountsByLabel(vault.sortedAccounts);
     await vault.reorderAccounts([
@@ -106,7 +107,7 @@ describe('AuthenticatorVault persistence and locking', () => {
       byLabel.get('bob@example.com')?.id ?? ''
     ]);
 
-    expect(vault.notice).toBe('Account order updated.');
+    expect(vault.notice).toBe(noticeBeforeReorder);
     expect(accountLabels(vault.sortedAccounts)).toEqual([
       'carol@example.com',
       'alice@example.com',

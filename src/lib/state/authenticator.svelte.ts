@@ -139,7 +139,7 @@ export class AuthenticatorVault {
       return;
     }
 
-    await this.persistData({ accounts, settings: this.settings }, 'Account order updated.');
+    await this.persistData({ accounts, settings: this.settings });
   }
 
   async advanceHotp(id: string): Promise<void> {
@@ -354,7 +354,7 @@ export class AuthenticatorVault {
     return { imported: additions.length, skipped };
   }
 
-  private async persistData(data: VaultData, message: string): Promise<void> {
+  private async persistData(data: VaultData, message?: string): Promise<void> {
     const normalizedData = normalizeVaultData(data);
 
     if (this.passwordProtected) {
@@ -378,7 +378,9 @@ export class AuthenticatorVault {
     this.applyUnlockedData(normalizedData);
     this.hasVault = true;
     this.locked = false;
-    this.notice = message;
+    if (message) {
+      this.notice = message;
+    }
   }
 
   private async saveSessionKey(key: CryptoKey, envelope: VaultEnvelope): Promise<void> {
