@@ -63,6 +63,9 @@ export class AuthenticatorVault {
     try {
       const stored = await loadStoredVault();
       await this.applyStoredVault(stored);
+      if (!this.locked) {
+        await this.refreshCodes();
+      }
     } finally {
       this.initialized = true;
       this.busy = false;

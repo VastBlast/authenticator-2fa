@@ -24,15 +24,15 @@
   --color-neutral-content: oklch(96% 0.005 250);
   --color-info: oklch(60% 0.15 235);
   --color-info-content: oklch(98% 0.015 235);
-  --color-success: oklch(55% 0.14 145);
-  --color-success-content: oklch(98% 0.015 145);
+  --color-success: oklch(56% 0.15 163);
+  --color-success-content: oklch(98% 0.015 163);
   --color-warning: oklch(74% 0.16 75);
   --color-warning-content: oklch(22% 0.03 75);
   --color-error: oklch(58% 0.19 25);
   --color-error-content: oklch(98% 0.015 25);
   --radius-selector: .5rem;
-  --radius-field: .25rem;
-  --radius-box: .5rem;
+  --radius-field: .625rem;
+  --radius-box: .875rem;
   --size-selector: .25rem;
   --size-field: .25rem;
   --border: 1px;
@@ -58,8 +58,8 @@
   --color-neutral-content: oklch(17% 0.015 250);
   --color-info: oklch(72% 0.13 235);
   --color-info-content: oklch(16% 0.025 235);
-  --color-success: oklch(72% 0.13 145);
-  --color-success-content: oklch(16% 0.025 145);
+  --color-success: oklch(72% 0.14 163);
+  --color-success-content: oklch(16% 0.025 163);
   --color-warning: oklch(78% 0.14 75);
   --color-warning-content: oklch(17% 0.025 75);
   --color-error: oklch(70% 0.16 25);
@@ -75,7 +75,7 @@
 }
 
 :root {
-  --auth-popup-width: 430px;
+  --auth-popup-width: 400px;
   --auth-popup-height: 600px;
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;

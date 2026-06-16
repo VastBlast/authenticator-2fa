@@ -6,8 +6,7 @@ const vaultData: VaultData = {
   accounts: [],
   settings: {
     language: 'en',
-    theme: 'light',
-    copyWithSpaces: false
+    theme: 'light'
   }
 };
 

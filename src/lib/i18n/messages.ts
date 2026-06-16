@@ -1,3 +1,5 @@
+import { authenticatorVault } from '../state/authenticator.svelte';
+
 export type MessageKey =
   | 'appName'
   | 'tagline'
@@ -34,8 +36,13 @@ export type MessageKey =
   | 'steam'
   | 'search'
   | 'empty'
+  | 'emptyHint'
+  | 'noResults'
   | 'copy'
+  | 'copied'
   | 'next'
+  | 'pin'
+  | 'unpin'
   | 'edit'
   | 'delete'
   | 'showQr'
@@ -55,22 +62,24 @@ export type MessageKey =
   | 'exportEncrypted'
   | 'plainWarning'
   | 'appearance'
-  | 'preferences'
   | 'security'
   | 'currentPassword'
   | 'setPassword'
   | 'changePassword'
   | 'removePassword'
+  | 'passwordProtection'
   | 'passwordProtectionOn'
   | 'passwordProtectionOff'
+  | 'protectionOnHint'
+  | 'protectionOffHint'
+  | 'passwordHint'
+  | 'turnOff'
   | 'deleteVault'
   | 'deleteVaultConfirm'
-  | 'codeDisplay'
   | 'language'
   | 'theme'
   | 'light'
   | 'dark'
-  | 'copyWithSpaces'
   | 'scanPage'
   | 'scanPageStart'
   | 'scanPageWaiting'
@@ -127,9 +136,14 @@ const en: Record<MessageKey, string> = {
   hotp: 'Counter-based',
   steam: 'Steam',
   search: 'Search',
-  empty: 'No accounts yet.',
+  empty: 'No codes yet',
+  emptyHint: 'Add an account to start generating 2FA codes.',
+  noResults: 'No matching accounts.',
   copy: 'Copy',
-  next: 'Next',
+  copied: 'Copied to clipboard',
+  next: 'Next code',
+  pin: 'Pin to top',
+  unpin: 'Unpin',
   edit: 'Edit',
   delete: 'Delete',
   showQr: 'Show QR',
@@ -149,22 +163,24 @@ const en: Record<MessageKey, string> = {
   exportEncrypted: 'Export encrypted backup',
   plainWarning: 'Plain otpauth exports contain live secrets.',
   appearance: 'Appearance',
-  preferences: 'Preferences',
   security: 'Security',
   currentPassword: 'Current password',
   setPassword: 'Set password',
   changePassword: 'Change password',
   removePassword: 'Remove password',
+  passwordProtection: 'Password protection',
   passwordProtectionOn: 'Password protection is on.',
   passwordProtectionOff: 'Password protection is off.',
+  protectionOnHint: 'Your vault is encrypted and locked with a password.',
+  protectionOffHint: 'Add a password to encrypt and lock your vault.',
+  passwordHint: 'Use at least 8 characters.',
+  turnOff: 'Turn off protection',
   deleteVault: 'Delete vault and password',
   deleteVaultConfirm: 'Type DELETE to remove all saved accounts.',
-  codeDisplay: 'Code display',
   language: 'Language',
   theme: 'Theme',
   light: 'Light',
   dark: 'Dark',
-  copyWithSpaces: 'Copy codes with spacing',
   scanPage: 'Scan page',
   scanPageStart: 'Select QR on page',
   scanPageWaiting: 'Select the QR code area in the page.',
@@ -359,4 +375,14 @@ const dictionaries: Record<string, Partial<Record<MessageKey, string>>> = {
 
 export function t(language: string, key: MessageKey): string {
   return dictionaries[language]?.[key] ?? en[key];
+}
+
+/**
+ * Reactive translation helper bound to the active vault language.
+ * Reading `vault.settings.language` inside a component's reactive context
+ * makes every `tr(...)` call re-evaluate when the language changes, so
+ * components don't need to thread a `tr` prop around.
+ */
+export function tr(key: MessageKey): string {
+  return t(authenticatorVault.settings.language, key);
 }

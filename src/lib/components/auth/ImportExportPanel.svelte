@@ -3,17 +3,16 @@
   import { downloadBlob, exportEncryptedBackup, exportPlainOtpAuth } from '../../auth/backup';
   import { decodeQrFiles } from '../../auth/qr';
   import type { AppSettings, AuthenticatorAccount, ImportResult } from '../../auth/types';
-  import type { MessageKey } from '../../i18n/messages';
+  import { tr } from '../../i18n/messages';
 
   interface Props {
     accounts: AuthenticatorAccount[];
     settings: AppSettings;
-    tr: (key: MessageKey) => string;
     onimport: (text: string) => Promise<ImportResult>;
     onimportencrypted: (text: string, password: string) => Promise<ImportResult>;
   }
 
-  let { accounts, settings, tr, onimport, onimportencrypted }: Props = $props();
+  let { accounts, settings, onimport, onimportencrypted }: Props = $props();
 
   let importText = $state('');
   let importPassword = $state('');

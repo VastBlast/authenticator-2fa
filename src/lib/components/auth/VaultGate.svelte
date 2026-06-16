@@ -1,16 +1,15 @@
 <script lang="ts">
   import { KeyRound, LockKeyhole } from '@lucide/svelte';
-  import type { MessageKey } from '../../i18n/messages';
+  import { tr } from '../../i18n/messages';
 
   interface Props {
     hasVault: boolean;
     busy: boolean;
-    tr: (key: MessageKey) => string;
     oncreate: (password: string) => void | Promise<void>;
     onunlock: (password: string) => void | Promise<void>;
   }
 
-  let { hasVault, busy, tr, oncreate, onunlock }: Props = $props();
+  let { hasVault, busy, oncreate, onunlock }: Props = $props();
   let password = $state('');
   let confirmation = $state('');
   let localError = $state('');
@@ -32,10 +31,10 @@
   }
 </script>
 
-<section class="grid place-items-center py-4">
-  <div class="grid w-full max-w-sm gap-5">
-    <div class="grid gap-3">
-      <div class="grid size-14 place-items-center rounded-box bg-primary text-primary-content shadow-sm">
+<section class="grid h-full place-items-center p-6">
+  <div class="grid w-full max-w-xs gap-6">
+    <div class="grid justify-items-center gap-3 text-center">
+      <div class="grid size-16 place-items-center rounded-2xl bg-primary text-primary-content shadow-md">
         {#if hasVault}
           <LockKeyhole size={32} aria-hidden="true" />
         {:else}
@@ -43,26 +42,27 @@
         {/if}
       </div>
       <div class="grid gap-1">
-        <h1 class="text-2xl font-bold leading-tight">{hasVault ? tr('unlockTitle') : tr('setupTitle')}</h1>
-        <p class="text-sm leading-snug text-base-content/65">{tr('tagline')}</p>
+        <h1 class="text-xl font-bold tracking-tight">{hasVault ? tr('unlockTitle') : tr('setupTitle')}</h1>
+        <p class="text-sm leading-snug text-base-content/60">{tr('tagline')}</p>
       </div>
     </div>
 
     <form class="grid gap-3" onsubmit={submit}>
-      <label class="grid gap-1.5 text-sm font-semibold">
+      <label class="grid gap-1 text-sm font-medium">
         <span>{hasVault ? tr('password') : tr('newPassword')}</span>
-        <input class="input w-full" type="password" bind:value={password} autocomplete="current-password" required />
+        <!-- svelte-ignore a11y_autofocus -->
+        <input class="input w-full" type="password" bind:value={password} autocomplete="current-password" autofocus required />
       </label>
 
       {#if !hasVault}
-        <label class="grid gap-1.5 text-sm font-semibold">
+        <label class="grid gap-1 text-sm font-medium">
           <span>{tr('confirmPassword')}</span>
           <input class="input w-full" type="password" bind:value={confirmation} autocomplete="new-password" required />
         </label>
       {/if}
 
       {#if localError}
-        <div class="alert alert-error py-2 text-sm" role="alert">{localError}</div>
+        <p class="text-sm text-error" role="alert">{localError}</p>
       {/if}
 
       <button class="btn btn-primary btn-block" type="submit" disabled={busy}>

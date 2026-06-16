@@ -75,8 +75,7 @@ describe('AuthenticatorVault persistence and locking', () => {
 
     await vault.replaceSettings({
       language: 'fr',
-      theme: 'dark',
-      copyWithSpaces: true
+      theme: 'dark'
     });
 
     expect(vault.hasVault).toBe(true);
@@ -88,7 +87,6 @@ describe('AuthenticatorVault persistence and locking', () => {
 
     expect(reopened.settings.language).toBe('fr');
     expect(reopened.settings.theme).toBe('dark');
-    expect(reopened.settings.copyWithSpaces).toBe(true);
   });
 
   test('enables password protection and restores unlocked state for the extension session', async () => {
