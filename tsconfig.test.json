@@ -6,5 +6,5 @@
     "checkJs": false,
     "noEmit": true
   },
-  "include": ["src/lib/**/*.ts", "test/**/*.ts"]
+  "include": ["src/**/*.d.ts", "src/lib/**/*.ts", "test/**/*.ts"]
 }

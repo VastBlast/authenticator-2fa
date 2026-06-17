@@ -1,8 +1,8 @@
-import { decodeQrFromCanvas } from './qrCanvas';
+import { decodeQrImageData } from './qrDecode';
 
 const QR_DECODE_ERROR = 'No QR code was found in that selection.';
 
-export async function decodeQrDataUrlInWorker(dataUrl: string): Promise<string> {
+export async function decodeQrDataUrlInWorker(dataUrl: string) {
   if (typeof OffscreenCanvas === 'undefined' || typeof createImageBitmap === 'undefined') {
     throw new Error('Page scan decoding is unavailable here.');
   }
@@ -11,12 +11,18 @@ export async function decodeQrDataUrlInWorker(dataUrl: string): Promise<string> 
   const bitmap = await createImageBitmap(blob);
   try {
     const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
-    const context = getCanvasContext(canvas);
+    const context = canvas.getContext('2d', { willReadFrequently: true });
+    if (!context) {
+      throw new Error('Canvas rendering is unavailable.');
+    }
+
     context.fillStyle = '#fff';
     context.fillRect(0, 0, canvas.width, canvas.height);
     context.drawImage(bitmap, 0, 0);
 
-    const decoded = await decodeQrFromCanvas(canvas);
+    const decoded = await decodeQrImageData(
+      context.getImageData(0, 0, canvas.width, canvas.height)
+    );
     if (!decoded) {
       throw new Error(QR_DECODE_ERROR);
     }
@@ -26,7 +32,7 @@ export async function decodeQrDataUrlInWorker(dataUrl: string): Promise<string> 
   }
 }
 
-export function dataUrlToBlob(dataUrl: string): Blob {
+export function dataUrlToBlob(dataUrl: string) {
   const match = /^data:([^,]*),(.*)$/s.exec(dataUrl);
   if (!match) {
     throw new Error('Page scan failed.');
@@ -50,12 +56,4 @@ export function dataUrlToBlob(dataUrl: string): Blob {
     bytes[index] = binary.charCodeAt(index);
   }
   return new Blob([bytes], { type: mimeType });
-}
-
-function getCanvasContext(canvas: OffscreenCanvas): OffscreenCanvasRenderingContext2D {
-  const context = canvas.getContext('2d', { willReadFrequently: true });
-  if (!context) {
-    throw new Error('Canvas rendering is unavailable.');
-  }
-  return context;
 }
