@@ -1,6 +1,8 @@
 <script lang="ts">
+  import { fade, fly, slide } from 'svelte/transition';
   import { ArrowLeft, ChevronRight, DatabaseBackup, KeyRound, Moon, ShieldCheck, Sun, Trash2 } from '@lucide/svelte';
   import ImportExportPanel from './ImportExportPanel.svelte';
+  import { EXPAND_TRANSITION, FADE_TRANSITION, MODAL_TRANSITION } from './transitions';
   import { authenticatorVault as vault } from '../../state/authenticator.svelte';
   import { LANGUAGES, tr } from '../../i18n/messages';
 
@@ -19,7 +21,6 @@
   let securityError = $state('');
   let showBackup = $state(false);
   let intent = $state<Intent>('idle');
-
   // The switch reflects the desired state, even mid-change before it is applied.
   const wantsProtection = $derived(
     vault.passwordProtected ? intent !== 'disabling' : intent === 'enabling'
@@ -33,6 +34,15 @@
   // Surface vault-level errors (wrong password, etc.) only while a password
   // change is in progress, alongside local validation messages.
   const passwordError = $derived(securityError || (intent === 'idle' ? '' : vault.error));
+  const securityPanel = $derived.by((): 'password' | 'disable' | 'change' | null => {
+    if (intent === 'enabling' || intent === 'changing') {
+      return 'password';
+    }
+    if (intent === 'disabling') {
+      return 'disable';
+    }
+    return vault.passwordProtected ? 'change' : null;
+  });
 
   function setLanguage(language: string) {
     void vault.replaceSettings({ ...vault.settings, language });
@@ -195,60 +205,64 @@
         />
       </label>
 
-      {#if intent === 'enabling' || intent === 'changing'}
-        <div class="space-y-2 rounded-box bg-base-200/60 p-3">
-          {#if intent === 'changing'}
-            <label class="grid gap-1.5">
-              <span class="text-sm font-medium">{tr('currentPassword')}</span>
-              <input class="input input-sm w-full" type="password" bind:value={currentPassword} autocomplete="current-password" />
-            </label>
+      {#if securityPanel}
+        <div transition:slide={EXPAND_TRANSITION}>
+          {#if securityPanel === 'password'}
+            <div class="space-y-2 rounded-box bg-base-200/60 p-3">
+              {#if intent === 'changing'}
+                <label class="grid gap-1.5">
+                  <span class="text-sm font-medium">{tr('currentPassword')}</span>
+                  <input class="input input-sm w-full" type="password" bind:value={currentPassword} autocomplete="current-password" />
+                </label>
+              {/if}
+              <label class="grid gap-1.5">
+                <span class="text-sm font-medium">{tr('newPassword')}</span>
+                <!-- svelte-ignore a11y_autofocus -->
+                <input class="input input-sm w-full" type="password" bind:value={newPassword} autocomplete="new-password" autofocus />
+                <span class="text-xs text-base-content/50">{tr('passwordHint')}</span>
+              </label>
+              <label class="grid gap-1.5">
+                <span class="text-sm font-medium">{tr('confirmPassword')}</span>
+                <input class="input input-sm w-full" type="password" bind:value={confirmNewPassword} autocomplete="new-password" />
+              </label>
+              <div class="grid grid-cols-2 gap-2 pt-1">
+                <button class="btn btn-sm" type="button" onclick={cancel}>{tr('cancel')}</button>
+                <button class="btn btn-primary btn-sm" type="button" onclick={applyPassword} disabled={!canApply}>
+                  {#if vault.busy}
+                    <span class="loading loading-spinner loading-xs"></span>
+                  {/if}
+                  {intent === 'changing' ? tr('changePassword') : tr('setPassword')}
+                </button>
+              </div>
+            </div>
+          {:else if securityPanel === 'disable'}
+            <div class="space-y-2 rounded-box border border-warning/40 bg-warning/10 p-3">
+              <label class="grid gap-1.5">
+                <span class="text-sm font-medium">{tr('currentPassword')}</span>
+                <!-- svelte-ignore a11y_autofocus -->
+                <input class="input input-sm w-full" type="password" bind:value={currentPassword} autocomplete="current-password" />
+              </label>
+              <div class="grid grid-cols-2 gap-2 pt-1">
+                <button class="btn btn-sm" type="button" onclick={cancel}>{tr('cancel')}</button>
+                <button class="btn btn-warning btn-sm" type="button" onclick={disableProtection} disabled={vault.busy || !currentPassword}>
+                  {#if vault.busy}
+                    <span class="loading loading-spinner loading-xs"></span>
+                  {/if}
+                  {tr('turnOff')}
+                </button>
+              </div>
+            </div>
+          {:else}
+            <button class="btn btn-ghost btn-block btn-sm justify-start" type="button" onclick={startChange}>
+              <KeyRound size={16} aria-hidden="true" />
+              {tr('changePassword')}
+            </button>
           {/if}
-          <label class="grid gap-1.5">
-            <span class="text-sm font-medium">{tr('newPassword')}</span>
-            <!-- svelte-ignore a11y_autofocus -->
-            <input class="input input-sm w-full" type="password" bind:value={newPassword} autocomplete="new-password" autofocus />
-            <span class="text-xs text-base-content/50">{tr('passwordHint')}</span>
-          </label>
-          <label class="grid gap-1.5">
-            <span class="text-sm font-medium">{tr('confirmPassword')}</span>
-            <input class="input input-sm w-full" type="password" bind:value={confirmNewPassword} autocomplete="new-password" />
-          </label>
-          <div class="grid grid-cols-2 gap-2 pt-1">
-            <button class="btn btn-sm" type="button" onclick={cancel}>{tr('cancel')}</button>
-            <button class="btn btn-primary btn-sm" type="button" onclick={applyPassword} disabled={!canApply}>
-              {#if vault.busy}
-                <span class="loading loading-spinner loading-xs"></span>
-              {/if}
-              {intent === 'changing' ? tr('changePassword') : tr('setPassword')}
-            </button>
-          </div>
         </div>
-      {:else if intent === 'disabling'}
-        <div class="space-y-2 rounded-box border border-warning/40 bg-warning/10 p-3">
-          <label class="grid gap-1.5">
-            <span class="text-sm font-medium">{tr('currentPassword')}</span>
-            <!-- svelte-ignore a11y_autofocus -->
-            <input class="input input-sm w-full" type="password" bind:value={currentPassword} autocomplete="current-password" autofocus />
-          </label>
-          <div class="grid grid-cols-2 gap-2 pt-1">
-            <button class="btn btn-sm" type="button" onclick={cancel}>{tr('cancel')}</button>
-            <button class="btn btn-warning btn-sm" type="button" onclick={disableProtection} disabled={vault.busy || !currentPassword}>
-              {#if vault.busy}
-                <span class="loading loading-spinner loading-xs"></span>
-              {/if}
-              {tr('turnOff')}
-            </button>
-          </div>
-        </div>
-      {:else if vault.passwordProtected}
-        <button class="btn btn-ghost btn-block btn-sm justify-start" type="button" onclick={startChange}>
-          <KeyRound size={16} aria-hidden="true" />
-          {tr('changePassword')}
-        </button>
       {/if}
 
       {#if passwordError}
-        <p class="text-sm text-error" role="alert">{passwordError}</p>
+        <p class="text-sm text-error" transition:fade={FADE_TRANSITION} role="alert">{passwordError}</p>
       {/if}
 
       <div class="space-y-2 rounded-box border border-error/30 bg-error/5 p-3">
@@ -268,7 +282,7 @@
 
 {#if showBackup}
   <dialog class="modal modal-open" open>
-    <div class="modal-box max-h-[88dvh] w-[calc(100vw-1.5rem)] max-w-md overflow-y-auto p-4">
+    <div class="modal-box max-h-[88dvh] w-[calc(100vw-1.5rem)] max-w-md overflow-y-auto p-4" transition:fly={MODAL_TRANSITION}>
       <h2 class="mb-3 text-lg font-bold">{tr('importExport')}</h2>
       <ImportExportPanel
         accounts={vault.accounts}
@@ -277,6 +291,6 @@
         onimportencrypted={(text, password) => vault.importEncryptedBackupText(text, password)}
       />
     </div>
-    <button class="modal-backdrop" type="button" onclick={() => (showBackup = false)}>close</button>
+    <button class="modal-backdrop" type="button" transition:fade={FADE_TRANSITION} onclick={() => (showBackup = false)}>close</button>
   </dialog>
 {/if}

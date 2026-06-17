@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
+  import { fade, fly } from 'svelte/transition';
   import {
     ClipboardPaste,
     Download,
@@ -19,6 +20,7 @@
   import AppBar from './lib/components/auth/AppBar.svelte';
   import SettingsView from './lib/components/auth/SettingsView.svelte';
   import VaultGate from './lib/components/auth/VaultGate.svelte';
+  import { FADE_TRANSITION, MODAL_TRANSITION, PANEL_TRANSITION } from './lib/components/auth/transitions';
   import { accountToOtpAuthUri } from './lib/auth/otpauth';
   import { decodeQrFiles, renderQrDataUrl } from './lib/auth/qr';
   import type { AccountDraft, AuthenticatorAccount, ImportResult } from './lib/auth/types';
@@ -64,7 +66,6 @@
     { mode: 'manual', key: 'addManual', icon: KeyRound },
     { mode: 'paste', key: 'addPaste', icon: ClipboardPaste }
   ];
-
   let view = $state<View>('codes');
   let query = $state('');
   let dragAccounts = $state.raw<AuthenticatorAccount[] | null>(null);
@@ -729,82 +730,88 @@
     {#if pageScanError}
       <p class="px-6 pb-4 text-center text-sm text-error" role="alert">{pageScanError}</p>
     {/if}
-  {:else if view === 'settings'}
-    <SettingsView onback={() => (view = 'codes')} />
   {:else}
-    <AppBar onsettings={() => (view = 'settings')} />
+    {#key view}
+      <section class="absolute inset-0 flex min-h-0 flex-col overflow-hidden" transition:fade={FADE_TRANSITION}>
+        {#if view === 'settings'}
+          <SettingsView onback={() => (view = 'codes')} />
+        {:else}
+          <AppBar onsettings={() => (view = 'settings')} />
 
-    <div class="flex grow flex-col overflow-y-auto pb-20" bind:this={scrollContainerElement}>
-      {#if vault.accounts.length > 0}
-        <div class="sticky top-0 z-10 bg-base-100/95 px-3 py-2 backdrop-blur">
-          <label class="input input-sm w-full items-center gap-2">
-            <Search class="shrink-0 text-base-content/45" size={16} aria-hidden="true" />
-            <input class="grow" type="search" placeholder={tr('search')} bind:value={query} />
-          </label>
-        </div>
-      {/if}
+          <div class="flex grow flex-col overflow-y-auto pb-20" bind:this={scrollContainerElement}>
+            {#if vault.accounts.length > 0}
+              <div class="sticky top-0 z-10 bg-base-100/95 px-3 py-2 backdrop-blur">
+                <label class="input input-sm w-full items-center gap-2">
+                  <Search class="shrink-0 text-base-content/45" size={16} aria-hidden="true" />
+                  <input class="grow" type="search" placeholder={tr('search')} bind:value={query} />
+                </label>
+              </div>
+            {/if}
 
-      {#if filteredAccounts.length > 0}
-        <ul
-          class="divide-y divide-base-200"
-          aria-label={tr('reorderAccounts')}
-          bind:this={accountListElement}
-        >
-          {#each filteredAccounts as account (account.id)}
-            <AccountRow
-              {account}
-              code={vault.codes[account.id]}
-              reorderDisabled={reorderDisabled}
-              dragging={activeDragAccountId === account.id}
-              dragStyle={getAccountDragStyle(account)}
-              onactions={(item) => (actionsFor = item)}
-              onreorderstart={startAccountDrag}
-              onreorderkey={handleAccountDragKey}
-              onreorderblur={handleAccountDragBlur}
-            />
-          {/each}
-        </ul>
-      {:else if vault.accounts.length === 0}
-        <div class="grid grow place-items-center p-8 text-center">
-          <div class="grid justify-items-center gap-3">
-            <div class="grid size-16 place-items-center rounded-2xl bg-base-200 text-base-content/40">
-              <KeyRound size={30} aria-hidden="true" />
-            </div>
-            <div class="grid gap-1">
-              <p class="text-base font-semibold">{tr('empty')}</p>
-              <p class="max-w-60 text-sm text-base-content/60">{tr('emptyHint')}</p>
-            </div>
-            <button class="btn btn-primary btn-sm mt-1" type="button" onclick={() => openAddDialog('qr')}>
-              <Plus size={16} aria-hidden="true" />
-              {tr('addAccount')}
-            </button>
+            {#if filteredAccounts.length > 0}
+              <ul
+                class="divide-y divide-base-200"
+                aria-label={tr('reorderAccounts')}
+                bind:this={accountListElement}
+              >
+                {#each filteredAccounts as account (account.id)}
+                  <AccountRow
+                    {account}
+                    code={vault.codes[account.id]}
+                    reorderDisabled={reorderDisabled}
+                    dragging={activeDragAccountId === account.id}
+                    dragStyle={getAccountDragStyle(account)}
+                    onactions={(item) => (actionsFor = item)}
+                    onreorderstart={startAccountDrag}
+                    onreorderkey={handleAccountDragKey}
+                    onreorderblur={handleAccountDragBlur}
+                  />
+                {/each}
+              </ul>
+            {:else if vault.accounts.length === 0}
+              <div class="grid grow place-items-center p-8 text-center">
+                <div class="grid justify-items-center gap-3">
+                  <div class="grid size-16 place-items-center rounded-2xl bg-base-200 text-base-content/40">
+                    <KeyRound size={30} aria-hidden="true" />
+                  </div>
+                  <div class="grid gap-1">
+                    <p class="text-base font-semibold">{tr('empty')}</p>
+                    <p class="max-w-60 text-sm text-base-content/60">{tr('emptyHint')}</p>
+                  </div>
+                  <button class="btn btn-primary btn-sm mt-1" type="button" onclick={() => openAddDialog('qr')}>
+                    <Plus size={16} aria-hidden="true" />
+                    {tr('addAccount')}
+                  </button>
+                </div>
+              </div>
+            {:else}
+              <p class="p-8 text-center text-sm text-base-content/55">{tr('noResults')}</p>
+            {/if}
           </div>
-        </div>
-      {:else}
-        <p class="p-8 text-center text-sm text-base-content/55">{tr('noResults')}</p>
-      {/if}
-    </div>
 
-    {#if vault.accounts.length > 0}
-      <button
-        class="btn btn-circle btn-primary btn-lg absolute bottom-4 right-4 z-20 shadow-lg"
-        type="button"
-        aria-label={tr('addAccount')}
-        title={tr('addAccount')}
-        onclick={() => openAddDialog('qr')}
-      >
-        <Plus size={24} aria-hidden="true" />
-      </button>
-    {/if}
+          {#if vault.accounts.length > 0}
+            <button
+              class="btn btn-circle btn-primary btn-lg absolute bottom-4 right-4 z-20 shadow-lg"
+              type="button"
+              aria-label={tr('addAccount')}
+              title={tr('addAccount')}
+              onclick={() => openAddDialog('qr')}
+            >
+              <Plus size={24} aria-hidden="true" />
+            </button>
+          {/if}
 
-    <!-- Transient feedback -->
-    <div class="toast toast-center toast-bottom z-30 mb-2">
-      {#if vault.error}
-        <div class="alert alert-error py-2 text-sm shadow-md" role="alert">{vault.error}</div>
-      {:else if vault.notice}
-        <div class="alert alert-success py-2 text-sm shadow-md" role="status">{vault.notice}</div>
-      {/if}
-    </div>
+          <!-- Transient feedback -->
+          <div class="toast toast-center toast-bottom z-30 mb-2">
+            {#if vault.error}
+              <div class="alert alert-error py-2 text-sm shadow-md" transition:fade={FADE_TRANSITION} role="alert">{vault.error}</div>
+            {:else if vault.notice}
+              <div class="alert alert-success py-2 text-sm shadow-md" transition:fade={FADE_TRANSITION} role="status">{vault.notice}</div>
+            {/if}
+          </div>
+        {/if}
+      </section>
+    {/key}
   {/if}
 </main>
 
@@ -812,7 +819,7 @@
 {#if actionsFor}
   {@const account = actionsFor}
   <dialog class="modal modal-bottom modal-open sm:modal-middle" open>
-    <div class="modal-box p-0">
+    <div class="modal-box p-0" transition:fly={MODAL_TRANSITION}>
       <div class="border-b border-base-200 px-4 py-3">
         <p class="truncate font-semibold">{accountTitle(account)}</p>
       </div>
@@ -834,14 +841,14 @@
         </li>
       </ul>
     </div>
-    <button class="modal-backdrop" type="button" onclick={() => (actionsFor = null)}>close</button>
+    <button class="modal-backdrop" type="button" transition:fade={FADE_TRANSITION} onclick={() => (actionsFor = null)}>close</button>
   </dialog>
 {/if}
 
 <!-- Add account -->
 {#if showAdd}
   <dialog class="modal modal-open" open>
-    <div class="modal-box max-h-[88dvh] w-[calc(100vw-1.5rem)] max-w-md overflow-y-auto p-4">
+    <div class="modal-box max-h-[88dvh] w-[calc(100vw-1.5rem)] max-w-md overflow-y-auto p-4" transition:fly={MODAL_TRANSITION}>
       <div class="mb-3 flex items-center justify-between gap-2">
         <h2 class="text-lg font-bold">{tr('addAccount')}</h2>
         <button class="btn btn-ghost btn-sm btn-circle" type="button" aria-label={tr('cancel')} onclick={() => (showAdd = false)}>
@@ -864,7 +871,7 @@
       </div>
 
       {#if addMode === 'qr'}
-        <div class="mt-4 grid gap-3">
+        <div class="mt-4 grid gap-3" in:fly={PANEL_TRANSITION}>
           <p class="text-sm leading-snug text-base-content/60">{tr('addQrDescription')}</p>
 
           <button class="btn btn-primary btn-block" type="button" onclick={startPageScan} disabled={pageScanBusy || addBusy}>
@@ -888,27 +895,27 @@
           </label>
 
           {#if pageScanMessage}
-            <div class="alert alert-info py-2 text-sm" role="status">{pageScanMessage}</div>
+            <div class="alert alert-info py-2 text-sm" transition:fade={FADE_TRANSITION} role="status">{pageScanMessage}</div>
           {/if}
           {#if pageScanError}
-            <div class="alert alert-error py-2 text-sm" role="alert">{pageScanError}</div>
+            <div class="alert alert-error py-2 text-sm" transition:fade={FADE_TRANSITION} role="alert">{pageScanError}</div>
           {/if}
           {#if addStatus}
-            <div class="alert alert-info py-2 text-sm" role="status">{addStatus}</div>
+            <div class="alert alert-info py-2 text-sm" transition:fade={FADE_TRANSITION} role="status">{addStatus}</div>
           {/if}
           {#if addError}
-            <div class="alert alert-error py-2 text-sm" role="alert">{addError}</div>
+            <div class="alert alert-error py-2 text-sm" transition:fade={FADE_TRANSITION} role="alert">{addError}</div>
           {/if}
         </div>
       {:else if addMode === 'manual'}
-        {#if formError}
-          <div class="alert alert-error my-3 py-2 text-sm" role="alert">{formError}</div>
-        {/if}
-        <div class="mt-4">
+        <div class="mt-4" in:fly={PANEL_TRANSITION}>
+          {#if formError}
+            <div class="alert alert-error mb-3 py-2 text-sm" transition:fade={FADE_TRANSITION} role="alert">{formError}</div>
+          {/if}
           <AccountForm onsubmit={saveNewAccount} oncancel={() => (showAdd = false)} />
         </div>
       {:else}
-        <div class="mt-4 grid gap-3">
+        <div class="mt-4 grid gap-3" in:fly={PANEL_TRANSITION}>
           <p class="text-sm leading-snug text-base-content/60">{tr('addPasteDescription')}</p>
 
           <textarea
@@ -928,36 +935,36 @@
           </button>
 
           {#if addStatus}
-            <div class="alert alert-info py-2 text-sm" role="status">{addStatus}</div>
+            <div class="alert alert-info py-2 text-sm" transition:fade={FADE_TRANSITION} role="status">{addStatus}</div>
           {/if}
           {#if addError}
-            <div class="alert alert-error py-2 text-sm" role="alert">{addError}</div>
+            <div class="alert alert-error py-2 text-sm" transition:fade={FADE_TRANSITION} role="alert">{addError}</div>
           {/if}
         </div>
       {/if}
     </div>
-    <button class="modal-backdrop" type="button" onclick={() => (showAdd = false)}>close</button>
+    <button class="modal-backdrop" type="button" transition:fade={FADE_TRANSITION} onclick={() => (showAdd = false)}>close</button>
   </dialog>
 {/if}
 
 <!-- Edit account -->
 {#if editing}
   <dialog class="modal modal-open" open>
-    <div class="modal-box max-h-[88dvh] w-[calc(100vw-1.5rem)] max-w-md overflow-y-auto p-4">
+    <div class="modal-box max-h-[88dvh] w-[calc(100vw-1.5rem)] max-w-md overflow-y-auto p-4" transition:fly={MODAL_TRANSITION}>
       <h2 class="mb-3 text-lg font-bold">{tr('editAccount')}</h2>
       {#if formError}
-        <div class="alert alert-error mb-3 py-2 text-sm" role="alert">{formError}</div>
+        <div class="alert alert-error mb-3 py-2 text-sm" transition:fade={FADE_TRANSITION} role="alert">{formError}</div>
       {/if}
       <AccountForm initial={editing} onsubmit={saveEditedAccount} oncancel={() => (editing = null)} />
     </div>
-    <button class="modal-backdrop" type="button" onclick={() => (editing = null)}>close</button>
+    <button class="modal-backdrop" type="button" transition:fade={FADE_TRANSITION} onclick={() => (editing = null)}>close</button>
   </dialog>
 {/if}
 
 <!-- Delete confirmation -->
 {#if deleting}
   <dialog class="modal modal-open" open>
-    <div class="modal-box w-[calc(100vw-1.5rem)] max-w-sm p-4">
+    <div class="modal-box w-[calc(100vw-1.5rem)] max-w-sm p-4" transition:fly={MODAL_TRANSITION}>
       <h2 class="text-lg font-bold">{tr('delete')}</h2>
       <p class="mt-2 break-words text-sm text-base-content/70">{accountTitle(deleting)}</p>
       <div class="modal-action grid grid-cols-2 gap-2">
@@ -965,28 +972,30 @@
         <button class="btn btn-error" type="button" onclick={deleteSelected}>{tr('delete')}</button>
       </div>
     </div>
-    <button class="modal-backdrop" type="button" onclick={() => (deleting = null)}>close</button>
+    <button class="modal-backdrop" type="button" transition:fade={FADE_TRANSITION} onclick={() => (deleting = null)}>close</button>
   </dialog>
 {/if}
 
 <!-- QR display -->
 {#if qrAccount}
   <dialog class="modal modal-open" open>
-    <div class="modal-box grid w-[calc(100vw-1.5rem)] max-w-sm justify-items-center gap-3 p-4 text-center">
+    <div class="modal-box grid w-[calc(100vw-1.5rem)] max-w-sm justify-items-center gap-3 p-4 text-center" transition:fly={MODAL_TRANSITION}>
       <h2 class="text-lg font-bold">{tr('showQr')}</h2>
       <p class="wrap-break-word text-sm text-base-content/70">{accountTitle(qrAccount)}</p>
       {#if qrDataUrl}
-        <img class="w-full max-w-64 rounded-box border border-base-300 bg-white p-2" src={qrDataUrl} alt={tr('showQr')} />
-        <a class="btn btn-block" href={qrDataUrl} download={`${qrAccount.label || 'account'}-qr.png`}>
-          <Download size={16} aria-hidden="true" />
-          QR
-        </a>
+        <div class="grid w-full justify-items-center gap-3" transition:fade={FADE_TRANSITION}>
+          <img class="w-full max-w-64 rounded-box border border-base-300 bg-white p-2" src={qrDataUrl} alt={tr('showQr')} />
+          <a class="btn btn-block" href={qrDataUrl} download={`${qrAccount.label || 'account'}-qr.png`}>
+            <Download size={16} aria-hidden="true" />
+            QR
+          </a>
+        </div>
       {/if}
       <div class="modal-action mt-0 w-full">
         <button class="btn btn-primary btn-block" type="button" onclick={() => (qrAccount = null)}>{tr('cancel')}</button>
       </div>
     </div>
-    <button class="modal-backdrop" type="button" onclick={() => (qrAccount = null)}>close</button>
+    <button class="modal-backdrop" type="button" transition:fade={FADE_TRANSITION} onclick={() => (qrAccount = null)}>close</button>
   </dialog>
 {/if}
 </div>
