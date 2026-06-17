@@ -1,5 +1,6 @@
+import { normalizeImportedAccounts } from './otp';
 import { parseImportText } from './otpauth';
-import type { AuthenticatorAccount, ImportResult, VaultData } from './types';
+import type { ImportResult, VaultData } from './types';
 
 export function importAnyText(text: string): ImportResult {
   const trimmed = text.trim();
@@ -10,7 +11,7 @@ export function importAnyText(text: string): ImportResult {
   if (trimmed.startsWith('{')) {
     const raw = JSON.parse(trimmed) as Partial<VaultData> | Record<string, unknown>;
     if (Array.isArray((raw as Partial<VaultData>).accounts)) {
-      const accounts = (raw as Partial<VaultData>).accounts as AuthenticatorAccount[];
+      const accounts = normalizeImportedAccounts((raw as Partial<VaultData>).accounts);
       return { accounts, imported: accounts.length, skipped: 0, errors: [] };
     }
   }

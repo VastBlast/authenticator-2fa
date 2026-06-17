@@ -3,7 +3,7 @@ import { toBuffer } from 'qrcode';
 import sharp from 'sharp';
 import { describe, expect, test } from 'vitest';
 import { prepareZXingModule } from 'zxing-wasm/reader';
-import { decodeQrImageData } from '../../src/lib/auth/qrDecode';
+import { decodeQrImageData, QR_IMAGE_TOO_LARGE_ERROR } from '../../src/lib/auth/qrDecode';
 
 const wasm = readFileSync(
   new URL('../../node_modules/zxing-wasm/dist/reader/zxing_reader.wasm', import.meta.url)
@@ -16,6 +16,16 @@ prepareZXingModule({
 });
 
 describe('decodeQrImageData', () => {
+  test('rejects oversized image dimensions before QR decoding', async () => {
+    await expect(
+      decodeQrImageData({
+        data: new Uint8Array(),
+        width: 5000,
+        height: 5000
+      })
+    ).rejects.toThrow(QR_IMAGE_TOO_LARGE_ERROR);
+  });
+
   test('decodes a QR embedded in a larger screenshot', async () => {
     const payload = `otpauth-migration://offline?data=${'A'.repeat(520)}`;
     const qr = await toBuffer(payload, {

@@ -37,6 +37,12 @@ test('otpauth parsing preserves HOTP counters', () => {
   expect(account.digits).toBe(8);
 });
 
+test('otpauth parsing rejects secrets that decode to zero bytes', () => {
+  expect(() => parseOtpAuthUri('otpauth://totp/Example:alice?secret=A&issuer=Example')).toThrow(
+    'Secret is too short.'
+  );
+});
+
 test('Google Authenticator migration protobuf payloads are decoded', () => {
   const accountBytes = protoMessage([
     fieldBytes(1, new TextEncoder().encode('12345678901234567890')),
@@ -58,6 +64,25 @@ test('Google Authenticator migration protobuf payloads are decoded', () => {
   expect(account.issuer).toBe('Example');
   expect(account.label).toBe('alice@example.com');
   expect(account.secret).toBe(rfcSecret);
+});
+
+test('Google Authenticator migration imports are bounded', () => {
+  const accountBytes = protoMessage([
+    fieldBytes(1, new TextEncoder().encode('12345678901234567890')),
+    fieldBytes(2, new TextEncoder().encode('Example:alice@example.com'))
+  ]);
+  const payload = protoMessage(Array.from({ length: 201 }, () => fieldBytes(1, accountBytes)));
+  const data = Buffer.from(payload).toString('base64');
+
+  expect(() =>
+    parseGoogleAuthenticatorMigration(`otpauth-migration://offline?data=${encodeURIComponent(data)}`)
+  ).toThrow('Authenticator migration contains too many accounts.');
+});
+
+test('Google Authenticator migration rejects oversized data before protobuf parsing', () => {
+  expect(() =>
+    parseGoogleAuthenticatorMigration(`otpauth-migration://offline?data=${'A'.repeat(70_000)}`)
+  ).toThrow('Authenticator migration import is too large.');
 });
 
 test('updating a Steam account preserves the 5 character code length', () => {

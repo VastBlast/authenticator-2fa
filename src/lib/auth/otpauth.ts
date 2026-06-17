@@ -3,6 +3,15 @@ import { createAccount } from './otp';
 import { readProtoFields } from './protobuf';
 import type { AccountDraft, AuthenticatorAccount, ImportResult, OtpAlgorithm, OtpType } from './types';
 
+const MAX_MIGRATION_URI_LENGTH = 64_000;
+const MAX_MIGRATION_PAYLOAD_BYTES = 48_000;
+const MAX_MIGRATION_DATA_CHARS = 65_536;
+const MAX_MIGRATION_FIELDS = 2_000;
+const MAX_MIGRATION_ACCOUNT_FIELDS = 32;
+const MAX_MIGRATION_FIELD_BYTES = 8_192;
+const MAX_MIGRATION_ACCOUNTS = 200;
+const MIGRATION_TOO_LARGE_ERROR = 'Authenticator migration import is too large.';
+
 interface MigrationOtpParameters {
   secret?: Uint8Array;
   name?: string;
@@ -98,11 +107,26 @@ export function exportOtpAuthText(accounts: AuthenticatorAccount[]): string {
 }
 
 export function parseGoogleAuthenticatorMigration(uri: string): AuthenticatorAccount[] {
+  if (uri.length > MAX_MIGRATION_URI_LENGTH) {
+    throw new Error(MIGRATION_TOO_LARGE_ERROR);
+  }
+
   const data = getMigrationData(uri);
+  if (data.length > MAX_MIGRATION_DATA_CHARS) {
+    throw new Error(MIGRATION_TOO_LARGE_ERROR);
+  }
+
   const payload = base64ToBytes(data);
+  if (payload.length > MAX_MIGRATION_PAYLOAD_BYTES) {
+    throw new Error(MIGRATION_TOO_LARGE_ERROR);
+  }
+
   const accounts: AuthenticatorAccount[] = [];
 
-  for (const field of readProtoFields(payload)) {
+  for (const field of readProtoFields(payload, {
+    maxFields: MAX_MIGRATION_FIELDS,
+    maxLengthDelimitedBytes: MAX_MIGRATION_FIELD_BYTES
+  })) {
     if (field.fieldNumber !== 1 || field.wireType !== 2 || !(field.value instanceof Uint8Array)) {
       continue;
     }
@@ -113,6 +137,9 @@ export function parseGoogleAuthenticatorMigration(uri: string): AuthenticatorAcc
     }
 
     const draft = migrationOtpToDraft(otp);
+    if (accounts.length >= MAX_MIGRATION_ACCOUNTS) {
+      throw new Error('Authenticator migration contains too many accounts.');
+    }
     accounts.push(createAccount(draft));
   }
 
@@ -138,7 +165,10 @@ function parseMigrationOtp(bytes: Uint8Array): MigrationOtpParameters {
   const decoder = new TextDecoder();
   const otp: MigrationOtpParameters = {};
 
-  for (const field of readProtoFields(bytes)) {
+  for (const field of readProtoFields(bytes, {
+    maxFields: MAX_MIGRATION_ACCOUNT_FIELDS,
+    maxLengthDelimitedBytes: MAX_MIGRATION_FIELD_BYTES
+  })) {
     if (field.wireType === 2 && field.value instanceof Uint8Array) {
       if (field.fieldNumber === 1) {
         otp.secret = field.value;

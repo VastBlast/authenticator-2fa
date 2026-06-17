@@ -1,6 +1,9 @@
 import { prepareZXingModule, readBarcodes, type ReaderOptions } from 'zxing-wasm/reader';
 import readerWasmUrl from 'zxing-wasm/reader/zxing_reader.wasm?url';
 
+export const MAX_QR_IMAGE_PIXELS = 16_000_000;
+export const QR_IMAGE_TOO_LARGE_ERROR = 'Selected image is too large to scan as a QR code.';
+
 const READER_OPTIONS = {
   formats: ['QRCode'],
   maxNumberOfSymbols: 1,
@@ -20,13 +23,25 @@ export async function decodeQrImageData(imageData: {
   height: number;
 }) {
   if (
-    imageData.width < 1 ||
-    imageData.height < 1 ||
-    imageData.data.length < imageData.width * imageData.height * 4
+    !Number.isSafeInteger(imageData.width) ||
+    imageData.width <= 0 ||
+    !Number.isSafeInteger(imageData.height) ||
+    imageData.height <= 0
   ) {
+    return '';
+  }
+
+  assertQrImageBounds(imageData.width, imageData.height);
+  if (imageData.data.length < imageData.width * imageData.height * 4) {
     return '';
   }
 
   const results = await readBarcodes(imageData as ImageData, READER_OPTIONS);
   return results.find(({ text }) => text)?.text ?? '';
+}
+
+export function assertQrImageBounds(width: number, height: number): void {
+  if (width * height > MAX_QR_IMAGE_PIXELS) {
+    throw new Error(QR_IMAGE_TOO_LARGE_ERROR);
+  }
 }

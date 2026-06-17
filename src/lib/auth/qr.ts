@@ -1,9 +1,15 @@
 import { toDataURL } from 'qrcode';
-import { decodeQrImageData } from './qrDecode';
+import { assertQrImageBounds, decodeQrImageData, QR_IMAGE_TOO_LARGE_ERROR } from './qrDecode';
 
 const QR_DECODE_ERROR = 'No QR code could be decoded from the selected image. Use a clear image with the whole QR code visible.';
+const MAX_QR_IMAGE_FILES = 20;
+const MAX_QR_IMAGE_FILE_BYTES = 10 * 1024 * 1024;
 
 export async function decodeQrFile(file: File) {
+  if (file.size > MAX_QR_IMAGE_FILE_BYTES) {
+    throw new Error(QR_IMAGE_TOO_LARGE_ERROR);
+  }
+
   const imageUrl = URL.createObjectURL(file);
   try {
     return await decodeQrDataUrl(imageUrl);
@@ -23,6 +29,8 @@ export async function decodeQrDataUrl(imageUrl: string) {
 
   const width = image.naturalWidth || image.width;
   const height = image.naturalHeight || image.height;
+  assertQrImageBounds(width, height);
+
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
@@ -45,13 +53,20 @@ export async function decodeQrDataUrl(imageUrl: string) {
 }
 
 export async function decodeQrFiles(files: FileList | File[]) {
+  if (files.length > MAX_QR_IMAGE_FILES) {
+    throw new Error(`Select ${MAX_QR_IMAGE_FILES} or fewer QR images at a time.`);
+  }
+
   const decoded: string[] = [];
   let failed = false;
 
   for (const file of Array.from(files)) {
     try {
       decoded.push(await decodeQrFile(file));
-    } catch {
+    } catch (error) {
+      if (error instanceof Error && error.message === QR_IMAGE_TOO_LARGE_ERROR) {
+        throw error;
+      }
       failed = true;
     }
   }

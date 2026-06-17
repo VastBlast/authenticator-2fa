@@ -29,6 +29,21 @@ describe('importTextIntoStoredVault', () => {
     expect(stored.data.accounts[0].sortOrder).toBe(0);
   });
 
+  test('rejects malformed JSON account imports before storage', async () => {
+    const malformed = JSON.stringify({
+      accounts: [
+        {
+          id: 'bad-account',
+          label: 'Broken',
+          secret: 'A'
+        }
+      ]
+    });
+
+    await expect(importTextIntoStoredVault(malformed)).rejects.toThrow('Imported account is not valid.');
+    expect(await loadStoredVault()).toBeNull();
+  });
+
   test('reports duplicates without rewriting account order', async () => {
     await importTextIntoStoredVault(ALICE_URI);
 

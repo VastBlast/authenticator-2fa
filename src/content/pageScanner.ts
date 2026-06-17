@@ -86,7 +86,7 @@ function showOverlay(): void {
 }
 
 function startSelection(event: PointerEvent): void {
-  if (!selection) {
+  if (!event.isTrusted || !selection) {
     return;
   }
   startX = event.clientX;
@@ -96,13 +96,17 @@ function startSelection(event: PointerEvent): void {
 }
 
 function resizeSelection(event: PointerEvent): void {
-  if (!selection || selection.style.display === 'none') {
+  if (!event.isTrusted || !selection || selection.style.display === 'none') {
     return;
   }
   drawSelection(event.clientX, event.clientY);
 }
 
 function finishSelection(event: PointerEvent): void {
+  if (!event.isTrusted || !selection || selection.style.display === 'none') {
+    return;
+  }
+
   const rect = getRect(event.clientX, event.clientY);
   removeOverlay();
 

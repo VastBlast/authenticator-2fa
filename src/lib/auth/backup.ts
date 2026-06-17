@@ -1,6 +1,7 @@
 import { createVaultEnvelope, unlockVaultEnvelope } from './vaultCrypto';
 import { exportOtpAuthText } from './otpauth';
 import { importAnyText } from './importText';
+import { normalizeImportedAccounts } from './otp';
 import type { AppSettings, AuthenticatorAccount, ImportResult, VaultEnvelope } from './types';
 
 export { importAnyText };
@@ -39,9 +40,10 @@ export async function importEncryptedBackup(fileText: string, password: string):
   }
 
   const unlocked = await unlockVaultEnvelope(parsed.vault, password);
+  const accounts = normalizeImportedAccounts(unlocked.data.accounts);
   return {
-    accounts: unlocked.data.accounts,
-    imported: unlocked.data.accounts.length,
+    accounts,
+    imported: accounts.length,
     skipped: 0,
     errors: []
   };

@@ -5,6 +5,7 @@ import {
   saveStoredVault,
   saveVaultSessionKey
 } from './storage';
+import { normalizeImportedAccounts } from './otp';
 import type {
   AppSettings,
   AuthenticatorAccount,
@@ -79,8 +80,9 @@ export function mergeImportedAccounts(
   incoming: AuthenticatorAccount[]
 ): MergeResult {
   const existingAccounts = normalizeAccountOrder(existing);
+  const incomingAccounts = normalizeImportedAccounts(incoming);
   const existingFingerprints = new Set(existingAccounts.map(accountFingerprint));
-  const additions = incoming.filter((account) => !existingFingerprints.has(accountFingerprint(account)));
+  const additions = incomingAccounts.filter((account) => !existingFingerprints.has(accountFingerprint(account)));
 
   return {
     accounts: [
@@ -91,7 +93,7 @@ export function mergeImportedAccounts(
       }))
     ],
     imported: additions.length,
-    skipped: incoming.length - additions.length
+    skipped: incomingAccounts.length - additions.length
   };
 }
 

@@ -1,7 +1,15 @@
 import { decodeBase32, normalizeBase32 } from './base32';
-import type { AccountDraft, AuthenticatorAccount, OtpAlgorithm, OtpCode } from './types';
+import {
+  OTP_ALGORITHMS,
+  OTP_TYPES,
+  type AccountDraft,
+  type AuthenticatorAccount,
+  type OtpAlgorithm,
+  type OtpCode
+} from './types';
 
 const STEAM_ALPHABET = '23456789BCDFGHJKMNPQRTVWXY';
+const IMPORTED_ACCOUNT_ERROR = 'Imported account is not valid.';
 
 export function createAccount(draft: AccountDraft): AuthenticatorAccount {
   const now = new Date().toISOString();
@@ -54,7 +62,9 @@ export function validateAccountDraft(draft: AccountDraft): void {
     throw new Error('Account name is required.');
   }
 
-  decodeBase32(draft.secret);
+  if (decodeBase32(draft.secret).length === 0) {
+    throw new Error('Secret is too short.');
+  }
 
   const type = draft.type ?? 'totp';
   if (!['totp', 'hotp', 'steam'].includes(type)) {
@@ -75,6 +85,63 @@ export function validateAccountDraft(draft: AccountDraft): void {
   if (!Number.isInteger(counter) || counter < 0) {
     throw new Error('Counter must be a positive whole number.');
   }
+}
+
+export function normalizeImportedAccounts(accounts: unknown): AuthenticatorAccount[] {
+  if (!Array.isArray(accounts)) {
+    throw new Error('Imported account list is not valid.');
+  }
+
+  return accounts.map(normalizeImportedAccount);
+}
+
+function normalizeImportedAccount(value: unknown): AuthenticatorAccount {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new Error(IMPORTED_ACCOUNT_ERROR);
+  }
+
+  const record = value as Record<string, unknown>;
+  if (typeof record.type !== 'string' || !(OTP_TYPES as readonly string[]).includes(record.type)) {
+    throw new Error(IMPORTED_ACCOUNT_ERROR);
+  }
+  if (
+    typeof record.algorithm !== 'string' ||
+    !(OTP_ALGORITHMS as readonly string[]).includes(record.algorithm)
+  ) {
+    throw new Error(IMPORTED_ACCOUNT_ERROR);
+  }
+  if (typeof record.issuer !== 'string') {
+    throw new Error(IMPORTED_ACCOUNT_ERROR);
+  }
+
+  const account: AuthenticatorAccount = {
+    id: readNonEmptyString(record.id),
+    issuer: record.issuer.trim(),
+    label: readNonEmptyString(record.label).trim(),
+    secret: normalizeBase32(readNonEmptyString(record.secret)),
+    type: record.type as AuthenticatorAccount['type'],
+    algorithm: record.algorithm as AuthenticatorAccount['algorithm'],
+    digits: readInteger(record.digits),
+    period: readInteger(record.period),
+    counter: readInteger(record.counter),
+    createdAt: readNonEmptyString(record.createdAt),
+    updatedAt: readNonEmptyString(record.updatedAt)
+  };
+
+  if (record.sortOrder !== undefined) {
+    const sortOrder = readInteger(record.sortOrder);
+    if (sortOrder < 0) {
+      throw new Error(IMPORTED_ACCOUNT_ERROR);
+    }
+    account.sortOrder = sortOrder;
+  }
+
+  validateAccountDraft(account);
+  if (account.period < 5 || account.period > 300) {
+    throw new Error(IMPORTED_ACCOUNT_ERROR);
+  }
+
+  return account;
 }
 
 export async function generateOtpCode(
@@ -143,4 +210,22 @@ export async function generateSteamCode(secret: string, counter: number): Promis
 
 function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
   return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+}
+
+function readNonEmptyString(value: unknown): string {
+  if (typeof value !== 'string') {
+    throw new Error(IMPORTED_ACCOUNT_ERROR);
+  }
+  const text = value;
+  if (!text.trim()) {
+    throw new Error(IMPORTED_ACCOUNT_ERROR);
+  }
+  return text;
+}
+
+function readInteger(value: unknown): number {
+  if (typeof value !== 'number' || !Number.isSafeInteger(value)) {
+    throw new Error(IMPORTED_ACCOUNT_ERROR);
+  }
+  return value;
 }

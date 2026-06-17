@@ -2,6 +2,9 @@ import { base64ToBytes, bytesToBase64 } from './base32';
 import type { VaultData, VaultEnvelope } from './types';
 
 const KDF_ITERATIONS = 310_000;
+const MIN_KDF_ITERATIONS = 100_000;
+const MAX_KDF_ITERATIONS = 1_000_000;
+const VAULT_PARAMETERS_ERROR = 'Vault encryption parameters are not supported.';
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
@@ -33,7 +36,7 @@ export async function unlockVaultEnvelope(
   envelope: VaultEnvelope,
   password: string
 ): Promise<UnlockedVault> {
-  const salt = base64ToBytes(envelope.kdf.salt);
+  const salt = readSupportedKdfSalt(envelope);
   const key = await deriveKey(password, salt, envelope.kdf.iterations);
   const data = await decryptVaultData(envelope, key);
 
@@ -132,4 +135,40 @@ async function deriveKey(password: string, salt: Uint8Array, iterations = KDF_IT
 
 function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
   return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+}
+
+function readSupportedKdfSalt(envelope: VaultEnvelope): Uint8Array {
+  if (
+    typeof envelope !== 'object' ||
+    envelope === null ||
+    Array.isArray(envelope) ||
+    envelope.version !== 1 ||
+    typeof envelope.kdf !== 'object' ||
+    envelope.kdf === null ||
+    Array.isArray(envelope.kdf)
+  ) {
+    throw new Error(VAULT_PARAMETERS_ERROR);
+  }
+
+  const { kdf } = envelope;
+  if (
+    kdf.name !== 'PBKDF2' ||
+    kdf.hash !== 'SHA-256' ||
+    !Number.isInteger(kdf.iterations) ||
+    kdf.iterations < MIN_KDF_ITERATIONS ||
+    kdf.iterations > MAX_KDF_ITERATIONS ||
+    typeof kdf.salt !== 'string'
+  ) {
+    throw new Error(VAULT_PARAMETERS_ERROR);
+  }
+
+  try {
+    const salt = base64ToBytes(kdf.salt);
+    if (salt.length !== 16) {
+      throw new Error(VAULT_PARAMETERS_ERROR);
+    }
+    return salt;
+  } catch {
+    throw new Error(VAULT_PARAMETERS_ERROR);
+  }
 }

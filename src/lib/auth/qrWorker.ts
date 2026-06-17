@@ -1,4 +1,4 @@
-import { decodeQrImageData } from './qrDecode';
+import { assertQrImageBounds, decodeQrImageData } from './qrDecode';
 
 const QR_DECODE_ERROR = 'No QR code was found in that selection.';
 
@@ -10,6 +10,7 @@ export async function decodeQrDataUrlInWorker(dataUrl: string) {
   const blob = dataUrlToBlob(dataUrl);
   const bitmap = await createImageBitmap(blob);
   try {
+    assertQrImageBounds(bitmap.width, bitmap.height);
     const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
     const context = canvas.getContext('2d', { willReadFrequently: true });
     if (!context) {

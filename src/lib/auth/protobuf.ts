@@ -4,8 +4,13 @@ export interface ProtoField {
   value: bigint | Uint8Array;
 }
 
-export function readProtoFields(bytes: Uint8Array): ProtoField[] {
+export function readProtoFields(
+  bytes: Uint8Array,
+  limits: { maxFields?: number; maxLengthDelimitedBytes?: number } = {}
+): ProtoField[] {
   const fields: ProtoField[] = [];
+  const maxFields = limits.maxFields ?? Number.POSITIVE_INFINITY;
+  const maxLengthDelimitedBytes = limits.maxLengthDelimitedBytes ?? Number.POSITIVE_INFINITY;
   let offset = 0;
 
   while (offset < bytes.length) {
@@ -21,18 +26,25 @@ export function readProtoFields(bytes: Uint8Array): ProtoField[] {
     if (wireType === 0) {
       const value = readVarint(bytes, offset);
       offset = value.nextOffset;
-      fields.push({ fieldNumber, wireType, value: value.value });
+      pushField(fields, { fieldNumber, wireType, value: value.value }, maxFields);
       continue;
     }
 
     if (wireType === 2) {
       const length = readVarint(bytes, offset);
       offset = length.nextOffset;
-      const endOffset = offset + Number(length.value);
+      if (length.value > BigInt(Number.MAX_SAFE_INTEGER)) {
+        throw new Error('Invalid protobuf length-delimited field.');
+      }
+      const byteLength = Number(length.value);
+      if (byteLength > maxLengthDelimitedBytes) {
+        throw new Error('Protobuf length-delimited field is too large.');
+      }
+      const endOffset = offset + byteLength;
       if (endOffset > bytes.length) {
         throw new Error('Invalid protobuf length-delimited field.');
       }
-      fields.push({ fieldNumber, wireType, value: bytes.slice(offset, endOffset) });
+      pushField(fields, { fieldNumber, wireType, value: bytes.slice(offset, endOffset) }, maxFields);
       offset = endOffset;
       continue;
     }
@@ -57,6 +69,13 @@ export function readProtoFields(bytes: Uint8Array): ProtoField[] {
   }
 
   return fields;
+}
+
+function pushField(fields: ProtoField[], field: ProtoField, maxFields: number): void {
+  if (fields.length >= maxFields) {
+    throw new Error('Protobuf message has too many fields.');
+  }
+  fields.push(field);
 }
 
 function readVarint(bytes: Uint8Array, startOffset: number): { value: bigint; nextOffset: number } {
