@@ -167,6 +167,25 @@ async function handleRequest(url, response) {
     return;
   }
 
+  if (path.startsWith('/store-screenshots/')) {
+    const filePath = resolve(screenshotDir, `.${decodeURIComponent(path.replace('/store-screenshots', ''))}`);
+    if (!filePath.startsWith(`${screenshotDir}/`)) {
+      response.writeHead(403);
+      response.end('Forbidden');
+      return;
+    }
+
+    try {
+      const body = await readFile(filePath);
+      response.writeHead(200, { 'content-type': getContentType(filePath) });
+      response.end(body);
+    } catch {
+      response.writeHead(404);
+      response.end('Not found');
+    }
+    return;
+  }
+
   const filePath = resolve(appDir, `.${decodeURIComponent(path === '/' ? '/index.html' : path)}`);
   if (!filePath.startsWith(`${appDir}/`) && filePath !== join(appDir, 'index.html')) {
     response.writeHead(403);
@@ -468,7 +487,7 @@ function renderPromoPage(tile) {
 
       body {
         display: grid;
-        grid-template-columns: ${isMarquee ? 'auto 1fr auto' : '1fr'};
+        grid-template-columns: ${isMarquee ? 'auto minmax(0, 1fr) 360px' : '1fr'};
         align-items: center;
         gap: ${isMarquee ? '44px' : '16px'};
         padding: ${isMarquee ? '64px 92px' : '26px'};
@@ -511,21 +530,17 @@ function renderPromoPage(tile) {
         font-weight: 650;
       }
 
-      .mark {
+      .preview-screenshot {
         display: ${isMarquee ? 'grid' : 'none'};
-        width: 280px;
-        height: 280px;
-        border: 1px solid rgba(26, 115, 232, 0.1);
-        border-radius: 48px;
-        place-items: center;
-        background: rgba(255, 255, 255, 0.58);
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 28px 70px rgba(31, 58, 124, 0.12);
-      }
-
-      .mark img {
-        width: 170px;
-        height: 170px;
-        border-radius: 40px;
+        width: 300px;
+        height: 398px;
+        justify-self: center;
+        border-radius: 20px;
+        overflow: hidden;
+        background-image: url("/store-screenshots/01-codes-overview.png");
+        background-position: -536px -122px;
+        background-size: 960px 600px;
+        box-shadow: 0 24px 58px rgba(31, 58, 124, 0.18);
       }
     </style>
   </head>
@@ -536,7 +551,11 @@ function renderPromoPage(tile) {
       <h1>${escapeHtml(tile.title)}</h1>
       <p>${escapeHtml(tile.body)}</p>
     </section>
-    ${isMarquee ? '<div class="mark" aria-hidden="true"><img src="/store-icons/store-icon128.png" alt="" /></div>' : ''}
+    ${
+      isMarquee
+        ? '<div class="preview-screenshot" aria-hidden="true"></div>'
+        : ''
+    }
   </body>
 </html>`;
 }
