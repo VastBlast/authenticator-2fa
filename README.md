@@ -6,6 +6,10 @@ Browser extension for generating and managing two-factor authentication codes.
 
 ![Authenticator - 2FA promo](assets/store/promotional/marquee-promo-tile.png)
 
+## Install
+
+[![Install from Microsoft Edge Add-ons](https://img.shields.io/badge/Install%20from-Microsoft%20Edge%20Add--ons-0078D7?style=for-the-badge&logo=microsoftedge&logoColor=white)](https://microsoftedge.microsoft.com/addons/detail/lngkiejjggjenmeelgcadhilloeffkdl)
+
 ## Features
 
 - Generate TOTP, HOTP, and Steam-style 2FA codes.
