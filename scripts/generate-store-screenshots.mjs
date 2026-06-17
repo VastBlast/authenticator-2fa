@@ -230,10 +230,10 @@ function renderDemoPage(scenario) {
         align-items: center;
         padding: 64px 86px;
         background:
-          radial-gradient(circle at 18% 18%, rgba(52, 168, 83, 0.14), transparent 28%),
-          radial-gradient(circle at 88% 12%, rgba(26, 115, 232, 0.13), transparent 24%),
-          linear-gradient(135deg, #f8fafc 0%, #eef7f3 56%, #f7fbff 100%);
-        color: #17221f;
+          radial-gradient(circle at 18% 18%, rgba(40, 88, 200, 0.16), transparent 28%),
+          radial-gradient(circle at 88% 12%, rgba(176, 200, 248, 0.28), transparent 24%),
+          linear-gradient(135deg, #f8fbff 0%, #eef3ff 56%, #f7fbff 100%);
+        color: #202124;
       }
 
       body.tall-frame {
@@ -252,7 +252,7 @@ function renderDemoPage(scenario) {
         display: flex;
         align-items: center;
         gap: 16px;
-        color: #33564c;
+        color: #2858c8;
         font-size: 22px;
         font-weight: 760;
       }
@@ -261,13 +261,13 @@ function renderDemoPage(scenario) {
         width: 64px;
         height: 64px;
         border-radius: 18px;
-        box-shadow: 0 14px 34px rgba(20, 36, 33, 0.12);
+        box-shadow: 0 14px 34px rgba(31, 58, 124, 0.14);
       }
 
       h1 {
         max-width: 560px;
         margin: 0;
-        color: #0f1f1a;
+        color: #202124;
         font-size: 64px;
         line-height: 0.96;
         font-weight: 820;
@@ -276,7 +276,7 @@ function renderDemoPage(scenario) {
       p {
         max-width: 540px;
         margin: 0;
-        color: #3d514c;
+        color: #475569;
         font-size: 24px;
         line-height: 1.35;
         font-weight: 500;
@@ -290,14 +290,14 @@ function renderDemoPage(scenario) {
       }
 
       .chip {
-        border: 1px solid rgba(20, 95, 76, 0.18);
+        border: 1px solid rgba(40, 88, 200, 0.18);
         border-radius: 999px;
         background: rgba(255, 255, 255, 0.74);
-        color: #1e5d4f;
+        color: #2858c8;
         padding: 10px 15px;
         font-size: 16px;
         font-weight: 700;
-        box-shadow: 0 12px 30px rgba(15, 31, 26, 0.06);
+        box-shadow: 0 12px 30px rgba(31, 58, 124, 0.08);
       }
 
       .visual {
@@ -311,7 +311,7 @@ function renderDemoPage(scenario) {
         border-radius: 28px;
         overflow: hidden;
         background: rgba(255, 255, 255, 0.78);
-        box-shadow: 0 28px 78px rgba(19, 43, 37, 0.2);
+        box-shadow: 0 28px 78px rgba(31, 58, 124, 0.18);
       }
 
       .bar {
@@ -327,12 +327,12 @@ function renderDemoPage(scenario) {
         width: 12px;
         height: 12px;
         border-radius: 999px;
-        background: #d4ddd9;
+        background: #d8dee9;
       }
 
       .window-title {
         margin-left: 10px;
-        color: #61736e;
+        color: #64748b;
         font-size: 15px;
         font-weight: 700;
       }
@@ -341,7 +341,7 @@ function renderDemoPage(scenario) {
         display: grid;
         place-items: center;
         padding: 16px 0 18px;
-        background: linear-gradient(180deg, rgba(255,255,255,0.76), rgba(239,246,243,0.88));
+        background: linear-gradient(180deg, rgba(255,255,255,0.78), rgba(239,244,255,0.9));
       }
 
       iframe {
@@ -350,7 +350,7 @@ function renderDemoPage(scenario) {
         border: 0;
         border-radius: 20px;
         background: white;
-        box-shadow: 0 18px 44px rgba(16, 38, 32, 0.18);
+        box-shadow: 0 18px 44px rgba(31, 58, 124, 0.16);
       }
     </style>
   </head>
@@ -473,18 +473,18 @@ function renderPromoPage(tile) {
         gap: ${isMarquee ? '44px' : '16px'};
         padding: ${isMarquee ? '64px 92px' : '26px'};
         background:
-          radial-gradient(circle at 18% 20%, rgba(52, 168, 83, 0.18), transparent 29%),
-          radial-gradient(circle at 82% 14%, rgba(26, 115, 232, 0.18), transparent 24%),
-          radial-gradient(circle at 72% 86%, rgba(234, 67, 53, 0.12), transparent 26%),
-          linear-gradient(135deg, #f8fbfa 0%, #eef7f3 56%, #f6fbff 100%);
-        color: #0f1f1a;
+          radial-gradient(circle at 18% 20%, rgba(40, 88, 200, 0.2), transparent 29%),
+          radial-gradient(circle at 82% 14%, rgba(176, 200, 248, 0.28), transparent 24%),
+          radial-gradient(circle at 72% 86%, rgba(251, 188, 4, 0.1), transparent 26%),
+          linear-gradient(135deg, #f8fbff 0%, #eef3ff 56%, #f7fbff 100%);
+        color: #202124;
       }
 
       img {
         width: ${isMarquee ? '128px' : '76px'};
         height: ${isMarquee ? '128px' : '76px'};
         border-radius: ${isMarquee ? '32px' : '22px'};
-        box-shadow: 0 ${isMarquee ? '24px 54px' : '16px 34px'} rgba(19, 43, 37, 0.16);
+        box-shadow: 0 ${isMarquee ? '24px 54px' : '16px 34px'} rgba(31, 58, 124, 0.16);
       }
 
       .copy {
@@ -505,7 +505,7 @@ function renderPromoPage(tile) {
       p {
         max-width: ${isMarquee ? '760px' : '340px'};
         margin: 0;
-        color: #35534b;
+        color: #475569;
         font-size: ${isMarquee ? '29px' : '18px'};
         line-height: 1.28;
         font-weight: 650;
@@ -519,7 +519,7 @@ function renderPromoPage(tile) {
         border-radius: 48px;
         place-items: center;
         background: rgba(255, 255, 255, 0.58);
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 28px 70px rgba(19, 43, 37, 0.12);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 28px 70px rgba(31, 58, 124, 0.12);
       }
 
       .mark img {
