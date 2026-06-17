@@ -74,6 +74,7 @@
   let accountListElement = $state<HTMLUListElement | null>(null);
   let scrollContainerElement = $state<HTMLDivElement | null>(null);
   let activeDragHandle: HTMLElement | null = null;
+  let noticeElement = $state<HTMLDivElement | null>(null);
   let autoScrollFrame = 0;
   let previousBodyUserSelect: string | null = null;
   let showAdd = $state(false);
@@ -140,11 +141,34 @@
 
   // Auto-dismiss transient status messages so they never pile up on screen.
   $effect(() => {
+    const noticeKey = vault.noticeKey;
     if (!vault.notice) {
       return;
     }
-    const id = setTimeout(() => (vault.notice = ''), 2200);
+    const id = setTimeout(() => {
+      if (vault.noticeKey === noticeKey) {
+        vault.clearNotice();
+      }
+    }, 2200);
     return () => clearTimeout(id);
+  });
+  $effect(() => {
+    const noticeKey = vault.noticeKey;
+    const element = noticeElement;
+    if (!vault.notice || !element || prefersReducedMotion()) {
+      return;
+    }
+
+    const animation = element.animate(
+      [
+        { opacity: 0.82, transform: 'scale(0.985)' },
+        { opacity: 1, transform: 'scale(1.012)', offset: 0.65 },
+        { opacity: 1, transform: 'scale(1)' }
+      ],
+      { duration: 160, easing: 'cubic-bezier(0.2, 0, 0, 1)' }
+    );
+    animation.id = `notice-${noticeKey}`;
+    return () => animation.cancel();
   });
   $effect(() => {
     if (!vault.error || vault.locked) {
@@ -715,6 +739,10 @@
   function accountTitle(account: AuthenticatorAccount): string {
     return account.issuer ? `${account.issuer} · ${account.label}` : account.label;
   }
+
+  function prefersReducedMotion(): boolean {
+    return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+  }
 </script>
 
 <svelte:head>
@@ -813,7 +841,7 @@
             {#if vault.error}
               <div class="alert alert-error py-2 text-sm shadow-md" transition:fade={FADE_TRANSITION} role="alert">{vault.error}</div>
             {:else if vault.notice}
-              <div class="alert border-primary bg-primary py-2 text-sm text-primary-content shadow-md" transition:fade={FADE_TRANSITION} role="status">{vault.notice}</div>
+              <div bind:this={noticeElement} class="alert border-primary bg-primary py-2 text-sm text-primary-content shadow-md" transition:fade={FADE_TRANSITION} role="status">{vault.notice}</div>
             {/if}
           </div>
         {/if}

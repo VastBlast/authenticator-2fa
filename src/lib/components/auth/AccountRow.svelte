@@ -40,7 +40,7 @@
       return;
     }
     await navigator.clipboard.writeText(value);
-    vault.notice = tr('copied');
+    vault.showNotice(tr('copied'));
   }
 
   function groupDigits(raw: string): string {

@@ -49,6 +49,7 @@ export class AuthenticatorVault {
   settings = $state.raw<AppSettings>({ ...DEFAULT_SETTINGS });
   codes = $state<Record<string, OtpCode>>({});
   notice = $state('');
+  noticeKey = $state(0);
   error = $state('');
 
   private key: CryptoKey | null = null;
@@ -73,9 +74,6 @@ export class AuthenticatorVault {
 
   async create(password: string): Promise<void> {
     await this.changePassword('', password);
-    if (!this.error) {
-      this.notice = 'Vault password set.';
-    }
   }
 
   async unlock(password: string): Promise<void> {
@@ -105,7 +103,7 @@ export class AuthenticatorVault {
 
   async lock(): Promise<void> {
     if (!this.passwordProtected) {
-      this.notice = 'Password protection is off.';
+      this.showNotice('Password protection is off.');
       return;
     }
 
@@ -114,7 +112,7 @@ export class AuthenticatorVault {
     this.accounts = [];
     this.codes = {};
     this.locked = true;
-    this.notice = 'Vault locked.';
+    this.showNotice('Vault locked.');
   }
 
   async addAccount(draft: AccountDraft): Promise<void> {
@@ -207,7 +205,7 @@ export class AuthenticatorVault {
       this.locked = false;
       await saveStoredVault(unlocked.envelope);
       await this.saveSessionKey(unlocked.key, unlocked.envelope);
-      this.notice = wasPasswordProtected ? 'Vault password changed.' : 'Vault password set.';
+      this.showNotice(wasPasswordProtected ? 'Vault password changed.' : 'Vault password set.');
     } catch (error) {
       this.error = getErrorMessage(error);
     } finally {
@@ -217,7 +215,7 @@ export class AuthenticatorVault {
 
   async removePassword(currentPassword: string): Promise<void> {
     if (!this.passwordProtected) {
-      this.notice = 'Password protection is already off.';
+      this.showNotice('Password protection is already off.');
       return;
     }
     if (!this.encryptedVault) {
@@ -243,7 +241,7 @@ export class AuthenticatorVault {
       this.hasVault = true;
       this.passwordProtected = false;
       this.locked = false;
-      this.notice = 'Vault password removed.';
+      this.showNotice('Vault password removed.');
     } catch (error) {
       this.error = getErrorMessage(error);
     } finally {
@@ -281,6 +279,15 @@ export class AuthenticatorVault {
 
     const entries = await Promise.all(this.accounts.map((account) => generateOtpCode(account, now)));
     this.codes = Object.fromEntries(entries.map((entry) => [entry.accountId, entry]));
+  }
+
+  showNotice(message: string): void {
+    this.notice = message;
+    this.noticeKey += 1;
+  }
+
+  clearNotice(): void {
+    this.notice = '';
   }
 
   private async applyStoredVault(stored: StoredVault | null): Promise<void> {
@@ -332,13 +339,13 @@ export class AuthenticatorVault {
 
   private async mergeAccounts(incoming: AuthenticatorAccount[]): Promise<{ imported: number; skipped: number }> {
     if (incoming.length === 0) {
-      this.notice = 'No accounts were found to import.';
+      this.showNotice('No accounts were found to import.');
       return { imported: 0, skipped: 0 };
     }
 
     const merged = mergeImportedAccounts(this.accounts, incoming);
     if (merged.imported === 0) {
-      this.notice = 'No new accounts were imported.';
+      this.showNotice('No new accounts were imported.');
       return { imported: 0, skipped: merged.skipped };
     }
 
@@ -375,7 +382,7 @@ export class AuthenticatorVault {
     this.hasVault = true;
     this.locked = false;
     if (message) {
-      this.notice = message;
+      this.showNotice(message);
     }
   }
 
@@ -396,7 +403,7 @@ export class AuthenticatorVault {
   }
 
   private clearStatus(): void {
-    this.notice = '';
+    this.clearNotice();
     this.error = '';
   }
 }
