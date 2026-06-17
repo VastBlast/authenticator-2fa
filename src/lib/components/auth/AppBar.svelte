@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { Lock, Settings, ShieldCheck } from '@lucide/svelte';
+  import { Lock, Settings } from '@lucide/svelte';
+  import appIconUrl from '../../../../assets/brand/icons/authenticator-2fa-icon.svg?url';
   import { authenticatorVault as vault } from '../../state/authenticator.svelte';
   import { tr } from '../../i18n/messages';
 
@@ -11,7 +12,7 @@
 </script>
 
 <header class="flex items-center gap-2 border-b border-base-200 px-3 py-2.5">
-  <ShieldCheck class="shrink-0 text-primary" size={22} aria-hidden="true" />
+  <img class="size-5 shrink-0" src={appIconUrl} alt="" aria-hidden="true" draggable="false" />
   <h1 class="grow truncate text-base font-bold tracking-tight">{tr('appName')}</h1>
 
   {#if vault.passwordProtected}
