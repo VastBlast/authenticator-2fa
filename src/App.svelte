@@ -219,7 +219,7 @@
     }
 
     await runAddImport(async () => {
-      addStatus = 'Reading QR image…';
+      addStatus = `Reading QR image${files.length === 1 ? '' : 's'}…`;
       const decoded = await decodeQrFiles(files);
       return vault.importText(decoded.join('\n'));
     });
@@ -877,7 +877,14 @@
               <ImageUp size={16} aria-hidden="true" />
               {tr('qrImage')}
             </span>
-            <input class="file-input file-input-sm w-full" type="file" accept="image/*" disabled={addBusy} onchange={importAddQrImages} />
+            <input
+              class="file-input file-input-sm w-full"
+              type="file"
+              accept="image/*"
+              multiple
+              disabled={addBusy}
+              onchange={importAddQrImages}
+            />
           </label>
 
           {#if pageScanMessage}
