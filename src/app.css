@@ -104,11 +104,12 @@ body,
   min-height: var(--auth-popup-height);
   max-height: var(--auth-popup-height);
   margin: 0;
+  background: var(--color-base-100);
 }
 
 body {
   overflow: hidden;
-  background: var(--color-base-100);
+  color: var(--color-base-content);
 }
 
 button,
@@ -116,4 +117,66 @@ input,
 select,
 textarea {
   font: inherit;
+}
+
+button:focus,
+input:focus,
+select:focus,
+textarea:focus,
+.btn:focus,
+.input:focus,
+.input:focus-within,
+.select:focus,
+.textarea:focus,
+.textarea:focus-within,
+.file-input:focus,
+.toggle:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.btn,
+.input,
+.select,
+.textarea,
+.file-input,
+.toggle {
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    transform 120ms ease;
+}
+
+select:not(:disabled),
+.select:not(:disabled) {
+  cursor: pointer;
+}
+
+.input:focus,
+.input:focus-within,
+.select:focus,
+.textarea:focus,
+.textarea:focus-within,
+.file-input:focus {
+  border-color: color-mix(in oklab, var(--color-base-content) 14%, transparent);
+  background-color: color-mix(in oklab, var(--color-base-200) 45%, var(--color-base-100));
+}
+
+.auth-search-input.input {
+  border-color: transparent;
+  background-color: color-mix(in oklab, var(--color-base-200) 55%, var(--color-base-100));
+}
+
+.auth-search-input.input:focus-within {
+  border-color: color-mix(in oklab, var(--color-base-content) 10%, transparent);
+  background-color: color-mix(in oklab, var(--color-base-200) 72%, var(--color-base-100));
+  transform: translateY(-1px);
+}
+
+.auth-search-input.input:active {
+  transform: translateY(0);
+}
+
+.btn:active {
+  transform: translateY(1px) scale(0.99);
 }

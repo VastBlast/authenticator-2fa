@@ -131,6 +131,13 @@
     cleanupAccountDrag();
   });
 
+  // Keep the browser popup frame on the same theme as the app surface.
+  $effect(() => {
+    const { theme } = vault.settings;
+    document.documentElement.dataset.theme = theme;
+    document.body.dataset.theme = theme;
+  });
+
   // Auto-dismiss transient status messages so they never pile up on screen.
   $effect(() => {
     if (!vault.notice) {
@@ -741,9 +748,9 @@
           <div class="flex grow flex-col overflow-y-auto pb-20" bind:this={scrollContainerElement}>
             {#if vault.accounts.length > 0}
               <div class="sticky top-0 z-10 bg-base-100/95 px-3 py-2 backdrop-blur">
-                <label class="input input-sm w-full items-center gap-2">
-                  <Search class="shrink-0 text-base-content/45" size={16} aria-hidden="true" />
-                  <input class="grow" type="search" placeholder={tr('search')} bind:value={query} />
+                <label class="auth-search-input input input-md w-full items-center gap-2">
+                  <Search class="shrink-0 text-base-content/45" size={18} aria-hidden="true" />
+                  <input class="grow text-base" type="search" placeholder={tr('search')} bind:value={query} />
                 </label>
               </div>
             {/if}
@@ -966,7 +973,7 @@
   <dialog class="modal modal-open" open>
     <div class="modal-box w-[calc(100vw-1.5rem)] max-w-sm p-4" transition:fly={MODAL_TRANSITION}>
       <h2 class="text-lg font-bold">{tr('delete')}</h2>
-      <p class="mt-2 break-words text-sm text-base-content/70">{accountTitle(deleting)}</p>
+      <p class="mt-2 wrap-break-word text-sm text-base-content/70">{accountTitle(deleting)}</p>
       <div class="modal-action grid grid-cols-2 gap-2">
         <button class="btn" type="button" onclick={() => (deleting = null)}>{tr('cancel')}</button>
         <button class="btn btn-error" type="button" onclick={deleteSelected}>{tr('delete')}</button>
