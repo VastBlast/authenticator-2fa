@@ -50,7 +50,7 @@ function createManifest(target) {
     optional_permissions: ['clipboardWrite'],
     content_security_policy: {
       extension_pages:
-        "script-src 'self'; object-src 'none'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; default-src 'self'",
+        "script-src 'self' 'wasm-unsafe-eval'; object-src 'none'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; default-src 'self'",
     },
   };
 

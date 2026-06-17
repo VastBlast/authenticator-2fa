@@ -1,7 +1,19 @@
+import { readFileSync } from 'node:fs';
 import { toBuffer } from 'qrcode';
 import sharp from 'sharp';
 import { describe, expect, test } from 'vitest';
+import { prepareZXingModule } from 'zxing-wasm/reader';
 import { decodeQrImageData } from '../../src/lib/auth/qrDecode';
+
+const wasm = readFileSync(
+  new URL('../../node_modules/zxing-wasm/dist/reader/zxing_reader.wasm', import.meta.url)
+);
+
+prepareZXingModule({
+  overrides: {
+    wasmBinary: wasm.buffer.slice(wasm.byteOffset, wasm.byteOffset + wasm.byteLength)
+  }
+});
 
 describe('decodeQrImageData', () => {
   test('decodes a QR embedded in a larger screenshot', async () => {
@@ -25,7 +37,7 @@ describe('decodeQrImageData', () => {
       .raw()
       .toBuffer({ resolveWithObject: true });
 
-    const decoded = decodeQrImageData({
+    const decoded = await decodeQrImageData({
       data,
       width: info.width,
       height: info.height
@@ -59,7 +71,7 @@ describe('decodeQrImageData', () => {
       .raw()
       .toBuffer({ resolveWithObject: true });
 
-    const decoded = decodeQrImageData({
+    const decoded = await decodeQrImageData({
       data,
       width: info.width,
       height: info.height

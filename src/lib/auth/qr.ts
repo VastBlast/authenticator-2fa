@@ -50,7 +50,7 @@ export async function renderQrDataUrl(text: string): Promise<string> {
 async function decodeQrDataUrlWithCanvasFallback(imageUrl: string): Promise<string> {
   const image = await loadImage(imageUrl);
   const source = drawImageToCanvas(image);
-  const decoded = decodeQrFromCanvas(source, createCanvas);
+  const decoded = await decodeQrFromCanvas(source);
 
   if (!decoded) {
     throw new Error(QR_DECODE_ERROR);
@@ -79,13 +79,6 @@ function drawImageToCanvas(image: HTMLImageElement): HTMLCanvasElement {
   context.fillStyle = '#fff';
   context.fillRect(0, 0, width, height);
   context.drawImage(image, 0, 0, width, height);
-  return canvas;
-}
-
-function createCanvas(width: number, height: number): HTMLCanvasElement {
-  const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
   return canvas;
 }
 

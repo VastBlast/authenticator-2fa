@@ -16,7 +16,7 @@ export async function decodeQrDataUrlInWorker(dataUrl: string): Promise<string> 
     context.fillRect(0, 0, canvas.width, canvas.height);
     context.drawImage(bitmap, 0, 0);
 
-    const decoded = decodeQrFromCanvas(canvas, createCanvas);
+    const decoded = await decodeQrFromCanvas(canvas);
     if (!decoded) {
       throw new Error(QR_DECODE_ERROR);
     }
@@ -58,8 +58,4 @@ function getCanvasContext(canvas: OffscreenCanvas): OffscreenCanvasRenderingCont
     throw new Error('Canvas rendering is unavailable.');
   }
   return context;
-}
-
-function createCanvas(width: number, height: number): OffscreenCanvas {
-  return new OffscreenCanvas(width, height);
 }
