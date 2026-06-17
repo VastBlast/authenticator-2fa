@@ -23,7 +23,7 @@ export function getCandidateRegions(source: PixelSource): CanvasRegion[] {
       padRegion(brightSquare, source, 48)
     );
   }
-  regions.push(...getCenteredSquareRegions(source));
+  regions.push(...getCoverageSquareRegions(source));
   return dedupeRegions(regions);
 }
 
@@ -143,11 +143,13 @@ function isPlausibleQrSquare(region: CanvasRegion, source: PixelSource): boolean
   );
 }
 
-function getCenteredSquareRegions(source: PixelSource): CanvasRegion[] {
+function getCoverageSquareRegions(source: PixelSource): CanvasRegion[] {
   const shortSide = Math.min(source.width, source.height);
-  const sizes = [0.9, 0.75, 0.6, 0.5].map((scale) => shortSide * scale);
-  const centersX = [source.width * 0.5];
-  const centersY = [source.height * 0.4, source.height * 0.5, source.height * 0.6, source.height * 0.7];
+  const sizes = [0.9, 0.7, 0.52, 0.38, 0.27]
+    .map((scale) => shortSide * scale)
+    .filter((size) => size >= 48 || shortSide < 96);
+  const centersX = getAxisCenters(source.width, source.height).map((scale) => source.width * scale);
+  const centersY = getAxisCenters(source.height, source.width).map((scale) => source.height * scale);
   const regions: CanvasRegion[] = [];
 
   for (const size of sizes) {
@@ -169,6 +171,10 @@ function getCenteredSquareRegions(source: PixelSource): CanvasRegion[] {
   }
 
   return regions;
+}
+
+function getAxisCenters(axis: number, otherAxis: number): number[] {
+  return axis > otherAxis * 1.15 ? [0.18, 0.34, 0.5, 0.66, 0.82] : [0.25, 0.5, 0.75];
 }
 
 function padRegion(region: CanvasRegion, source: PixelSource, padding: number): CanvasRegion {
