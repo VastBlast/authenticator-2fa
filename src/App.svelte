@@ -806,7 +806,7 @@
             {#if vault.error}
               <div class="alert alert-error py-2 text-sm shadow-md" transition:fade={FADE_TRANSITION} role="alert">{vault.error}</div>
             {:else if vault.notice}
-              <div class="alert alert-success py-2 text-sm shadow-md" transition:fade={FADE_TRANSITION} role="status">{vault.notice}</div>
+              <div class="alert border-primary bg-primary py-2 text-sm text-primary-content shadow-md" transition:fade={FADE_TRANSITION} role="status">{vault.notice}</div>
             {/if}
           </div>
         {/if}

@@ -98,7 +98,7 @@
       </span>
       <span
         class={[
-          'font-mono text-3xl font-semibold leading-snug tracking-[0.1em] tabular-nums',
+          'font-(family-name:--auth-code-font) text-[2.5rem] font-normal leading-none tracking-normal tabular-nums',
           expiring ? 'text-error' : 'text-primary'
         ]}
       >
