@@ -32,6 +32,7 @@
   const value = $derived(code?.value ?? '');
   const displayCode = $derived(value ? groupDigits(value) : '••••••');
   const expiring = $derived(account.type !== 'hotp' && (code?.remaining ?? 99) <= 5);
+  const expiringPulseKey = $derived(expiring ? (code?.remaining ?? 0) : 'idle');
   const title = $derived(account.issuer ? `${account.issuer} ${account.label}` : account.label);
 
   async function copy() {
@@ -96,14 +97,16 @@
           <span class="truncate">{account.label}</span>
         {/if}
       </span>
-      <span
-        class={[
-          'font-(family-name:--auth-code-font) text-[2.35rem] font-[450] leading-[0.95] mt-[0.3rem] tracking-normal lining-nums tabular-nums',
-          expiring ? 'text-error' : 'text-primary'
-        ]}
-      >
-        {displayCode}
-      </span>
+      {#key expiringPulseKey}
+        <span
+          class={[
+            'font-(family-name:--auth-code-font) text-[2.35rem] font-[450] leading-[0.95] mt-[0.3rem] tracking-normal lining-nums tabular-nums',
+            expiring ? 'auth-code-expiring text-error' : 'text-primary'
+          ]}
+        >
+          {displayCode}
+        </span>
+      {/key}
     </span>
 
     {#if account.type === 'hotp'}

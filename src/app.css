@@ -180,3 +180,29 @@ select:not(:disabled),
 .btn:active {
   transform: translateY(1px) scale(0.99);
 }
+
+@keyframes auth-code-expiring-flash {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  28% {
+    opacity: 0.72;
+  }
+
+  68% {
+    opacity: 0.96;
+  }
+}
+
+.auth-code-expiring {
+  animation: auth-code-expiring-flash 360ms cubic-bezier(0.2, 0, 0, 1) both;
+  will-change: opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-code-expiring {
+    animation: none;
+  }
+}
