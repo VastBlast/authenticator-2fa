@@ -6,7 +6,8 @@ const vaultData: VaultData = {
   accounts: [],
   settings: {
     language: 'en',
-    theme: 'light'
+    theme: 'light',
+    showCountdownSeconds: false
   }
 };
 

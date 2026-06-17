@@ -2,42 +2,55 @@
   interface Props {
     remaining: number;
     period: number;
+    showSeconds?: boolean;
   }
 
-  let { remaining, period }: Props = $props();
+  let { remaining, period, showSeconds = false }: Props = $props();
 
   const RADIUS = 9;
-  const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+  const CENTER = 12;
+  const FULL_CIRCLE_THRESHOLD = 0.995;
 
   const fraction = $derived(period > 0 ? Math.max(0, Math.min(1, remaining / period)) : 0);
-  const offset = $derived(CIRCUMFERENCE * (1 - fraction));
   const expiring = $derived(remaining <= 5);
+  const piePath = $derived(createPiePath(fraction));
+
+  function createPiePath(value: number): string {
+    const angle = -Math.PI / 2 - value * Math.PI * 2;
+    const endX = CENTER + RADIUS * Math.cos(angle);
+    const endY = CENTER + RADIUS * Math.sin(angle);
+    const largeArc = value > 0.5 ? 1 : 0;
+
+    return [
+      `M ${CENTER} ${CENTER}`,
+      `L ${CENTER} ${CENTER - RADIUS}`,
+      `A ${RADIUS} ${RADIUS} 0 ${largeArc} 0 ${endX.toFixed(3)} ${endY.toFixed(3)}`,
+      'Z'
+    ].join(' ');
+  }
 </script>
 
-<div class="relative grid size-8 shrink-0 place-items-center" title={`${remaining}s`}>
-  <svg class="size-8 -rotate-90" viewBox="0 0 24 24" aria-hidden="true">
-    <circle cx="12" cy="12" r={RADIUS} fill="none" class="stroke-base-300" stroke-width="2.5" />
-    <circle
-      cx="12"
-      cy="12"
-      r={RADIUS}
-      fill="none"
-      class={expiring ? 'stroke-error' : 'stroke-primary'}
-      stroke-width="2.5"
-      stroke-linecap="round"
-      stroke-dasharray={CIRCUMFERENCE}
-      stroke-dashoffset={offset}
-      style="transition: stroke-dashoffset 1s linear, stroke 0.3s ease;"
-    />
+<div
+  class="relative grid size-8 shrink-0 place-items-center"
+  title={`${remaining}s`}
+  role="timer"
+  aria-label={`${remaining} seconds remaining`}
+>
+  <svg class="size-8" viewBox="0 0 24 24" aria-hidden="true">
+    {#if fraction >= FULL_CIRCLE_THRESHOLD}
+      <circle cx={CENTER} cy={CENTER} r={RADIUS} class={expiring ? 'fill-error' : 'fill-primary'} />
+    {:else if fraction > 0}
+      <path d={piePath} class={expiring ? 'fill-error' : 'fill-primary'} />
+    {/if}
   </svg>
-  <span
-    class={[
-      'absolute text-xs font-semibold tabular-nums',
-      expiring ? 'text-error' : 'text-base-content/60'
-    ]}
-    role="timer"
-    aria-label={`${remaining} seconds remaining`}
-  >
-    {remaining}
-  </span>
+  {#if showSeconds}
+    <span
+      class={[
+        'absolute grid size-5 place-items-center rounded-full bg-base-100/90 text-[0.625rem] font-semibold tabular-nums shadow-sm',
+        expiring ? 'text-error' : 'text-base-content/70'
+      ]}
+    >
+      {remaining}
+    </span>
+  {/if}
 </div>

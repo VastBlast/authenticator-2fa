@@ -54,6 +54,12 @@
     }
   }
 
+  function setShowCountdownSeconds(showCountdownSeconds: boolean) {
+    if (showCountdownSeconds !== vault.settings.showCountdownSeconds) {
+      void vault.replaceSettings({ ...vault.settings, showCountdownSeconds });
+    }
+  }
+
   function resetForm() {
     currentPassword = newPassword = confirmNewPassword = '';
     securityError = '';
@@ -163,6 +169,19 @@
             <option value={language.code}>{language.label}</option>
           {/each}
         </select>
+      </label>
+
+      <label class="flex items-center justify-between gap-3">
+        <span class="min-w-0">
+          <span class="block text-sm font-medium">{tr('showCountdownSeconds')}</span>
+          <span class="block text-xs text-base-content/60">{tr('showCountdownSecondsHint')}</span>
+        </span>
+        <input
+          class="toggle toggle-primary shrink-0"
+          type="checkbox"
+          checked={vault.settings.showCountdownSeconds}
+          onchange={(event) => setShowCountdownSeconds((event.target as HTMLInputElement).checked)}
+        />
       </label>
     </section>
 

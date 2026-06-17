@@ -109,7 +109,11 @@
     {#if account.type === 'hotp'}
       <span class="badge badge-ghost shrink-0">#{account.counter}</span>
     {:else if code}
-      <CountdownRing remaining={code.remaining} period={account.period} />
+      <CountdownRing
+        remaining={code.remaining}
+        period={account.period}
+        showSeconds={vault.settings.showCountdownSeconds}
+      />
     {/if}
   </button>
 
