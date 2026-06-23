@@ -24,6 +24,11 @@ const MANIFEST_LOCALE_BY_LANGUAGE: Record<string, string> = {
 };
 const BROWSER_BRAND_PATTERN = /\b(?:Chrome|Chromium|Edge|Firefox|Web Store)\b/i;
 const MANIFEST_LOCALES_DIR = join(process.cwd(), 'assets', 'extension', '_locales');
+const CHARACTER_SEGMENTER = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+
+function characterLength(value: string): number {
+  return Array.from(CHARACTER_SEGMENTER.segment(value)).length;
+}
 
 describe('localized copy', () => {
   test('every supported runtime language has non-empty values for every UI key', () => {
@@ -71,7 +76,9 @@ describe('localized copy', () => {
       const shortName = messages.extensionShortName?.message;
 
       expect(shortName, `${locale}.extensionShortName`).toEqual(expect.any(String));
-      expect([...String(shortName)].length, `${locale}.extensionShortName`).toBeLessThanOrEqual(12);
+      expect(characterLength(String(shortName)), `${locale}.extensionShortName`).toBeLessThanOrEqual(
+        12
+      );
     }
   });
 });
