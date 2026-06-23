@@ -19,6 +19,7 @@
   import AccountRow from './lib/components/auth/AccountRow.svelte';
   import AppBar from './lib/components/auth/AppBar.svelte';
   import SettingsView from './lib/components/auth/SettingsView.svelte';
+  import Toast from './lib/components/auth/Toast.svelte';
   import VaultGate from './lib/components/auth/VaultGate.svelte';
   import { FADE_TRANSITION, MODAL_TRANSITION, PANEL_TRANSITION } from './lib/components/auth/transitions';
   import { accountToOtpAuthUri } from './lib/auth/otpauth';
@@ -74,7 +75,6 @@
   let accountListElement = $state<HTMLUListElement | null>(null);
   let scrollContainerElement = $state<HTMLDivElement | null>(null);
   let activeDragHandle: HTMLElement | null = null;
-  let noticeElement = $state<HTMLDivElement | null>(null);
   let autoScrollFrame = 0;
   let previousBodyUserSelect: string | null = null;
   let showAdd = $state(false);
@@ -149,32 +149,14 @@
       if (vault.noticeKey === noticeKey) {
         vault.clearNotice();
       }
-    }, 2200);
+    }, 1700);
     return () => clearTimeout(id);
-  });
-  $effect(() => {
-    const noticeKey = vault.noticeKey;
-    const element = noticeElement;
-    if (!vault.notice || !element || prefersReducedMotion()) {
-      return;
-    }
-
-    const animation = element.animate(
-      [
-        { opacity: 0.82, transform: 'scale(0.985)' },
-        { opacity: 1, transform: 'scale(1.012)', offset: 0.65 },
-        { opacity: 1, transform: 'scale(1)' }
-      ],
-      { duration: 160, easing: 'cubic-bezier(0.2, 0, 0, 1)' }
-    );
-    animation.id = `notice-${noticeKey}`;
-    return () => animation.cancel();
   });
   $effect(() => {
     if (!vault.error || vault.locked) {
       return;
     }
-    const id = setTimeout(() => (vault.error = ''), 4000);
+    const id = setTimeout(() => (vault.error = ''), 3000);
     return () => clearTimeout(id);
   });
 
@@ -364,12 +346,22 @@
   async function handlePageScanCompleted(message: PageScanCompletedMessage) {
     pageScanState = 'idle';
     pageScanMessage = '';
-    pageScanError = message.ok ? '' : message.message || tr('scanPageFailed');
     if (!message.ok) {
-      vault.error = pageScanError;
+      const failure = message.message || tr('scanPageFailed');
+      // Surface the error in exactly one place: inside the add modal when it
+      // is open, otherwise as the global toast. Setting both would render the
+      // same message twice (in the modal and faded behind it).
+      if (showAdd) {
+        pageScanError = failure;
+        vault.error = '';
+      } else {
+        pageScanError = '';
+        vault.error = failure;
+      }
       return;
     }
 
+    pageScanError = '';
     showAdd = false;
     view = 'codes';
     await vault.initialize();
@@ -740,9 +732,6 @@
     return account.issuer ? `${account.issuer} · ${account.label}` : account.label;
   }
 
-  function prefersReducedMotion(): boolean {
-    return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
-  }
 </script>
 
 <svelte:head>
@@ -837,13 +826,11 @@
           {/if}
 
           <!-- Transient feedback -->
-          <div class="toast toast-center toast-bottom z-30 mb-2">
-            {#if vault.error}
-              <div class="alert alert-error py-2 text-sm shadow-md" transition:fade={FADE_TRANSITION} role="alert">{vault.error}</div>
-            {:else if vault.notice}
-              <div bind:this={noticeElement} class="alert border-primary bg-primary py-2 text-sm text-primary-content shadow-md" transition:fade={FADE_TRANSITION} role="status">{vault.notice}</div>
-            {/if}
-          </div>
+          <Toast
+            message={vault.error || vault.notice}
+            variant={vault.error ? 'error' : 'notice'}
+            nonce={vault.noticeKey}
+          />
         {/if}
       </section>
     {/key}
