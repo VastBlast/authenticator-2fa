@@ -43,6 +43,11 @@
     vault.showNotice(tr('copied'));
   }
 
+  async function copyFromContextMenu(event: MouseEvent) {
+    event.preventDefault();
+    await copy();
+  }
+
   function groupDigits(raw: string): string {
     if (/\D/.test(raw)) {
       return raw; // Steam / non-numeric codes stay intact.
@@ -87,6 +92,7 @@
     ]}
     type="button"
     onclick={copy}
+    oncontextmenu={copyFromContextMenu}
     disabled={!value}
     aria-label={tr('copy')}
   >
