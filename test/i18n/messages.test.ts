@@ -7,8 +7,7 @@ const LOCALE_MESSAGES = [
   'extensionName',
   'extensionShortName',
   'extensionDescription',
-  'actionTitle',
-  'scanPageCommandDescription'
+  'actionTitle'
 ] as const;
 const MANIFEST_LOCALE_BY_LANGUAGE: Record<string, string> = {
   en: 'en',

@@ -10,8 +10,5 @@
   },
   "actionTitle": {
     "message": "প্রমাণীকরণকারী - 2FA খুলুন"
-  },
-  "scanPageCommandDescription": {
-    "message": "বর্তমান পেজ থেকে QR কোড স্ক্যান করুন"
   }
 }

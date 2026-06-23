@@ -10,8 +10,5 @@
   },
   "actionTitle": {
     "message": "Abrir Autenticador - 2FA"
-  },
-  "scanPageCommandDescription": {
-    "message": "Escanear un código QR de la página actual"
   }
 }

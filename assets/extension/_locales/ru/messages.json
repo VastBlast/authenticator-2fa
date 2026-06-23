@@ -10,8 +10,5 @@
   },
   "actionTitle": {
     "message": "Открыть Аутентификатор - 2FA"
-  },
-  "scanPageCommandDescription": {
-    "message": "Сканировать QR-код с текущей страницы"
   }
 }

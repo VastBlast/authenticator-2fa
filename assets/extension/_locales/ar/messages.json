@@ -10,8 +10,5 @@
   },
   "actionTitle": {
     "message": "فتح المصادِق - 2FA"
-  },
-  "scanPageCommandDescription": {
-    "message": "مسح رمز QR من الصفحة الحالية"
   }
 }
