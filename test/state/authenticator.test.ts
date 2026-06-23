@@ -267,6 +267,42 @@ describe('AuthenticatorVault persistence and locking', () => {
     expect(reopened.accounts).toHaveLength(1);
   });
 
+  test('changing password while locked preserves encrypted vault data', async () => {
+    const vault = new AuthenticatorVault();
+    await vault.initialize();
+    await vault.importText(OTPAUTH_URI);
+    await vault.changePassword('', PASSWORD);
+    await vault.lock();
+
+    await vault.changePassword(PASSWORD, 'new correct horse battery staple');
+
+    expect(vault.error).toBe('');
+    expect(vault.locked).toBe(false);
+    expect(vault.accounts).toHaveLength(1);
+
+    await vault.lock();
+    await vault.unlock('new correct horse battery staple');
+
+    expect(vault.error).toBe('');
+    expect(vault.accounts).toHaveLength(1);
+  });
+
+  test('removing password while locked preserves vault data', async () => {
+    const vault = new AuthenticatorVault();
+    await vault.initialize();
+    await vault.importText(OTPAUTH_URI);
+    await vault.changePassword('', PASSWORD);
+    await vault.lock();
+
+    await vault.removePassword(PASSWORD);
+
+    expect(vault.error).toBe('');
+    expect(vault.passwordProtected).toBe(false);
+    expect(vault.locked).toBe(false);
+    expect(vault.accounts).toHaveLength(1);
+    expect(isPlainVaultRecord(await loadStoredVault())).toBe(true);
+  });
+
   test('wrong unlock password keeps encrypted vault locked and empty', async () => {
     const vault = new AuthenticatorVault();
     await vault.initialize();

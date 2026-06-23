@@ -184,18 +184,19 @@ export class AuthenticatorVault {
     this.clearStatus();
     try {
       const wasPasswordProtected = this.passwordProtected;
+      let data = this.getCurrentData();
       if (this.passwordProtected) {
         if (!this.encryptedVault) {
           throw new Error('No encrypted vault exists yet.');
         }
         try {
-          await unlockVaultEnvelope(this.encryptedVault, currentPassword);
+          const unlocked = await unlockVaultEnvelope(this.encryptedVault, currentPassword);
+          data = normalizeVaultData(unlocked.data);
         } catch {
           throw new Error('Current password is incorrect.');
         }
       }
 
-      const data = this.getCurrentData();
       const unlocked = await createVaultEnvelope(data, newPassword);
       await saveStoredVault(unlocked.envelope);
       await this.saveSessionKey(unlocked.key, unlocked.envelope);
@@ -205,6 +206,7 @@ export class AuthenticatorVault {
       this.hasVault = true;
       this.passwordProtected = true;
       this.locked = false;
+      this.applyUnlockedData(unlocked.data);
       this.showNotice(wasPasswordProtected ? 'Vault password changed.' : 'Vault password set.');
     } catch (error) {
       this.error = getErrorMessage(error);
@@ -226,13 +228,15 @@ export class AuthenticatorVault {
     this.busy = true;
     this.clearStatus();
     try {
+      let data: VaultData;
       try {
-        await unlockVaultEnvelope(this.encryptedVault, currentPassword);
+        const unlocked = await unlockVaultEnvelope(this.encryptedVault, currentPassword);
+        data = normalizeVaultData(unlocked.data);
       } catch {
         throw new Error('Current password is incorrect.');
       }
 
-      const plainVault = createPlainVaultRecord(this.getCurrentData(), this.plainVault);
+      const plainVault = createPlainVaultRecord(data, this.plainVault);
       await saveStoredVault(plainVault);
       await clearVaultSessionKey();
       this.key = null;
@@ -241,6 +245,7 @@ export class AuthenticatorVault {
       this.hasVault = true;
       this.passwordProtected = false;
       this.locked = false;
+      this.applyUnlockedData(plainVault.data);
       this.showNotice('Vault password removed.');
     } catch (error) {
       this.error = getErrorMessage(error);
