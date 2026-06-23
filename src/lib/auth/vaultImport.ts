@@ -81,19 +81,28 @@ export function mergeImportedAccounts(
 ): MergeResult {
   const existingAccounts = normalizeAccountOrder(existing);
   const incomingAccounts = normalizeImportedAccounts(incoming);
-  const existingFingerprints = new Set(existingAccounts.map(accountFingerprint));
-  const additions = incomingAccounts.filter((account) => !existingFingerprints.has(accountFingerprint(account)));
+  const fingerprints = new Set(existingAccounts.map(accountFingerprint));
+  const additions: AuthenticatorAccount[] = [];
+  let skipped = 0;
+
+  for (const account of incomingAccounts) {
+    const fingerprint = accountFingerprint(account);
+    if (fingerprints.has(fingerprint)) {
+      skipped += 1;
+      continue;
+    }
+
+    fingerprints.add(fingerprint);
+    additions.push({
+      ...account,
+      sortOrder: existingAccounts.length + additions.length
+    });
+  }
 
   return {
-    accounts: [
-      ...existingAccounts,
-      ...additions.map((account, index) => ({
-        ...account,
-        sortOrder: existingAccounts.length + index
-      }))
-    ],
+    accounts: [...existingAccounts, ...additions],
     imported: additions.length,
-    skipped: incomingAccounts.length - additions.length
+    skipped
   };
 }
 

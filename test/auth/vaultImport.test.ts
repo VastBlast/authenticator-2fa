@@ -60,6 +60,19 @@ describe('importTextIntoStoredVault', () => {
     expect(stored.data.accounts[0].sortOrder).toBe(0);
   });
 
+  test('skips duplicate accounts within the same import batch', async () => {
+    const result = await importTextIntoStoredVault([ALICE_URI, ALICE_URI].join('\n'));
+
+    expect(result.imported).toBe(1);
+    expect(result.skipped).toBe(1);
+
+    const stored = await loadStoredVault();
+    if (!isPlainVaultRecord(stored)) {
+      throw new Error('Expected a plain vault record.');
+    }
+    expect(stored.data.accounts).toHaveLength(1);
+  });
+
   test('imports into an encrypted vault while the session key is available', async () => {
     const vault = new AuthenticatorVault();
     await vault.initialize();
