@@ -242,6 +242,24 @@ describe('AuthenticatorVault persistence and locking', () => {
     expect(isPlainVaultRecord(await loadStoredVault())).toBe(true);
   });
 
+  test('failed session key save keeps live state aligned with encrypted storage', async () => {
+    const { sessionStorage } = installMemoryStorage();
+    const vault = new AuthenticatorVault();
+    await vault.initialize();
+    await vault.importText(OTPAUTH_URI);
+    sessionStorage.setItem = () => {
+      throw new Error('session failed');
+    };
+
+    await vault.changePassword('', PASSWORD);
+
+    expect(vault.error).toBe('session failed');
+    expect(vault.passwordProtected).toBe(true);
+    expect(vault.locked).toBe(false);
+    expect(vault.accounts).toHaveLength(1);
+    expect(isEncryptedVaultRecord(await loadStoredVault())).toBe(true);
+  });
+
   test('manual lock clears the session unlock and requires the password again', async () => {
     const vault = new AuthenticatorVault();
     await vault.initialize();
@@ -297,6 +315,25 @@ describe('AuthenticatorVault persistence and locking', () => {
     await vault.removePassword(PASSWORD);
 
     expect(vault.error).toBe('');
+    expect(vault.passwordProtected).toBe(false);
+    expect(vault.locked).toBe(false);
+    expect(vault.accounts).toHaveLength(1);
+    expect(isPlainVaultRecord(await loadStoredVault())).toBe(true);
+  });
+
+  test('failed session key clear keeps live state aligned with plain storage', async () => {
+    const { sessionStorage } = installMemoryStorage();
+    const vault = new AuthenticatorVault();
+    await vault.initialize();
+    await vault.importText(OTPAUTH_URI);
+    await vault.changePassword('', PASSWORD);
+    sessionStorage.removeItem = () => {
+      throw new Error('session clear failed');
+    };
+
+    await vault.removePassword(PASSWORD);
+
+    expect(vault.error).toBe('session clear failed');
     expect(vault.passwordProtected).toBe(false);
     expect(vault.locked).toBe(false);
     expect(vault.accounts).toHaveLength(1);
