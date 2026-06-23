@@ -44,10 +44,7 @@ jobs:
           npm version "$version" --no-git-tag-version --allow-same-version
           echo "VERSION=$version" >> "$GITHUB_ENV"
 
-      - name: Check
-        run: npm run check
-
-      - name: Test
+      - name: Check and test
         run: npm run test
 
       - name: Generate icons
