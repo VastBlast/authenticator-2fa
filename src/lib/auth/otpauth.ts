@@ -57,10 +57,11 @@ export function parseOtpAuthUri(uri: string): AuthenticatorAccount {
       ? 'steam'
       : parseOtpType(url.hostname.toLowerCase());
   const labelPart = decodeURIComponent(url.pathname.replace(/^\/+/, ''));
-  const labelPieces = labelPart.split(':');
-  const issuerFromLabel = labelPieces.length > 1 ? labelPieces.shift()?.trim() : '';
-  const label = (labelPieces.join(':') || labelPart).trim();
-  const issuer = decodeParameter(url.searchParams.get('issuer')) || issuerFromLabel || '';
+  const issuerParameter = url.searchParams.get('issuer');
+  const { issuer, label } = parseOtpLabel(
+    labelPart,
+    url.searchParams.has('issuer') ? decodeParameter(issuerParameter) : null
+  );
   const secret = url.searchParams.get('secret');
 
   if (!secret) {
@@ -219,6 +220,35 @@ function parseOtpType(value: string): OtpType {
     return value;
   }
   throw new Error(`Unsupported OTP type "${value}".`);
+}
+
+function parseOtpLabel(labelPart: string, issuerParameter: string | null): { issuer: string; label: string } {
+  const labelText = labelPart.trim();
+  const labelFromPath = parseLabelPath(labelText);
+
+  if (issuerParameter !== null) {
+    const issuer = issuerParameter.trim();
+    if (!issuer) {
+      return { issuer: '', label: labelText };
+    }
+    return {
+      issuer,
+      label: labelText.startsWith(`${issuer}:`)
+        ? labelText.slice(issuer.length + 1).trim() || labelFromPath.label
+        : labelFromPath.label
+    };
+  }
+
+  return labelFromPath;
+}
+
+function parseLabelPath(labelText: string): { issuer: string; label: string } {
+  const labelPieces = labelText.split(':');
+  const issuerFromLabel = labelPieces.length > 1 ? labelPieces.shift()?.trim() ?? '' : '';
+  return {
+    issuer: issuerFromLabel,
+    label: (labelPieces.join(':') || labelText).trim()
+  };
 }
 
 function parseAlgorithm(value: string | null): OtpAlgorithm {

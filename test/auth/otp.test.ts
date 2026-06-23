@@ -1,7 +1,11 @@
 import { expect, test } from 'vitest';
 import { encodeBase32 } from '../../src/lib/auth/base32';
 import { createAccount, hotp, updateAccount } from '../../src/lib/auth/otp';
-import { parseGoogleAuthenticatorMigration, parseOtpAuthUri } from '../../src/lib/auth/otpauth';
+import {
+  accountToOtpAuthUri,
+  parseGoogleAuthenticatorMigration,
+  parseOtpAuthUri
+} from '../../src/lib/auth/otpauth';
 
 const rfcSecret = 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ';
 
@@ -35,6 +39,27 @@ test('otpauth parsing preserves HOTP counters', () => {
   expect(account.type).toBe('hotp');
   expect(account.counter).toBe(42);
   expect(account.digits).toBe(8);
+});
+
+test('otpauth export and import preserves colons in issuer and account labels', () => {
+  const withIssuer = createAccount({
+    issuer: 'Team:Ops',
+    label: 'alice@example.com',
+    secret: rfcSecret
+  });
+  const parsedWithIssuer = parseOtpAuthUri(accountToOtpAuthUri(withIssuer));
+
+  expect(parsedWithIssuer.issuer).toBe('Team:Ops');
+  expect(parsedWithIssuer.label).toBe('alice@example.com');
+
+  const withoutIssuer = createAccount({
+    label: 'work:alice@example.com',
+    secret: rfcSecret
+  });
+  const parsedWithoutIssuer = parseOtpAuthUri(accountToOtpAuthUri(withoutIssuer));
+
+  expect(parsedWithoutIssuer.issuer).toBe('');
+  expect(parsedWithoutIssuer.label).toBe('work:alice@example.com');
 });
 
 test('otpauth parsing rejects secrets that decode to zero bytes', () => {
