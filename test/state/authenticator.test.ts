@@ -224,6 +224,24 @@ describe('AuthenticatorVault persistence and locking', () => {
     expect(reopened.accounts).toHaveLength(1);
   });
 
+  test('failed password setup does not switch live state to password protected', async () => {
+    const { localStorage } = installMemoryStorage();
+    const vault = new AuthenticatorVault();
+    await vault.initialize();
+    await vault.importText(OTPAUTH_URI);
+    localStorage.setItem = () => {
+      throw new Error('storage failed');
+    };
+
+    await vault.changePassword('', PASSWORD);
+
+    expect(vault.error).toBe('storage failed');
+    expect(vault.passwordProtected).toBe(false);
+    expect(vault.locked).toBe(false);
+    expect(vault.accounts).toHaveLength(1);
+    expect(isPlainVaultRecord(await loadStoredVault())).toBe(true);
+  });
+
   test('manual lock clears the session unlock and requires the password again', async () => {
     const vault = new AuthenticatorVault();
     await vault.initialize();

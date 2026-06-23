@@ -197,14 +197,14 @@ export class AuthenticatorVault {
 
       const data = this.getCurrentData();
       const unlocked = await createVaultEnvelope(data, newPassword);
+      await saveStoredVault(unlocked.envelope);
+      await this.saveSessionKey(unlocked.key, unlocked.envelope);
       this.key = unlocked.key;
       this.encryptedVault = unlocked.envelope;
       this.plainVault = null;
       this.hasVault = true;
       this.passwordProtected = true;
       this.locked = false;
-      await saveStoredVault(unlocked.envelope);
-      await this.saveSessionKey(unlocked.key, unlocked.envelope);
       this.showNotice(wasPasswordProtected ? 'Vault password changed.' : 'Vault password set.');
     } catch (error) {
       this.error = getErrorMessage(error);
