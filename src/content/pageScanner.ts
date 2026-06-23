@@ -2,6 +2,9 @@ let overlay: HTMLDivElement | null = null;
 let selection: HTMLDivElement | null = null;
 let startX = 0;
 let startY = 0;
+let activePointerId: number | null = null;
+
+const scannerEventOptions = { capture: true, passive: false };
 
 interface CaptureRect {
   left: number;
@@ -57,12 +60,19 @@ function handleMessage(
 function showOverlay(): void {
   removeOverlay();
 
+  // Modal libraries can set body pointer-events to none and dismiss when an
+  // injected overlay becomes the outside event target.
+  const bodyPointerEventsLocked = document.body
+    ? getComputedStyle(document.body).pointerEvents === 'none'
+    : false;
+
   overlay = document.createElement('div');
   overlay.id = 'twofa-page-scanner-overlay';
   overlay.style.cssText = [
     'position:fixed',
     'inset:0',
     'z-index:2147483647',
+    `pointer-events:${bodyPointerEventsLocked ? 'none' : 'auto'}`,
     'cursor:crosshair',
     'background:rgba(9,12,20,.38)'
   ].join(';');
@@ -77,11 +87,12 @@ function showOverlay(): void {
   ].join(';');
 
   overlay.append(selection);
-  overlay.addEventListener('pointerdown', startSelection);
-  overlay.addEventListener('pointermove', resizeSelection);
-  overlay.addEventListener('pointerup', finishSelection);
-  overlay.addEventListener('contextmenu', (event) => event.preventDefault());
-  document.addEventListener('keydown', cancelOnEscape, true);
+  window.addEventListener('pointerdown', startSelection, scannerEventOptions);
+  window.addEventListener('pointermove', resizeSelection, scannerEventOptions);
+  window.addEventListener('pointerup', finishSelection, scannerEventOptions);
+  window.addEventListener('pointercancel', cancelSelection, scannerEventOptions);
+  window.addEventListener('contextmenu', blockScanEvent, scannerEventOptions);
+  window.addEventListener('keydown', cancelOnEscape, scannerEventOptions);
   document.documentElement.append(overlay);
 }
 
@@ -89,6 +100,13 @@ function startSelection(event: PointerEvent): void {
   if (!event.isTrusted || !selection) {
     return;
   }
+  claimScanEvent(event);
+
+  if (activePointerId !== null || (event.pointerType === 'mouse' && event.button !== 0)) {
+    return;
+  }
+
+  activePointerId = event.pointerId;
   startX = event.clientX;
   startY = event.clientY;
   selection.style.display = 'block';
@@ -96,18 +114,29 @@ function startSelection(event: PointerEvent): void {
 }
 
 function resizeSelection(event: PointerEvent): void {
-  if (!event.isTrusted || !selection || selection.style.display === 'none') {
+  if (!event.isTrusted || !selection) {
+    return;
+  }
+  claimScanEvent(event);
+
+  if (event.pointerId !== activePointerId || selection.style.display === 'none') {
     return;
   }
   drawSelection(event.clientX, event.clientY);
 }
 
 function finishSelection(event: PointerEvent): void {
-  if (!event.isTrusted || !selection || selection.style.display === 'none') {
+  if (!event.isTrusted || !selection) {
+    return;
+  }
+  claimScanEvent(event);
+
+  if (event.pointerId !== activePointerId || selection.style.display === 'none') {
     return;
   }
 
   const rect = getRect(event.clientX, event.clientY);
+  suppressNextClick();
   removeOverlay();
 
   if (rect.width < 12 || rect.height < 12) {
@@ -116,6 +145,20 @@ function finishSelection(event: PointerEvent): void {
   }
 
   sendRuntimeMessage({ type: 'page-scan:capture', rect });
+}
+
+function cancelSelection(event: PointerEvent): void {
+  if (!event.isTrusted || !overlay) {
+    return;
+  }
+  claimScanEvent(event);
+
+  if (event.pointerId !== activePointerId) {
+    return;
+  }
+
+  removeOverlay();
+  reportFailure('Page scan cancelled.');
 }
 
 function drawSelection(currentX: number, currentY: number): void {
@@ -191,17 +234,44 @@ function removeOverlay(): void {
   overlay?.remove();
   overlay = null;
   selection = null;
-  document.removeEventListener('keydown', cancelOnEscape, true);
+  activePointerId = null;
+  window.removeEventListener('pointerdown', startSelection, scannerEventOptions);
+  window.removeEventListener('pointermove', resizeSelection, scannerEventOptions);
+  window.removeEventListener('pointerup', finishSelection, scannerEventOptions);
+  window.removeEventListener('pointercancel', cancelSelection, scannerEventOptions);
+  window.removeEventListener('contextmenu', blockScanEvent, scannerEventOptions);
+  window.removeEventListener('keydown', cancelOnEscape, scannerEventOptions);
 }
 
 function cancelOnEscape(event: KeyboardEvent): void {
-  if (event.key !== 'Escape' || !overlay) {
+  if (!event.isTrusted || event.key !== 'Escape' || !overlay) {
     return;
   }
 
-  event.preventDefault();
+  claimScanEvent(event);
   removeOverlay();
   reportFailure('Page scan cancelled.');
+}
+
+function blockScanEvent(event: Event): void {
+  if (!event.isTrusted || !overlay) {
+    return;
+  }
+  claimScanEvent(event);
+}
+
+function claimScanEvent(event: Event): void {
+  event.preventDefault();
+  event.stopImmediatePropagation();
+}
+
+function suppressNextClick(): void {
+  const stopClick = (event: MouseEvent) => {
+    claimScanEvent(event);
+  };
+
+  window.addEventListener('click', stopClick, { capture: true, passive: false, once: true });
+  window.setTimeout(() => window.removeEventListener('click', stopClick, true), 500);
 }
 
 function respond(sendResponse: (response: MessageResponse) => void, action: Promise<void>): void {
