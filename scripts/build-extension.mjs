@@ -37,17 +37,11 @@ function createManifest(target) {
         32: 'icons/icon32.png',
       },
     },
-    commands: {
-      'scan-page': {
-        description: '__MSG_scanPageCommandDescription__',
-      },
-    },
     background: {
       service_worker: 'assets/background.js',
       type: 'module',
     },
     permissions: ['storage', 'activeTab', 'scripting'],
-    optional_permissions: ['clipboardWrite'],
     content_security_policy: {
       extension_pages:
         "script-src 'self' 'wasm-unsafe-eval'; object-src 'none'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; default-src 'self'",

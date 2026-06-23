@@ -10,8 +10,5 @@
   },
   "actionTitle": {
     "message": "Authentifikator - 2FA öffnen"
-  },
-  "scanPageCommandDescription": {
-    "message": "QR-Code von der aktuellen Seite scannen"
   }
 }

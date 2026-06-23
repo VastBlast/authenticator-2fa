@@ -10,8 +10,5 @@
   },
   "actionTitle": {
     "message": "認証アプリ - 2FAを開く"
-  },
-  "scanPageCommandDescription": {
-    "message": "現在のページからQRコードをスキャン"
   }
 }

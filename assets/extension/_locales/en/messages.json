@@ -10,8 +10,5 @@
   },
   "actionTitle": {
     "message": "Open Authenticator - 2FA"
-  },
-  "scanPageCommandDescription": {
-    "message": "Scan a QR code from the current page"
   }
 }

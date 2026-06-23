@@ -10,8 +10,5 @@
   },
   "actionTitle": {
     "message": "प्रमाणक - 2FA खोलें"
-  },
-  "scanPageCommandDescription": {
-    "message": "मौजूदा पेज से QR कोड स्कैन करें"
   }
 }

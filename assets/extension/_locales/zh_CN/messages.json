@@ -10,8 +10,5 @@
   },
   "actionTitle": {
     "message": "打开身份验证器 - 2FA"
-  },
-  "scanPageCommandDescription": {
-    "message": "从当前页面扫描 QR 码"
   }
 }
