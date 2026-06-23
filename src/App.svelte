@@ -85,6 +85,7 @@
   let actionsFor = $state<AuthenticatorAccount | null>(null);
   let qrAccount = $state<AuthenticatorAccount | null>(null);
   let qrDataUrl = $state('');
+  let qrRenderRequest = 0;
   let formError = $state('');
   let addBusy = $state(false);
   let addStatus = $state('');
@@ -220,8 +221,20 @@
   }
 
   async function showQr(account: AuthenticatorAccount) {
+    const request = qrRenderRequest + 1;
+    qrRenderRequest = request;
     qrAccount = account;
-    qrDataUrl = await renderQrDataUrl(accountToOtpAuthUri(account));
+    qrDataUrl = '';
+    const dataUrl = await renderQrDataUrl(accountToOtpAuthUri(account));
+    if (qrRenderRequest === request && qrAccount?.id === account.id) {
+      qrDataUrl = dataUrl;
+    }
+  }
+
+  function closeQr() {
+    qrRenderRequest += 1;
+    qrAccount = null;
+    qrDataUrl = '';
   }
 
   async function importAddQrImages(event: Event) {
@@ -1014,10 +1027,10 @@
         </div>
       {/if}
       <div class="modal-action mt-0 w-full">
-        <button class="btn btn-primary btn-block" type="button" onclick={() => (qrAccount = null)}>{tr('cancel')}</button>
+        <button class="btn btn-primary btn-block" type="button" onclick={closeQr}>{tr('cancel')}</button>
       </div>
     </div>
-    <button class="modal-backdrop" type="button" transition:fade={FADE_TRANSITION} onclick={() => (qrAccount = null)}>close</button>
+    <button class="modal-backdrop" type="button" transition:fade={FADE_TRANSITION} onclick={closeQr}>close</button>
   </dialog>
 {/if}
 </div>
