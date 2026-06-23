@@ -73,6 +73,35 @@ describe('importTextIntoStoredVault', () => {
     expect(stored.data.accounts).toHaveLength(1);
   });
 
+  test('regenerates imported account IDs that collide with existing accounts', async () => {
+    await importTextIntoStoredVault(ALICE_URI);
+
+    const storedBefore = await loadStoredVault();
+    if (!isPlainVaultRecord(storedBefore)) {
+      throw new Error('Expected a plain vault record.');
+    }
+
+    const result = await importTextIntoStoredVault(
+      JSON.stringify({
+        accounts: [
+          {
+            ...storedBefore.data.accounts[0],
+            label: 'alice.backup@example.com'
+          }
+        ]
+      })
+    );
+
+    expect(result.imported).toBe(1);
+
+    const storedAfter = await loadStoredVault();
+    if (!isPlainVaultRecord(storedAfter)) {
+      throw new Error('Expected a plain vault record.');
+    }
+    expect(storedAfter.data.accounts).toHaveLength(2);
+    expect(new Set(storedAfter.data.accounts.map((account) => account.id)).size).toBe(2);
+  });
+
   test('imports into an encrypted vault while the session key is available', async () => {
     const vault = new AuthenticatorVault();
     await vault.initialize();

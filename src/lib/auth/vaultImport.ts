@@ -82,6 +82,7 @@ export function mergeImportedAccounts(
   const existingAccounts = normalizeAccountOrder(existing);
   const incomingAccounts = normalizeImportedAccounts(incoming);
   const fingerprints = new Set(existingAccounts.map(accountFingerprint));
+  const accountIds = new Set(existingAccounts.map((account) => account.id));
   const additions: AuthenticatorAccount[] = [];
   let skipped = 0;
 
@@ -93,8 +94,11 @@ export function mergeImportedAccounts(
     }
 
     fingerprints.add(fingerprint);
+    const id = accountIds.has(account.id) ? crypto.randomUUID() : account.id;
+    accountIds.add(id);
     additions.push({
       ...account,
+      id,
       sortOrder: existingAccounts.length + additions.length
     });
   }
