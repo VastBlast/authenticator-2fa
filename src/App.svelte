@@ -776,7 +776,7 @@
 
 <div class="contents" data-theme={vault.settings.theme}>
 <main
-  class="relative flex h-(--auth-popup-height) w-(--auth-popup-width) flex-col overflow-hidden bg-base-100 text-base-content"
+  class="relative flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden bg-base-100 text-base-content"
 >
   {#if !vault.initialized}
     <div class="grid h-full place-items-center">

@@ -98,11 +98,11 @@
 html,
 body,
 #app {
-  width: var(--auth-popup-width);
+  width: max(var(--auth-popup-width), 100vw);
   min-width: var(--auth-popup-width);
-  height: var(--auth-popup-height);
+  height: max(var(--auth-popup-height), 100vh);
+  height: max(var(--auth-popup-height), 100dvh);
   min-height: var(--auth-popup-height);
-  max-height: var(--auth-popup-height);
   margin: 0;
   background: var(--color-base-100);
 }
