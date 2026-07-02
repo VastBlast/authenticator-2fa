@@ -24,6 +24,7 @@
     "zxing-wasm": "^3.1.0"
   },
   "devDependencies": {
+    "@sveltejs/mcp": "^0.1.25",
     "@sveltejs/vite-plugin-svelte": "^7.1.2",
     "@tailwindcss/vite": "^4.3.1",
     "@tsconfig/svelte": "^5.0.2",
@@ -33,7 +34,7 @@
     "daisyui": "^5.5.23",
     "fflate": "^0.8.3",
     "oxlint": "^1.71.0",
-    "oxlint-tsgolint": "^0.23.0",
+    "oxlint-tsgolint": "^0.24.0",
     "sharp": "^0.35.1",
     "svelte": "^5.56.3",
     "svelte-check": "^4.6.0",
