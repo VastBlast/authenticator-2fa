@@ -35,6 +35,7 @@
   interface RuntimeResponse {
     ok?: boolean;
     error?: string;
+    pasted?: boolean;
   }
 
   interface PageScanCompletedMessage {
@@ -220,6 +221,28 @@
     }
   }
 
+  async function copyCode(value: string) {
+    vault.error = '';
+    try {
+      await navigator.clipboard.writeText(value);
+    } catch (error) {
+      vault.error = getErrorMessage(error, tr('copyFailed'));
+      return;
+    }
+
+    if (!vault.settings.autoPasteCodes) {
+      vault.showNotice(tr('copied'));
+      return;
+    }
+
+    try {
+      const response = await sendRuntimeMessage({ type: 'paste-code', code: value });
+      vault.showNotice(response.pasted ? tr('copiedAndPasted') : tr('copied'));
+    } catch {
+      vault.showNotice(tr('copied'));
+    }
+  }
+
   async function showQr(account: AuthenticatorAccount) {
     const request = qrRenderRequest + 1;
     qrRenderRequest = request;
@@ -331,7 +354,7 @@
     return typeof chrome !== 'undefined' && Boolean(chrome.runtime?.onMessage);
   }
 
-  function sendRuntimeMessage(message: unknown): Promise<void> {
+  function sendRuntimeMessage(message: unknown): Promise<RuntimeResponse> {
     return new Promise((resolve, reject) => {
       chrome.runtime.sendMessage(message, (response: RuntimeResponse | undefined) => {
         const errorMessage = chrome.runtime.lastError?.message;
@@ -340,7 +363,7 @@
         } else if (response?.ok === false) {
           reject(new Error(response.error ?? tr('scanPageFailed')));
         } else {
-          resolve();
+          resolve(response ?? { ok: true });
         }
       });
     });
@@ -798,6 +821,7 @@
                     reorderDisabled={reorderDisabled}
                     dragging={activeDragAccountId === account.id}
                     dragStyle={getAccountDragStyle(account)}
+                    oncodecopy={copyCode}
                     onactions={(item) => (actionsFor = item)}
                     onreorderstart={startAccountDrag}
                     onreorderkey={handleAccountDragKey}

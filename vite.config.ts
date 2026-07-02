@@ -2,9 +2,16 @@ import { resolve } from 'node:path'
 import { defineConfig } from 'vitest/config'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
 import tailwindcss from '@tailwindcss/vite'
+import { normalizePath, type Plugin } from 'vite'
+
+const contentScriptEntries = {
+  codePaster: resolve(__dirname, 'src/content/codePaster.ts'),
+  pageScanner: resolve(__dirname, 'src/content/pageScanner.ts'),
+}
+const wrappedContentScriptEntryIds = new Set(Object.values(contentScriptEntries).map(normalizePath))
 
 export default defineConfig({
-  plugins: [tailwindcss(), svelte()],
+  plugins: [tailwindcss(), svelte(), wrapContentScriptEntries()],
   publicDir: 'assets/extension',
   build: {
     outDir: 'dist/app',
@@ -13,7 +20,7 @@ export default defineConfig({
       input: {
         index: resolve(__dirname, 'index.html'),
         background: resolve(__dirname, 'src/background.ts'),
-        pageScanner: resolve(__dirname, 'src/content/pageScanner.ts'),
+        ...contentScriptEntries,
       },
       output: {
         entryFileNames: 'assets/[name].js',
@@ -27,3 +34,21 @@ export default defineConfig({
     include: ['test/**/*.test.ts'],
   },
 })
+
+function wrapContentScriptEntries(): Plugin {
+  return {
+    name: 'auth-wrap-content-script-entries',
+    apply: 'build',
+    renderChunk(code, chunk) {
+      const entry = chunk.facadeModuleId && normalizePath(chunk.facadeModuleId)
+      if (!entry || !wrappedContentScriptEntryIds.has(entry)) {
+        return null
+      }
+
+      return {
+        code: `(() => {\n${code}\n})();\n`,
+        map: null,
+      }
+    },
+  }
+}

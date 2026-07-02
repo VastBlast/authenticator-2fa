@@ -12,9 +12,15 @@ interface CaptureRect {
 interface MessageResponse {
   ok: boolean;
   error?: string;
+  pasted?: boolean;
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message?.type === 'paste-code') {
+    respond(sendResponse, pasteCodeIntoActivePage(message.code));
+    return true;
+  }
+
   if (message?.type === 'start-page-scan') {
     respond(sendResponse, startPageScan());
     return true;
@@ -56,6 +62,29 @@ async function startPageScan(): Promise<void> {
   await sendTabMessage(tab.id, { type: 'page-scan:start' });
 }
 
+async function pasteCodeIntoActivePage(code: unknown): Promise<Partial<MessageResponse>> {
+  if (typeof code !== 'string' || code.length === 0 || code.length > 32) {
+    throw new Error('Auto-paste code is invalid.');
+  }
+
+  const tab = await getActiveTab();
+  if (!tab?.id) {
+    throw new Error('No active tab is available for auto-paste.');
+  }
+
+  if (tab.url && isRestrictedPage(tab.url)) {
+    throw new Error('Auto-paste is unavailable on internal or extension pages.');
+  }
+
+  await executeScript(tab.id, 'assets/codePaster.js');
+  const response = await sendTabMessage<MessageResponse>(tab.id, { type: 'code-paste:run', code });
+  if (!response?.ok) {
+    throw new Error(response?.error ?? 'Auto-paste failed.');
+  }
+
+  return { pasted: Boolean(response.pasted) };
+}
+
 async function captureSelection(
   windowId: number | undefined,
   tabId: number | undefined,
@@ -71,17 +100,20 @@ async function captureSelection(
 
 function respond(
   sendResponse: (response: MessageResponse) => void,
-  action: Promise<void>,
+  action: Promise<Partial<MessageResponse> | void>,
   failureTabId?: number
 ): void {
   action
-    .then(() => sendResponse({ ok: true }))
+    .then((payload) => {
+      const data = payload && typeof payload === 'object' ? payload : {};
+      sendResponse({ ok: true, ...data });
+    })
     .catch(async (error) => {
       const message = error instanceof Error ? error.message : 'Page scan failed.';
       if (failureTabId !== undefined) {
         await alertPageScanResult(failureTabId, message);
+        sendRuntimeMessage({ type: 'page-scan:completed', ok: false, message });
       }
-      sendRuntimeMessage({ type: 'page-scan:completed', ok: false, message });
       sendResponse({ ok: false, error: message });
     });
 }
@@ -137,9 +169,16 @@ function captureVisibleTab(windowId: number | undefined): Promise<string> {
   });
 }
 
-function sendTabMessage(tabId: number, message: unknown): Promise<void> {
+function sendTabMessage<T = unknown>(tabId: number, message: unknown): Promise<T> {
   return new Promise((resolve, reject) => {
-    chrome.tabs.sendMessage(tabId, message, () => settleChromeCallback(resolve, reject));
+    chrome.tabs.sendMessage(tabId, message, (response: T) => {
+      const errorMessage = chrome.runtime.lastError?.message;
+      if (errorMessage) {
+        reject(new Error(errorMessage));
+      } else {
+        resolve(response);
+      }
+    });
   });
 }
 
