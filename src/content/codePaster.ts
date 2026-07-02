@@ -1,5 +1,9 @@
+import { canReplaceCodeValue, normalizeCodeValue } from '../lib/auth/codePasteSafety';
+
 type PasteTargetKind = 'single' | 'group' | 'contenteditable';
 type EditableElement = HTMLInputElement | HTMLTextAreaElement | HTMLElement;
+type TextEditRange = { start: number; end: number };
+type ContentEditableEdit = 'all' | Range;
 
 interface MessageResponse {
   ok: boolean;
@@ -69,8 +73,10 @@ function pasteCode(code: string): MessageResponse {
 function findPasteTarget(code: string): PasteTarget | null {
   const activeElement = getDeepActiveElement();
   const activeTarget = activeElement ? createTarget(activeElement, code, true) : null;
-  if (activeTarget && (activeTarget.otpLike || activeTarget.kind === 'group')) {
-    return activeTarget;
+  const safeActiveTarget = activeTarget && canFillTarget(activeTarget, code) ? activeTarget : null;
+
+  if (safeActiveTarget && (safeActiveTarget.otpLike || safeActiveTarget.kind === 'group')) {
+    return safeActiveTarget;
   }
 
   const candidates = collectEditableElements(document)
@@ -78,9 +84,10 @@ function findPasteTarget(code: string): PasteTarget | null {
     .map((element) => createTarget(element, code, false))
     .filter((target): target is PasteTarget => Boolean(target))
     .filter((target) => target.otpLike && target.score >= OTP_SCORE_THRESHOLD)
+    .filter((target) => canFillTarget(target, code))
     .sort((left, right) => right.score - left.score);
 
-  return candidates[0] ?? activeTarget;
+  return candidates[0] ?? safeActiveTarget;
 }
 
 function createTarget(element: Element, code: string, active: boolean): PasteTarget | null {
@@ -147,10 +154,16 @@ function createInputTarget(input: HTMLInputElement, code: string, active: boolea
 }
 
 function fillTarget(target: PasteTarget, code: string): boolean {
+  if (!canFillTarget(target, code)) {
+    return false;
+  }
+
   focusElement(target.element);
-  dispatchPasteEvent(target.element, code);
-  if (targetContainsCode(target, code)) {
-    return true;
+  if (targetValueIsEmpty(target)) {
+    dispatchPasteEvent(target.element, code);
+    if (targetContainsCode(target, code)) {
+      return true;
+    }
   }
 
   if (target.kind === 'group' && target.group) {
@@ -164,20 +177,40 @@ function fillTarget(target: PasteTarget, code: string): boolean {
   return fillContentEditable(target.element, code, target.replace);
 }
 
+function canFillTarget(target: PasteTarget, code: string): boolean {
+  if (target.kind === 'group' && target.group) {
+    return canFillInputGroup(target.group, code);
+  }
+
+  if (target.element instanceof HTMLInputElement || target.element instanceof HTMLTextAreaElement) {
+    return Boolean(getTextControlEditRange(target.element, code, target.replace));
+  }
+
+  return Boolean(getContentEditableEdit(target.element, code, target.replace));
+}
+
+function canFillInputGroup(group: HTMLInputElement[], code: string): boolean {
+  return (
+    group.length === Array.from(code).length &&
+    canReplaceCodeValue(getInputGroupValue(group), code)
+  );
+}
+
 function fillInputGroup(group: HTMLInputElement[], code: string): boolean {
-  if (group.length < code.length) {
+  const characters = Array.from(code);
+  if (!canFillInputGroup(group, code)) {
     return false;
   }
 
-  for (const [index, character] of Array.from(code).entries()) {
+  for (const [index, character] of characters.entries()) {
     const input = group[index];
     focusElement(input);
     setTextControlValue(input, character);
     dispatchInputEvents(input, character);
   }
 
-  focusElement(group[code.length - 1]);
-  return group.map((input) => input.value).join('') === code;
+  focusElement(group[characters.length - 1]);
+  return normalizeCodeValue(getInputGroupValue(group)) === normalizeCodeValue(code);
 }
 
 function fillTextControl(
@@ -186,27 +219,38 @@ function fillTextControl(
   replace: boolean
 ): boolean {
   const currentValue = control.value;
-  const start = replace ? 0 : control.selectionStart ?? currentValue.length;
-  const end = replace ? currentValue.length : control.selectionEnd ?? currentValue.length;
+  const editRange = getTextControlEditRange(control, code, replace);
+  if (!editRange) {
+    return false;
+  }
+
+  const { start, end } = editRange;
   const nextValue = `${currentValue.slice(0, start)}${code}${currentValue.slice(end)}`;
 
   setTextControlValue(control, nextValue);
   setSelection(control, start + code.length);
   dispatchInputEvents(control, code);
-  return replace ? normalizeCode(control.value) === normalizeCode(code) : control.value.includes(code);
+  return (
+    normalizeCodeValue(control.value) === normalizeCodeValue(code) || control.value.includes(code)
+  );
 }
 
 function fillContentEditable(element: HTMLElement, code: string, replace: boolean): boolean {
-  const selection = window.getSelection();
-  if (!replace && selection?.rangeCount && selection.anchorNode && element.contains(selection.anchorNode)) {
-    const range = selection.getRangeAt(0);
+  const edit = getContentEditableEdit(element, code, replace);
+  if (!edit) {
+    return false;
+  }
+
+  if (edit === 'all') {
+    element.textContent = code;
+  } else {
+    const selection = window.getSelection();
+    const range = edit;
     range.deleteContents();
     range.insertNode(document.createTextNode(code));
     range.collapse(false);
-    selection.removeAllRanges();
-    selection.addRange(range);
-  } else {
-    element.textContent = code;
+    selection?.removeAllRanges();
+    selection?.addRange(range);
   }
 
   dispatchInputEvents(element, code);
@@ -215,20 +259,32 @@ function fillContentEditable(element: HTMLElement, code: string, replace: boolea
 
 function targetContainsCode(target: PasteTarget, code: string): boolean {
   if (target.kind === 'group' && target.group) {
-    const joinedValue = target.group.map((input) => input.value).join('');
+    const joinedValue = getInputGroupValue(target.group);
     return (
-      joinedValue === code ||
-      target.group.some((input) => normalizeCode(input.value) === normalizeCode(code))
+      normalizeCodeValue(joinedValue) === normalizeCodeValue(code) ||
+      target.group.some((input) => normalizeCodeValue(input.value) === normalizeCodeValue(code))
     );
   }
 
   if (target.element instanceof HTMLInputElement || target.element instanceof HTMLTextAreaElement) {
     return target.otpLike
-      ? normalizeCode(target.element.value) === normalizeCode(code)
+      ? normalizeCodeValue(target.element.value) === normalizeCodeValue(code)
       : target.element.value.includes(code);
   }
 
   return target.element.textContent?.includes(code) ?? false;
+}
+
+function targetValueIsEmpty(target: PasteTarget): boolean {
+  if (target.kind === 'group' && target.group) {
+    return normalizeCodeValue(getInputGroupValue(target.group)).length === 0;
+  }
+
+  if (target.element instanceof HTMLInputElement || target.element instanceof HTMLTextAreaElement) {
+    return normalizeCodeValue(target.element.value).length === 0;
+  }
+
+  return normalizeCodeValue(target.element.textContent ?? '').length === 0;
 }
 
 function collectEditableElements(root: Document | ShadowRoot): EditableElement[] {
@@ -259,11 +315,11 @@ function findOtpInputGroup(input: HTMLInputElement, code: string): HTMLInputElem
       .filter((item): item is HTMLInputElement => item instanceof HTMLInputElement)
       .filter((item) => isVisibleEditable(item) && isTextLikeInput(item) && isOtpBoxInput(item));
 
-    if (!inputs.includes(input) || inputs.length < code.length || inputs.length > 12) {
+    if (!inputs.includes(input) || inputs.length !== code.length || inputs.length > 12) {
       continue;
     }
 
-    return inputs.slice(0, code.length);
+    return inputs;
   }
 
   return null;
@@ -442,6 +498,73 @@ function setSelection(control: HTMLInputElement | HTMLTextAreaElement, position:
   }
 }
 
+function getInputGroupValue(group: HTMLInputElement[]): string {
+  return group.map((input) => input.value).join('');
+}
+
+function getTextControlEditRange(
+  control: HTMLInputElement | HTMLTextAreaElement,
+  code: string,
+  replace: boolean
+): TextEditRange | null {
+  const currentValue = control.value;
+  if (canReplaceCodeValue(currentValue, code)) {
+    return { start: 0, end: currentValue.length };
+  }
+
+  if (replace) {
+    return null;
+  }
+
+  const selection = getTextSelectionRange(control);
+  if (!selection || selection.start === selection.end) {
+    return null;
+  }
+
+  const selectedValue = currentValue.slice(selection.start, selection.end);
+  return canReplaceCodeValue(selectedValue, code) ? selection : null;
+}
+
+function getTextSelectionRange(
+  control: HTMLInputElement | HTMLTextAreaElement
+): TextEditRange | null {
+  try {
+    const { selectionStart, selectionEnd } = control;
+    return typeof selectionStart === 'number' && typeof selectionEnd === 'number'
+      ? { start: selectionStart, end: selectionEnd }
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function getContentEditableEdit(
+  element: HTMLElement,
+  code: string,
+  replace: boolean
+): ContentEditableEdit | null {
+  const currentValue = element.textContent ?? '';
+  if (canReplaceCodeValue(currentValue, code)) {
+    return 'all';
+  }
+
+  if (replace) {
+    return null;
+  }
+
+  const selection = window.getSelection();
+  if (!selection?.rangeCount || !selection.anchorNode || !element.contains(selection.anchorNode)) {
+    return null;
+  }
+
+  const range = selection.getRangeAt(0);
+  if (range.collapsed) {
+    return null;
+  }
+
+  return canReplaceCodeValue(range.toString(), code) ? range : null;
+}
+
 function dispatchInputEvents(element: HTMLElement, code: string): void {
   let inputEvent: Event;
   try {
@@ -457,8 +580,4 @@ function dispatchInputEvents(element: HTMLElement, code: string): void {
 
   element.dispatchEvent(inputEvent);
   element.dispatchEvent(new Event('change', { bubbles: true }));
-}
-
-function normalizeCode(value: string): string {
-  return value.replace(/\s+/g, '');
 }
