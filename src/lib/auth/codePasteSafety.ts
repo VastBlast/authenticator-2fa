@@ -6,6 +6,18 @@ export function normalizeCodeValue(value: string): string {
   return value.replace(/\s+/g, '');
 }
 
+export function isCodeValueEmpty(value: string): boolean {
+  return normalizeCodeValue(value).length === 0;
+}
+
+export function canReplaceWholeCodeValue(
+  currentValue: string,
+  code: string,
+  replace: boolean
+): boolean {
+  return isCodeValueEmpty(currentValue) || (replace && canReplaceCodeValue(currentValue, code));
+}
+
 export function canReplaceCodeValue(currentValue: string, code: string): boolean {
   const current = normalizeCodeValue(currentValue);
   const next = normalizeCodeValue(code);

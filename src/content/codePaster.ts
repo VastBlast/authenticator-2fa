@@ -1,4 +1,9 @@
-import { canReplaceCodeValue, normalizeCodeValue } from '../lib/auth/codePasteSafety';
+import {
+  canReplaceCodeValue,
+  canReplaceWholeCodeValue,
+  isCodeValueEmpty,
+  normalizeCodeValue
+} from '../lib/auth/codePasteSafety';
 
 type PasteTargetKind = 'single' | 'group' | 'contenteditable';
 type EditableElement = HTMLInputElement | HTMLTextAreaElement | HTMLElement;
@@ -23,7 +28,7 @@ interface PasteTarget {
 const MAX_CODE_LENGTH = 32;
 const OTP_SCORE_THRESHOLD = 45;
 const STRONG_OTP_PATTERN =
-  /\b(?:otp|totp|hotp|mfa|2fa|two[-\s]?factor|one[-\s]?time|verification|authentication|authenticator|security\s+code|login\s+code|passcode)\b/i;
+  /\b(?:otp|totp|hotp|mfa|2fa|two[-\s]?factor|one[-\s]?time|verification|authentication|authenticator|login\s+code|passcode)\b/i;
 const CODE_PATTERN = /\bcode\b/i;
 const codePasterWindow = window as Window & { __twofaCodePasterInstalled?: boolean };
 
@@ -277,14 +282,14 @@ function targetContainsCode(target: PasteTarget, code: string): boolean {
 
 function targetValueIsEmpty(target: PasteTarget): boolean {
   if (target.kind === 'group' && target.group) {
-    return normalizeCodeValue(getInputGroupValue(target.group)).length === 0;
+    return isCodeValueEmpty(getInputGroupValue(target.group));
   }
 
   if (target.element instanceof HTMLInputElement || target.element instanceof HTMLTextAreaElement) {
-    return normalizeCodeValue(target.element.value).length === 0;
+    return isCodeValueEmpty(target.element.value);
   }
 
-  return normalizeCodeValue(target.element.textContent ?? '').length === 0;
+  return isCodeValueEmpty(target.element.textContent ?? '');
 }
 
 function collectEditableElements(root: Document | ShadowRoot): EditableElement[] {
@@ -508,7 +513,7 @@ function getTextControlEditRange(
   replace: boolean
 ): TextEditRange | null {
   const currentValue = control.value;
-  if (canReplaceCodeValue(currentValue, code)) {
+  if (canReplaceWholeCodeValue(currentValue, code, replace)) {
     return { start: 0, end: currentValue.length };
   }
 
@@ -544,7 +549,7 @@ function getContentEditableEdit(
   replace: boolean
 ): ContentEditableEdit | null {
   const currentValue = element.textContent ?? '';
-  if (canReplaceCodeValue(currentValue, code)) {
+  if (canReplaceWholeCodeValue(currentValue, code, replace)) {
     return 'all';
   }
 

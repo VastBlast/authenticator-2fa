@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { KeyRound, LockKeyhole } from '@lucide/svelte';
   import { tr } from '../../i18n/messages';
 
@@ -13,6 +14,11 @@
   let password = $state('');
   let confirmation = $state('');
   let localError = $state('');
+  let passwordInput = $state<HTMLInputElement | undefined>();
+
+  onMount(() => {
+    passwordInput?.focus();
+  });
 
   async function submit(event: SubmitEvent) {
     event.preventDefault();
@@ -50,7 +56,14 @@
     <form class="grid gap-3" onsubmit={submit}>
       <label class="grid gap-1 text-sm font-medium">
         <span>{hasVault ? tr('password') : tr('newPassword')}</span>
-        <input class="input w-full" type="password" bind:value={password} autocomplete="current-password" required />
+        <input
+          class="input w-full"
+          type="password"
+          bind:this={passwordInput}
+          bind:value={password}
+          autocomplete="current-password"
+          required
+        />
       </label>
 
       {#if !hasVault}

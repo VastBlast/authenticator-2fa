@@ -21,6 +21,8 @@
   let securityError = $state('');
   let showBackup = $state(false);
   let intent = $state<Intent>('idle');
+  let currentPasswordInput = $state<HTMLInputElement | undefined>();
+  let newPasswordInput = $state<HTMLInputElement | undefined>();
   // The switch reflects the desired state, even mid-change before it is applied.
   const wantsProtection = $derived(
     vault.passwordProtected ? intent !== 'disabling' : intent === 'enabling'
@@ -42,6 +44,14 @@
       return 'disable';
     }
     return vault.passwordProtected ? 'change' : null;
+  });
+
+  $effect(() => {
+    if (securityPanel === 'disable' || (securityPanel === 'password' && intent === 'changing')) {
+      currentPasswordInput?.focus();
+    } else if (securityPanel === 'password') {
+      newPasswordInput?.focus();
+    }
   });
 
   function setLanguage(language: string) {
@@ -258,12 +268,24 @@
               {#if intent === 'changing'}
                 <label class="grid gap-1.5">
                   <span class="text-sm font-medium">{tr('currentPassword')}</span>
-                  <input class="input input-sm w-full" type="password" bind:value={currentPassword} autocomplete="current-password" />
+                  <input
+                    class="input input-sm w-full"
+                    type="password"
+                    bind:this={currentPasswordInput}
+                    bind:value={currentPassword}
+                    autocomplete="current-password"
+                  />
                 </label>
               {/if}
               <label class="grid gap-1.5">
                 <span class="text-sm font-medium">{tr('newPassword')}</span>
-                <input class="input input-sm w-full" type="password" bind:value={newPassword} autocomplete="new-password" />
+                <input
+                  class="input input-sm w-full"
+                  type="password"
+                  bind:this={newPasswordInput}
+                  bind:value={newPassword}
+                  autocomplete="new-password"
+                />
                 <span class="text-xs text-base-content/50">{tr('passwordHint')}</span>
               </label>
               <label class="grid gap-1.5">
@@ -284,7 +306,13 @@
             <div class="space-y-2 rounded-box border border-warning/40 bg-warning/10 p-3">
               <label class="grid gap-1.5">
                 <span class="text-sm font-medium">{tr('currentPassword')}</span>
-                <input class="input input-sm w-full" type="password" bind:value={currentPassword} autocomplete="current-password" />
+                <input
+                  class="input input-sm w-full"
+                  type="password"
+                  bind:this={currentPasswordInput}
+                  bind:value={currentPassword}
+                  autocomplete="current-password"
+                />
               </label>
               <div class="grid grid-cols-2 gap-2 pt-1">
                 <button class="btn btn-sm" type="button" onclick={cancel}>{tr('cancel')}</button>
