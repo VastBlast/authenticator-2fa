@@ -13,6 +13,7 @@ export default defineConfig({
       input: {
         index: resolve(__dirname, 'index.html'),
         background: resolve(__dirname, 'src/background.ts'),
+        codePaster: resolve(__dirname, 'src/content/codePaster.ts'),
         pageScanner: resolve(__dirname, 'src/content/pageScanner.ts'),
       },
       output: {

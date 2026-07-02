@@ -7,7 +7,8 @@ const vaultData: VaultData = {
   settings: {
     language: 'en',
     theme: 'light',
-    showCountdownSeconds: false
+    showCountdownSeconds: false,
+    autoPasteCodes: false
   }
 };
 

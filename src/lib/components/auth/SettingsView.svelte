@@ -60,6 +60,12 @@
     }
   }
 
+  function setAutoPasteCodes(autoPasteCodes: boolean) {
+    if (autoPasteCodes !== vault.settings.autoPasteCodes) {
+      void vault.replaceSettings({ ...vault.settings, autoPasteCodes });
+    }
+  }
+
   function resetForm() {
     currentPassword = newPassword = confirmNewPassword = '';
     securityError = '';
@@ -185,6 +191,27 @@
       </label>
     </section>
 
+    <!-- Code entry -->
+    <section class="space-y-3">
+      <h2 class="text-xs font-bold uppercase tracking-wide text-base-content/50">{tr('codeEntry')}</h2>
+
+      <label class="flex items-center justify-between gap-3">
+        <span class="min-w-0">
+          <span class="flex flex-wrap items-center gap-1.5 text-sm font-medium">
+            <span>{tr('autoPasteCodes')}</span>
+            <span class="badge badge-warning badge-xs shrink-0">{tr('beta')}</span>
+          </span>
+          <span class="block text-xs text-base-content/60">{tr('autoPasteCodesHint')}</span>
+        </span>
+        <input
+          class="toggle toggle-primary shrink-0"
+          type="checkbox"
+          checked={vault.settings.autoPasteCodes}
+          onchange={(event) => setAutoPasteCodes((event.target as HTMLInputElement).checked)}
+        />
+      </label>
+    </section>
+
     <!-- Backup -->
     <section class="space-y-3">
       <h2 class="text-xs font-bold uppercase tracking-wide text-base-content/50">{tr('importExport')}</h2>
@@ -236,8 +263,7 @@
               {/if}
               <label class="grid gap-1.5">
                 <span class="text-sm font-medium">{tr('newPassword')}</span>
-                <!-- svelte-ignore a11y_autofocus -->
-                <input class="input input-sm w-full" type="password" bind:value={newPassword} autocomplete="new-password" autofocus />
+                <input class="input input-sm w-full" type="password" bind:value={newPassword} autocomplete="new-password" />
                 <span class="text-xs text-base-content/50">{tr('passwordHint')}</span>
               </label>
               <label class="grid gap-1.5">
@@ -258,7 +284,6 @@
             <div class="space-y-2 rounded-box border border-warning/40 bg-warning/10 p-3">
               <label class="grid gap-1.5">
                 <span class="text-sm font-medium">{tr('currentPassword')}</span>
-                <!-- svelte-ignore a11y_autofocus -->
                 <input class="input input-sm w-full" type="password" bind:value={currentPassword} autocomplete="current-password" />
               </label>
               <div class="grid grid-cols-2 gap-2 pt-1">

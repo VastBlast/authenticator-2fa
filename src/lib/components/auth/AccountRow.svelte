@@ -11,6 +11,7 @@
     reorderDisabled?: boolean;
     dragging?: boolean;
     dragStyle?: string;
+    oncodecopy: (value: string) => Promise<void>;
     onactions: (account: AuthenticatorAccount) => void;
     onreorderstart: (account: AuthenticatorAccount, event: PointerEvent) => void;
     onreorderkey: (account: AuthenticatorAccount, event: KeyboardEvent) => void;
@@ -23,6 +24,7 @@
     reorderDisabled = false,
     dragging = false,
     dragStyle = '',
+    oncodecopy,
     onactions,
     onreorderstart,
     onreorderkey,
@@ -39,8 +41,7 @@
     if (!value) {
       return;
     }
-    await navigator.clipboard.writeText(value);
-    vault.showNotice(tr('copied'));
+    await oncodecopy(value);
   }
 
   async function copyFromContextMenu(event: MouseEvent) {

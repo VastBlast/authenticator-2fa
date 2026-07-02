@@ -50,8 +50,7 @@
     <form class="grid gap-3" onsubmit={submit}>
       <label class="grid gap-1 text-sm font-medium">
         <span>{hasVault ? tr('password') : tr('newPassword')}</span>
-        <!-- svelte-ignore a11y_autofocus -->
-        <input class="input w-full" type="password" bind:value={password} autocomplete="current-password" autofocus required />
+        <input class="input w-full" type="password" bind:value={password} autocomplete="current-password" required />
       </label>
 
       {#if !hasVault}

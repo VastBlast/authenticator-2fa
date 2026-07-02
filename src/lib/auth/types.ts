@@ -52,6 +52,7 @@ export interface AppSettings {
   language: string;
   theme: 'light' | 'dark';
   showCountdownSeconds: boolean;
+  autoPasteCodes: boolean;
 }
 
 export interface VaultEnvelope {
@@ -84,7 +85,8 @@ export type StoredVault = VaultEnvelope | PlainVaultRecord;
 export const DEFAULT_SETTINGS: AppSettings = {
   language: 'en',
   theme: 'light',
-  showCountdownSeconds: false
+  showCountdownSeconds: false,
+  autoPasteCodes: false
 };
 
 export const OTP_ALGORITHMS: OtpAlgorithm[] = ['SHA-1', 'SHA-256', 'SHA-512'];
