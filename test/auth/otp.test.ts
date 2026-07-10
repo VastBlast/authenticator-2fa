@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 import { encodeBase32 } from '../../src/lib/auth/base32';
-import { createAccount, hotp, updateAccount } from '../../src/lib/auth/otp';
+import { createAccount, generateOtpCode, hotp, updateAccount } from '../../src/lib/auth/otp';
 import {
   accountToOtpAuthUri,
   parseGoogleAuthenticatorMigration,
@@ -8,6 +8,26 @@ import {
 } from '../../src/lib/auth/otpauth';
 
 const rfcSecret = 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ';
+const rfcTimestamps = [59, 1_111_111_109, 1_111_111_111, 1_234_567_890, 2_000_000_000, 20_000_000_000];
+const rfcTotpCases = [
+  {
+    algorithm: 'SHA-1' as const,
+    secret: rfcSecret,
+    expected: ['94287082', '07081804', '14050471', '89005924', '69279037', '65353130']
+  },
+  {
+    algorithm: 'SHA-256' as const,
+    secret: encodeBase32(new TextEncoder().encode('12345678901234567890123456789012')),
+    expected: ['46119246', '68084774', '67062674', '91819424', '90698825', '77737706']
+  },
+  {
+    algorithm: 'SHA-512' as const,
+    secret: encodeBase32(
+      new TextEncoder().encode('1234567890123456789012345678901234567890123456789012345678901234')
+    ),
+    expected: ['90693936', '25091201', '99943326', '93441116', '38618901', '47863826']
+  }
+];
 
 test('HOTP matches RFC 4226 test vectors', async () => {
   const expected = ['755224', '287082', '359152', '969429', '338314', '254676', '287922', '162583', '399871', '520489'];
@@ -17,18 +37,64 @@ test('HOTP matches RFC 4226 test vectors', async () => {
   }
 });
 
-test('TOTP matches RFC 6238 SHA-1 test vector at 59 seconds', async () => {
-  expect(await hotp(rfcSecret, 1, 8, 'SHA-1')).toBe('94287082');
+test.each(rfcTotpCases)('TOTP matches every RFC 6238 $algorithm test vector', async ({
+  algorithm,
+  secret,
+  expected
+}) => {
+  const account = createAccount({ label: `RFC 6238 ${algorithm}`, secret, algorithm, digits: 8 });
+
+  for (const [index, timestamp] of rfcTimestamps.entries()) {
+    const code = await generateOtpCode(account, timestamp * 1000);
+    expect(code.value, `timestamp ${timestamp}`).toBe(expected[index]);
+  }
 });
 
-test('TOTP supports SHA-256 and SHA-512 secrets', async () => {
-  const sha256Secret = encodeBase32(new TextEncoder().encode('12345678901234567890123456789012'));
-  const sha512Secret = encodeBase32(
-    new TextEncoder().encode('1234567890123456789012345678901234567890123456789012345678901234')
+test('TOTP rolls over exactly at a custom period boundary', async () => {
+  const sha256Secret = rfcTotpCases[1].secret;
+  const account = parseOtpAuthUri(
+    `otpauth://totp/Example:alice?secret=${sha256Secret}&issuer=Example&algorithm=sha-256&digits=8&period=45`
   );
 
-  expect(await hotp(sha256Secret, 1, 8, 'SHA-256')).toBe('46119246');
-  expect(await hotp(sha512Secret, 1, 8, 'SHA-512')).toBe('90693936');
+  expect(account).toMatchObject({ algorithm: 'SHA-256', digits: 8, period: 45 });
+  await expect(generateOtpCode(account, 44_999)).resolves.toMatchObject({
+    value: '18920136',
+    remaining: 1
+  });
+  await expect(generateOtpCode(account, 45_000)).resolves.toMatchObject({
+    value: '46119246',
+    remaining: 45,
+    progress: 0
+  });
+});
+
+test('otpauth parsing normalizes URL-encoded padding and common secret formatting', async () => {
+  const account = parseOtpAuthUri(
+    'otpauth://totp/Example:User?secret=j3ww-iv3p%20tgjp-qv5q%20aicm%3D%3D%3D%3D&issuer=Example'
+  );
+
+  expect(account.secret).toBe('J3WWIV3PTGJPQV5QAICM');
+  await expect(generateOtpCode(account, 59_000)).resolves.toMatchObject({ value: '850668' });
+});
+
+test.each([
+  ['digits=0', 'Digits must be between 5 and 10.'],
+  ['period=0', 'Period must be between 5 and 300 seconds.']
+])('otpauth parsing rejects unsafe TOTP parameters: %s', (parameter, message) => {
+  expect(() =>
+    parseOtpAuthUri(`otpauth://totp/Example:alice?secret=${rfcSecret}&issuer=Example&${parameter}`)
+  ).toThrow(message);
+});
+
+test.each([
+  ['algorithm=MD5', 'Unsupported OTP algorithm "MD5".'],
+  ['digits=abc', 'Digits must be a non-negative whole number.'],
+  ['period=-30', 'Period must be a non-negative whole number.'],
+  ['period=30.5', 'Period must be a non-negative whole number.']
+])('otpauth parsing does not silently default malformed TOTP parameters: %s', (parameter, message) => {
+  expect(() =>
+    parseOtpAuthUri(`otpauth://totp/Example:alice?secret=${rfcSecret}&issuer=Example&${parameter}`)
+  ).toThrow(message);
 });
 
 test('otpauth parsing preserves HOTP counters', () => {
