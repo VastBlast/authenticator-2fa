@@ -28,3 +28,4 @@ artifacts
 *.sln
 *.sw?
 /.claude/
+/.codex/
