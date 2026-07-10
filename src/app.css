@@ -88,6 +88,8 @@
 :root {
   --auth-popup-width: 400px;
   --auth-popup-height: 532px;
+  --auth-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --auth-ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
   --auth-code-font:
     "Google Sans Flex", "Google Sans", "Product Sans", Arial, "Liberation Sans", Roboto, "Helvetica Neue",
     ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -105,11 +107,20 @@ body,
   min-height: var(--auth-popup-height);
   margin: 0;
   background: var(--color-base-100);
+  transition:
+    background-color 180ms ease,
+    color 180ms ease;
 }
 
 body {
   overflow: hidden;
   color: var(--color-base-content);
+}
+
+main {
+  transition:
+    background-color 180ms ease,
+    color 180ms ease;
 }
 
 button,
@@ -142,9 +153,24 @@ textarea:focus,
 .file-input,
 .toggle {
   transition:
-    background-color 160ms ease,
-    border-color 160ms ease,
-    transform 120ms ease;
+    color 140ms ease,
+    background-color 140ms ease,
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    transform 120ms var(--auth-ease-out),
+    opacity 120ms ease;
+}
+
+.btn:focus-visible,
+a.btn:focus-visible,
+.input:focus-visible,
+.select:focus-visible,
+.textarea:focus-visible,
+.file-input:focus-visible,
+.toggle:focus-visible,
+button:not(.btn):focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--color-primary) 78%, transparent);
+  outline-offset: 2px;
 }
 
 select:not(:disabled),
@@ -170,39 +196,72 @@ select:not(:disabled),
 .auth-search-input.input:focus-within {
   border-color: color-mix(in oklab, var(--color-base-content) 10%, transparent);
   background-color: color-mix(in oklab, var(--color-base-200) 72%, var(--color-base-100));
-  transform: translateY(-1px);
 }
 
-.auth-search-input.input:active {
-  transform: translateY(0);
+.auth-search-input.input:has(input:focus-visible) {
+  outline: 2px solid color-mix(in oklab, var(--color-primary) 78%, transparent);
+  outline-offset: 2px;
 }
 
-.btn:active {
-  transform: translateY(1px) scale(0.99);
+.btn:not(:disabled):active {
+  transform: scale(0.97);
+  transition-duration: 100ms;
 }
 
-@keyframes auth-code-expiring-flash {
-  0%,
-  100% {
-    opacity: 1;
-  }
-
-  28% {
-    opacity: 0.72;
-  }
-
-  68% {
-    opacity: 0.96;
-  }
+.auth-code-action {
+  touch-action: manipulation;
+  transform-origin: center;
+  transition:
+    background-color 120ms ease,
+    transform 100ms var(--auth-ease-out);
 }
 
-.auth-code-expiring {
-  animation: auth-code-expiring-flash 360ms cubic-bezier(0.2, 0, 0, 1) both;
-  will-change: opacity;
+.auth-code-action:not(:disabled):active {
+  transform: scale(0.985);
+}
+
+.menu :where(li > button) {
+  transform-origin: center;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease,
+    transform 100ms var(--auth-ease-out);
+}
+
+.menu :where(li > button:not(:disabled)):active {
+  transform: scale(0.985);
+}
+
+.auth-code-value {
+  transition: color 140ms ease;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .auth-code-expiring {
-    animation: none;
+  .btn,
+  .input,
+  .select,
+  .textarea,
+  .file-input,
+  .toggle,
+  .auth-code-action,
+  .menu :where(li > button) {
+    transition-duration: 80ms;
+  }
+
+  .btn:not(:disabled):active,
+  .auth-code-action:not(:disabled):active,
+  .menu :where(li > button:not(:disabled)):active {
+    transform: none;
+  }
+
+  .btn:not(:disabled):active {
+    translate: 0;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .auth-sticky-search {
+    background-color: var(--color-base-100);
+    backdrop-filter: none;
   }
 }

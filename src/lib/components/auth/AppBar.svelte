@@ -5,7 +5,7 @@
   import { tr } from '../../i18n/messages';
 
   interface Props {
-    onsettings: () => void;
+    onsettings: (event: MouseEvent) => void;
   }
 
   let { onsettings }: Props = $props();

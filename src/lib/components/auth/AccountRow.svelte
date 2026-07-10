@@ -9,6 +9,7 @@
     account: AuthenticatorAccount;
     code?: OtpCode;
     reorderDisabled?: boolean;
+    reorderPending?: boolean;
     dragging?: boolean;
     dragStyle?: string;
     oncodecopy: (value: string) => Promise<void>;
@@ -22,6 +23,7 @@
     account,
     code,
     reorderDisabled = false,
+    reorderPending = false,
     dragging = false,
     dragStyle = '',
     oncodecopy,
@@ -34,7 +36,6 @@
   const value = $derived(code?.value ?? '');
   const displayCode = $derived(value ? groupDigits(value) : '••••••');
   const expiring = $derived(account.type !== 'hotp' && (code?.remaining ?? 99) <= 5);
-  const expiringPulseKey = $derived(expiring ? (code?.remaining ?? 0) : 'idle');
   const title = $derived(account.issuer ? `${account.issuer} ${account.label}` : account.label);
 
   async function copy() {
@@ -71,12 +72,17 @@
 >
   <button
     class={[
-      'btn btn-ghost btn-sm btn-square m-1 shrink-0 touch-none text-base-content/45',
-      reorderDisabled ? 'pointer-events-none opacity-35' : 'cursor-grab hover:text-base-content active:cursor-grabbing'
+      'btn btn-ghost btn-sm btn-square m-0.5 size-10 shrink-0 touch-none text-base-content/45',
+      reorderDisabled
+        ? 'pointer-events-none opacity-35'
+        : reorderPending
+          ? 'pointer-events-none cursor-default opacity-55'
+          : 'cursor-grab hover:text-base-content active:cursor-grabbing'
     ]}
     type="button"
     disabled={reorderDisabled}
     aria-label={`${tr('reorderAccount')}: ${title}`}
+    aria-disabled={reorderDisabled || reorderPending}
     aria-pressed={dragging}
     title={tr('reorderAccount')}
     onpointerdown={(event) => onreorderstart(account, event)}
@@ -88,7 +94,7 @@
 
   <button
     class={[
-      'flex min-w-0 grow items-center gap-3 px-2 py-[0.6rem] text-left transition-colors hover:bg-base-200/70 focus-visible:bg-base-200/70 focus:outline-none',
+      'auth-code-action flex min-w-0 grow items-center gap-3 px-2 py-[0.6rem] text-left hover:bg-base-200/70 focus-visible:bg-base-200/70 focus:outline-none',
       value ? 'cursor-pointer' : 'cursor-default'
     ]}
     type="button"
@@ -104,16 +110,14 @@
           <span class="truncate">{account.label}</span>
         {/if}
       </span>
-      {#key expiringPulseKey}
-        <span
-          class={[
-            'font-(family-name:--auth-code-font) text-[2.35rem] font-[450] leading-[0.95] mt-[0.3rem] tracking-normal lining-nums tabular-nums',
-            expiring ? 'auth-code-expiring text-error' : 'text-primary'
-          ]}
-        >
-          {displayCode}
-        </span>
-      {/key}
+      <span
+        class={[
+          'auth-code-value font-(family-name:--auth-code-font) text-[2.35rem] font-[450] leading-[0.95] mt-[0.3rem] tracking-normal lining-nums tabular-nums',
+          expiring ? 'text-error' : 'text-primary'
+        ]}
+      >
+        {displayCode}
+      </span>
     </span>
 
     {#if account.type === 'hotp'}

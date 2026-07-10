@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { onDestroy, onMount } from 'svelte';
-  import { fade, fly } from 'svelte/transition';
+  import { onDestroy, onMount, tick } from 'svelte';
+  import { prefersReducedMotion } from 'svelte/motion';
+  import { fade } from 'svelte/transition';
   import {
     ClipboardPaste,
     Download,
@@ -18,10 +19,20 @@
   import AccountForm from './lib/components/auth/AccountForm.svelte';
   import AccountRow from './lib/components/auth/AccountRow.svelte';
   import AppBar from './lib/components/auth/AppBar.svelte';
+  import MotionDialog from './lib/components/auth/MotionDialog.svelte';
   import SettingsView from './lib/components/auth/SettingsView.svelte';
   import Toast from './lib/components/auth/Toast.svelte';
   import VaultGate from './lib/components/auth/VaultGate.svelte';
-  import { FADE_TRANSITION, MODAL_TRANSITION, PANEL_TRANSITION } from './lib/components/auth/transitions';
+  import {
+    FADE_TRANSITION,
+    PANEL_TRANSITION,
+    viewTransition
+  } from './lib/components/auth/transitions';
+  import {
+    getAutoScrollVelocity as calculateAutoScrollVelocity,
+    moveItem,
+    rubberbandOffset
+  } from './lib/components/auth/reorder';
   import { accountToOtpAuthUri } from './lib/auth/otpauth';
   import { decodeQrFiles, renderQrDataUrl } from './lib/auth/qr';
   import type { AccountDraft, AuthenticatorAccount, ImportResult } from './lib/auth/types';
@@ -69,14 +80,17 @@
     { mode: 'paste', key: 'addPaste', icon: ClipboardPaste }
   ];
   let view = $state<View>('codes');
+  let animateViewTransition = $state(false);
   let query = $state('');
   let dragAccounts = $state.raw<AuthenticatorAccount[] | null>(null);
   let dragState = $state.raw<AccountDragState | null>(null);
+  let reorderSaving = $state(false);
   let keyboardDraggingAccountId = $state<string | null>(null);
   let accountListElement = $state<HTMLUListElement | null>(null);
   let scrollContainerElement = $state<HTMLDivElement | null>(null);
   let activeDragHandle: HTMLElement | null = null;
   let autoScrollFrame = 0;
+  let lastAutoScrollTime = 0;
   let previousBodyUserSelect: string | null = null;
   let showAdd = $state(false);
   let addMode = $state<AddMode>('qr');
@@ -109,6 +123,16 @@
   const reorderDisabled = $derived(query.trim().length > 0 || filteredAccounts.length < 2);
   const activeDragAccountId = $derived(dragState?.accountId ?? keyboardDraggingAccountId);
   const pageScanBusy = $derived(pageScanState !== 'idle');
+
+  function showSettings(event: MouseEvent) {
+    animateViewTransition = event.detail > 0;
+    view = 'settings';
+  }
+
+  function showCodes(event?: MouseEvent) {
+    animateViewTransition = Boolean(event && event.detail > 0);
+    view = 'codes';
+  }
 
   onMount(() => {
     void initializeApp();
@@ -427,7 +451,14 @@
 
   function startAccountDrag(account: AuthenticatorAccount, event: PointerEvent) {
     const scrollContainer = scrollContainerElement;
-    if (reorderDisabled || !accountListElement || !scrollContainer) {
+    if (
+      dragState ||
+      keyboardDraggingAccountId ||
+      reorderSaving ||
+      reorderDisabled ||
+      !accountListElement ||
+      !scrollContainer
+    ) {
       return;
     }
 
@@ -509,11 +540,12 @@
     }
 
     event.preventDefault();
+    updatePointerDrag(event.clientY);
     const state = dragState;
     const accounts =
       state.currentIndex === state.startIndex
         ? null
-        : moveAccountInList(vault.sortedAccounts, state.startIndex, state.currentIndex);
+        : moveItem(vault.sortedAccounts, state.startIndex, state.currentIndex);
     if (accounts) {
       dragAccounts = accounts;
     }
@@ -523,7 +555,10 @@
     }
   }
 
-  function cancelAccountDrag() {
+  function cancelAccountDrag(event: PointerEvent) {
+    if (!dragState || event.pointerId !== dragState.pointerId) {
+      return;
+    }
     cleanupPointerDrag();
   }
 
@@ -542,6 +577,7 @@
       window.cancelAnimationFrame(autoScrollFrame);
       autoScrollFrame = 0;
     }
+    lastAutoScrollTime = 0;
     if (
       activeDragHandle &&
       pointerId !== undefined &&
@@ -564,15 +600,18 @@
     autoScrollFrame = window.requestAnimationFrame(runAutoScroll);
   }
 
-  function runAutoScroll() {
+  function runAutoScroll(timestamp: number) {
     if (!dragState || !scrollContainerElement) {
       autoScrollFrame = 0;
+      lastAutoScrollTime = 0;
       return;
     }
 
+    const elapsed = lastAutoScrollTime ? Math.min(timestamp - lastAutoScrollTime, 32) : 1000 / 60;
+    lastAutoScrollTime = timestamp;
     const velocity = getAutoScrollVelocity(dragState.currentPointerY);
     if (velocity !== 0) {
-      scrollContainerElement.scrollTop += velocity;
+      scrollContainerElement.scrollTop += (velocity * elapsed) / 1000;
       updatePointerDrag(dragState.currentPointerY);
     }
 
@@ -585,25 +624,17 @@
     }
 
     const rect = scrollContainerElement.getBoundingClientRect();
-    const threshold = 56;
-    const maxVelocity = 18;
-    const topDistance = clientY - rect.top;
-    const bottomDistance = rect.bottom - clientY;
-
-    if (topDistance < threshold && scrollContainerElement.scrollTop > 0) {
-      return -Math.ceil(Math.min(maxVelocity, ((threshold - topDistance) / threshold) * maxVelocity));
-    }
-
-    const maxScrollTop = scrollContainerElement.scrollHeight - scrollContainerElement.clientHeight;
-    if (bottomDistance < threshold && scrollContainerElement.scrollTop < maxScrollTop) {
-      return Math.ceil(Math.min(maxVelocity, ((threshold - bottomDistance) / threshold) * maxVelocity));
-    }
-
-    return 0;
+    return calculateAutoScrollVelocity({
+      pointerY: clientY,
+      top: rect.top,
+      bottom: rect.bottom,
+      scrollTop: scrollContainerElement.scrollTop,
+      maxScrollTop: scrollContainerElement.scrollHeight - scrollContainerElement.clientHeight
+    });
   }
 
   function handleAccountDragKey(account: AuthenticatorAccount, event: KeyboardEvent) {
-    if (reorderDisabled) {
+    if (reorderSaving || reorderDisabled) {
       return;
     }
 
@@ -650,7 +681,9 @@
       return;
     }
 
-    dragAccounts = moveAccountInList(accounts, fromIndex, toIndex);
+    const handle = event.currentTarget as HTMLElement;
+    dragAccounts = moveItem(accounts, fromIndex, toIndex);
+    void tick().then(() => handle.scrollIntoView({ block: 'nearest', behavior: 'auto' }));
   }
 
   function handleAccountDragBlur(account: AuthenticatorAccount) {
@@ -665,18 +698,16 @@
 
   async function commitAccountOrder(accounts: AuthenticatorAccount[]) {
     dragAccounts = accounts;
+    reorderSaving = true;
     try {
       await persistAccountOrder(accounts);
     } finally {
       dragAccounts = null;
+      reorderSaving = false;
     }
   }
 
   async function persistAccountOrder(accounts: AuthenticatorAccount[]) {
-    if (reorderDisabled) {
-      return;
-    }
-
     try {
       await vault.reorderAccounts(accounts.map((account) => account.id));
     } catch (error) {
@@ -735,12 +766,24 @@
     if (account.id === dragState.accountId) {
       const scrollDelta =
         (scrollContainerElement?.scrollTop ?? dragState.scrollTopAtStart) - dragState.scrollTopAtStart;
-      const offset = dragState.currentPointerY - dragState.startPointerY + scrollDelta;
+      let offset = dragState.currentPointerY - dragState.startPointerY + scrollDelta;
+      const currentRect = dragState.itemRects[index];
+      const firstRect = dragState.itemRects[0];
+      const lastRect = dragState.itemRects.at(-1);
+      if (lastRect) {
+        const minOffset = firstRect.top - currentRect.top;
+        const maxOffset = lastRect.top + lastRect.height - currentRect.top - currentRect.height;
+        offset = rubberbandOffset(offset, minOffset, maxOffset, dragState.itemHeight);
+      }
       return `position: relative; z-index: 30; transform: translate3d(0, ${offset}px, 0); transition: none; will-change: transform;`;
     }
 
     const offset = getDisplacedAccountOffset(index, dragState);
-    return `transform: translate3d(0, ${offset}px, 0); transition: transform 150ms cubic-bezier(0.2, 0, 0, 1); will-change: transform;`;
+    const transition = prefersReducedMotion.current
+      ? 'none'
+      : 'transform 150ms var(--auth-ease-in-out)';
+    const willChange = offset === 0 ? '' : ' will-change: transform;';
+    return `transform: translate3d(0, ${offset}px, 0); transition: ${transition};${willChange}`;
   }
 
   function getDisplacedAccountOffset(index: number, state: AccountDragState): number {
@@ -751,17 +794,6 @@
       return state.itemHeight;
     }
     return 0;
-  }
-
-  function moveAccountInList(
-    accounts: AuthenticatorAccount[],
-    fromIndex: number,
-    toIndex: number
-  ): AuthenticatorAccount[] {
-    const next = [...accounts];
-    const [moved] = next.splice(fromIndex, 1);
-    next.splice(toIndex, 0, moved);
-    return next;
   }
 
   function accountTitle(account: AuthenticatorAccount): string {
@@ -785,22 +817,30 @@
   {:else if vault.locked}
     <VaultGate hasVault={vault.hasVault} busy={vault.busy} oncreate={createVault} onunlock={unlockVault} />
     {#if vault.error}
-      <p class="px-6 pb-4 text-center text-sm text-error" role="alert">{vault.error}</p>
+      <p class="px-6 pb-4 text-center text-sm text-error" transition:fade={FADE_TRANSITION} role="alert">{vault.error}</p>
     {/if}
     {#if pageScanError}
-      <p class="px-6 pb-4 text-center text-sm text-error" role="alert">{pageScanError}</p>
+      <p class="px-6 pb-4 text-center text-sm text-error" transition:fade={FADE_TRANSITION} role="alert">{pageScanError}</p>
     {/if}
   {:else}
-    {#key view}
-      <section class="absolute inset-0 flex min-h-0 flex-col overflow-hidden" transition:fade={FADE_TRANSITION}>
-        {#if view === 'settings'}
-          <SettingsView onback={() => (view = 'codes')} />
-        {:else}
-          <AppBar onsettings={() => (view = 'settings')} />
+    <section class="absolute inset-0 flex min-h-0 flex-col overflow-hidden">
+      {#if view === 'settings'}
+        <div
+          class="absolute inset-0 z-10 flex min-h-0 flex-col overflow-hidden bg-base-100"
+          transition:viewTransition={{ x: 20, instant: !animateViewTransition }}
+        >
+          <SettingsView onback={showCodes} />
+        </div>
+      {:else}
+        <div
+          class="absolute inset-0 flex min-h-0 flex-col overflow-hidden bg-base-100"
+          transition:viewTransition={{ x: -20, instant: !animateViewTransition }}
+        >
+          <AppBar onsettings={showSettings} />
 
           <div class="flex grow flex-col overflow-y-auto pb-20" bind:this={scrollContainerElement}>
             {#if vault.accounts.length > 0}
-              <div class="sticky top-0 z-10 bg-base-100/95 px-3 py-2 backdrop-blur">
+              <div class="auth-sticky-search sticky top-0 z-10 bg-base-100/95 px-3 py-2 backdrop-blur">
                 <label class="auth-search-input input input-md w-full items-center gap-2">
                   <Search class="shrink-0 text-base-content/45" size={18} aria-hidden="true" />
                   <input class="grow text-base" type="search" placeholder={tr('search')} bind:value={query} />
@@ -819,6 +859,7 @@
                     {account}
                     code={vault.codes[account.id]}
                     reorderDisabled={reorderDisabled}
+                    reorderPending={reorderSaving}
                     dragging={activeDragAccountId === account.id}
                     dragStyle={getAccountDragStyle(account)}
                     oncodecopy={copyCode}
@@ -868,193 +909,223 @@
             variant={vault.error ? 'error' : 'notice'}
             nonce={vault.noticeKey}
           />
-        {/if}
-      </section>
-    {/key}
+        </div>
+      {/if}
+    </section>
   {/if}
 </main>
 
 <!-- Per-account actions sheet -->
 {#if actionsFor}
   {@const account = actionsFor}
-  <dialog class="modal modal-bottom modal-open sm:modal-middle" open>
-    <div class="modal-box p-0" transition:fly={MODAL_TRANSITION}>
-      <div class="border-b border-base-200 px-4 py-3">
-        <p class="truncate font-semibold">{accountTitle(account)}</p>
-      </div>
-      <ul class="menu w-full gap-0.5 p-2 text-base">
-        <li>
-          <button type="button" onclick={() => { void showQr(account); actionsFor = null; }}>
-            <QrCode size={18} aria-hidden="true" />{tr('showQr')}
-          </button>
-        </li>
-        <li>
-          <button type="button" onclick={() => { editing = account; actionsFor = null; }}>
-            <Pencil size={18} aria-hidden="true" />{tr('edit')}
-          </button>
-        </li>
-        <li>
-          <button class="text-error" type="button" onclick={() => { deleting = account; actionsFor = null; }}>
-            <Trash2 size={18} aria-hidden="true" />{tr('delete')}
-          </button>
-        </li>
-      </ul>
+  <MotionDialog
+    placement="sheet"
+    surfaceClass="p-0"
+    closeLabel={tr('cancel')}
+    onclose={() => (actionsFor = null)}
+  >
+    <div class="border-b border-base-200 px-4 py-3">
+      <p class="truncate font-semibold">{accountTitle(account)}</p>
     </div>
-    <button class="modal-backdrop" type="button" transition:fade={FADE_TRANSITION} onclick={() => (actionsFor = null)}>close</button>
-  </dialog>
+    <ul class="menu w-full gap-0.5 p-2 text-base">
+      <li>
+        <button
+          type="button"
+          onclick={() => {
+            void showQr(account);
+            actionsFor = null;
+          }}
+        >
+          <QrCode size={18} aria-hidden="true" />{tr('showQr')}
+        </button>
+      </li>
+      <li>
+        <button
+          type="button"
+          onclick={() => {
+            editing = account;
+            actionsFor = null;
+          }}
+        >
+          <Pencil size={18} aria-hidden="true" />{tr('edit')}
+        </button>
+      </li>
+      <li>
+        <button
+          class="text-error"
+          type="button"
+          onclick={() => {
+            deleting = account;
+            actionsFor = null;
+          }}
+        >
+          <Trash2 size={18} aria-hidden="true" />{tr('delete')}
+        </button>
+      </li>
+    </ul>
+  </MotionDialog>
 {/if}
 
 <!-- Add account -->
 {#if showAdd}
-  <dialog class="modal modal-open" open>
-    <div class="modal-box max-h-[88dvh] w-[calc(100vw-1.5rem)] max-w-md overflow-y-auto p-4" transition:fly={MODAL_TRANSITION}>
-      <div class="mb-3 flex items-center justify-between gap-2">
-        <h2 class="text-lg font-bold">{tr('addAccount')}</h2>
-        <button class="btn btn-ghost btn-sm btn-circle" type="button" aria-label={tr('cancel')} onclick={() => (showAdd = false)}>
-          <X size={18} aria-hidden="true" />
-        </button>
-      </div>
-
-      <div class="join w-full">
-        {#each ADD_MODES as item (item.mode)}
-          {@const Icon = item.icon}
-          <button
-            class={['btn join-item flex-1 btn-sm px-1', addMode === item.mode ? 'btn-primary' : '']}
-            type="button"
-            onclick={() => selectAddMode(item.mode)}
-          >
-            <Icon size={15} aria-hidden="true" />
-            <span class="truncate">{tr(item.key)}</span>
-          </button>
-        {/each}
-      </div>
-
-      {#if addMode === 'qr'}
-        <div class="mt-4 grid gap-3" in:fly={PANEL_TRANSITION}>
-          <p class="text-sm leading-snug text-base-content/60">{tr('addQrDescription')}</p>
-
-          <button class="btn btn-primary btn-block" type="button" onclick={startPageScan} disabled={pageScanBusy || addBusy}>
-            <ScanLine size={16} aria-hidden="true" />
-            {pageScanState === 'starting' ? tr('scanPage') : tr('scanPageStart')}
-          </button>
-
-          <label class="grid gap-1 text-sm font-medium">
-            <span class="flex items-center gap-2">
-              <ImageUp size={16} aria-hidden="true" />
-              {tr('qrImage')}
-            </span>
-            <input
-              class="file-input file-input-sm w-full"
-              type="file"
-              accept="image/*"
-              multiple
-              disabled={addBusy}
-              onchange={importAddQrImages}
-            />
-          </label>
-
-          {#if pageScanMessage}
-            <div class="alert alert-info py-2 text-sm" transition:fade={FADE_TRANSITION} role="status">{pageScanMessage}</div>
-          {/if}
-          {#if pageScanError}
-            <div class="alert alert-error py-2 text-sm" transition:fade={FADE_TRANSITION} role="alert">{pageScanError}</div>
-          {/if}
-          {#if addStatus}
-            <div class="alert alert-info py-2 text-sm" transition:fade={FADE_TRANSITION} role="status">{addStatus}</div>
-          {/if}
-          {#if addError}
-            <div class="alert alert-error py-2 text-sm" transition:fade={FADE_TRANSITION} role="alert">{addError}</div>
-          {/if}
-        </div>
-      {:else if addMode === 'manual'}
-        <div class="mt-4" in:fly={PANEL_TRANSITION}>
-          {#if formError}
-            <div class="alert alert-error mb-3 py-2 text-sm" transition:fade={FADE_TRANSITION} role="alert">{formError}</div>
-          {/if}
-          <AccountForm onsubmit={saveNewAccount} oncancel={() => (showAdd = false)} />
-        </div>
-      {:else}
-        <div class="mt-4 grid gap-3" in:fly={PANEL_TRANSITION}>
-          <p class="text-sm leading-snug text-base-content/60">{tr('addPasteDescription')}</p>
-
-          <textarea
-            class="textarea min-h-32 w-full font-mono text-sm leading-relaxed"
-            bind:value={addImportText}
-            placeholder="otpauth://totp/..."
-            spellcheck="false"
-          ></textarea>
-
-          <button class="btn btn-primary btn-block" type="button" onclick={importAddText} disabled={addBusy || !addImportText.trim()}>
-            {#if addBusy}
-              <span class="loading loading-spinner loading-sm"></span>
-            {:else}
-              <Upload size={16} aria-hidden="true" />
-            {/if}
-            {tr('import')}
-          </button>
-
-          {#if addStatus}
-            <div class="alert alert-info py-2 text-sm" transition:fade={FADE_TRANSITION} role="status">{addStatus}</div>
-          {/if}
-          {#if addError}
-            <div class="alert alert-error py-2 text-sm" transition:fade={FADE_TRANSITION} role="alert">{addError}</div>
-          {/if}
-        </div>
-      {/if}
+  <MotionDialog
+    surfaceClass="max-h-[88dvh] w-[calc(100vw-1.5rem)] max-w-md overflow-y-auto p-4"
+    closeLabel={tr('cancel')}
+    onclose={() => (showAdd = false)}
+  >
+    <div class="mb-3 flex items-center justify-between gap-2">
+      <h2 class="text-lg font-bold">{tr('addAccount')}</h2>
+      <button
+        class="btn btn-ghost btn-sm btn-circle"
+        type="button"
+        aria-label={tr('cancel')}
+        onclick={() => (showAdd = false)}
+      >
+        <X size={18} aria-hidden="true" />
+      </button>
     </div>
-    <button class="modal-backdrop" type="button" transition:fade={FADE_TRANSITION} onclick={() => (showAdd = false)}>close</button>
-  </dialog>
+
+    <div class="join w-full">
+      {#each ADD_MODES as item (item.mode)}
+        {@const Icon = item.icon}
+        <button
+          class={['btn join-item flex-1 btn-sm px-1', addMode === item.mode ? 'btn-primary' : '']}
+          type="button"
+          onclick={() => selectAddMode(item.mode)}
+        >
+          <Icon size={15} aria-hidden="true" />
+          <span class="truncate">{tr(item.key)}</span>
+        </button>
+      {/each}
+    </div>
+
+    {#if addMode === 'qr'}
+      <div class="mt-4 grid gap-3" in:fade={PANEL_TRANSITION}>
+        <p class="text-sm leading-snug text-base-content/60">{tr('addQrDescription')}</p>
+
+        <button class="btn btn-primary btn-block" type="button" onclick={startPageScan} disabled={pageScanBusy || addBusy}>
+          <ScanLine size={16} aria-hidden="true" />
+          {pageScanState === 'starting' ? tr('scanPage') : tr('scanPageStart')}
+        </button>
+
+        <label class="grid gap-1 text-sm font-medium">
+          <span class="flex items-center gap-2">
+            <ImageUp size={16} aria-hidden="true" />
+            {tr('qrImage')}
+          </span>
+          <input
+            class="file-input file-input-sm w-full"
+            type="file"
+            accept="image/*"
+            multiple
+            disabled={addBusy}
+            onchange={importAddQrImages}
+          />
+        </label>
+
+        {#if pageScanMessage}
+          <div class="alert alert-info py-2 text-sm" transition:fade={FADE_TRANSITION} role="status">{pageScanMessage}</div>
+        {/if}
+        {#if pageScanError}
+          <div class="alert alert-error py-2 text-sm" transition:fade={FADE_TRANSITION} role="alert">{pageScanError}</div>
+        {/if}
+        {#if addStatus}
+          <div class="alert alert-info py-2 text-sm" transition:fade={FADE_TRANSITION} role="status">{addStatus}</div>
+        {/if}
+        {#if addError}
+          <div class="alert alert-error py-2 text-sm" transition:fade={FADE_TRANSITION} role="alert">{addError}</div>
+        {/if}
+      </div>
+    {:else if addMode === 'manual'}
+      <div class="mt-4" in:fade={PANEL_TRANSITION}>
+        {#if formError}
+          <div class="alert alert-error mb-3 py-2 text-sm" transition:fade={FADE_TRANSITION} role="alert">{formError}</div>
+        {/if}
+        <AccountForm onsubmit={saveNewAccount} oncancel={() => (showAdd = false)} />
+      </div>
+    {:else}
+      <div class="mt-4 grid gap-3" in:fade={PANEL_TRANSITION}>
+        <p class="text-sm leading-snug text-base-content/60">{tr('addPasteDescription')}</p>
+
+        <textarea
+          class="textarea min-h-32 w-full font-mono text-sm leading-relaxed"
+          bind:value={addImportText}
+          placeholder="otpauth://totp/..."
+          spellcheck="false"
+        ></textarea>
+
+        <button class="btn btn-primary btn-block" type="button" onclick={importAddText} disabled={addBusy || !addImportText.trim()}>
+          {#if addBusy}
+            <span class="loading loading-spinner loading-sm"></span>
+          {:else}
+            <Upload size={16} aria-hidden="true" />
+          {/if}
+          {tr('import')}
+        </button>
+
+        {#if addStatus}
+          <div class="alert alert-info py-2 text-sm" transition:fade={FADE_TRANSITION} role="status">{addStatus}</div>
+        {/if}
+        {#if addError}
+          <div class="alert alert-error py-2 text-sm" transition:fade={FADE_TRANSITION} role="alert">{addError}</div>
+        {/if}
+      </div>
+    {/if}
+  </MotionDialog>
 {/if}
 
 <!-- Edit account -->
 {#if editing}
-  <dialog class="modal modal-open" open>
-    <div class="modal-box max-h-[88dvh] w-[calc(100vw-1.5rem)] max-w-md overflow-y-auto p-4" transition:fly={MODAL_TRANSITION}>
-      <h2 class="mb-3 text-lg font-bold">{tr('editAccount')}</h2>
-      {#if formError}
-        <div class="alert alert-error mb-3 py-2 text-sm" transition:fade={FADE_TRANSITION} role="alert">{formError}</div>
-      {/if}
-      <AccountForm initial={editing} onsubmit={saveEditedAccount} oncancel={() => (editing = null)} />
-    </div>
-    <button class="modal-backdrop" type="button" transition:fade={FADE_TRANSITION} onclick={() => (editing = null)}>close</button>
-  </dialog>
+  <MotionDialog
+    surfaceClass="max-h-[88dvh] w-[calc(100vw-1.5rem)] max-w-md overflow-y-auto p-4"
+    closeLabel={tr('cancel')}
+    onclose={() => (editing = null)}
+  >
+    <h2 class="mb-3 text-lg font-bold">{tr('editAccount')}</h2>
+    {#if formError}
+      <div class="alert alert-error mb-3 py-2 text-sm" transition:fade={FADE_TRANSITION} role="alert">{formError}</div>
+    {/if}
+    <AccountForm initial={editing} onsubmit={saveEditedAccount} oncancel={() => (editing = null)} />
+  </MotionDialog>
 {/if}
 
 <!-- Delete confirmation -->
 {#if deleting}
-  <dialog class="modal modal-open" open>
-    <div class="modal-box w-[calc(100vw-1.5rem)] max-w-sm p-4" transition:fly={MODAL_TRANSITION}>
-      <h2 class="text-lg font-bold">{tr('delete')}</h2>
-      <p class="mt-2 wrap-break-word text-sm text-base-content/70">{accountTitle(deleting)}</p>
-      <div class="modal-action grid grid-cols-2 gap-2">
-        <button class="btn" type="button" onclick={() => (deleting = null)}>{tr('cancel')}</button>
-        <button class="btn btn-error" type="button" onclick={deleteSelected}>{tr('delete')}</button>
-      </div>
+  <MotionDialog
+    surfaceClass="w-[calc(100vw-1.5rem)] max-w-sm p-4"
+    closeLabel={tr('cancel')}
+    onclose={() => (deleting = null)}
+  >
+    <h2 class="text-lg font-bold">{tr('delete')}</h2>
+    <p class="mt-2 wrap-break-word text-sm text-base-content/70">{accountTitle(deleting)}</p>
+    <div class="modal-action grid grid-cols-2 gap-2">
+      <button class="btn" type="button" onclick={() => (deleting = null)}>{tr('cancel')}</button>
+      <button class="btn btn-error" type="button" onclick={deleteSelected}>{tr('delete')}</button>
     </div>
-    <button class="modal-backdrop" type="button" transition:fade={FADE_TRANSITION} onclick={() => (deleting = null)}>close</button>
-  </dialog>
+  </MotionDialog>
 {/if}
 
 <!-- QR display -->
 {#if qrAccount}
-  <dialog class="modal modal-open" open>
-    <div class="modal-box grid w-[calc(100vw-1.5rem)] max-w-sm justify-items-center gap-3 p-4 text-center" transition:fly={MODAL_TRANSITION}>
-      <h2 class="text-lg font-bold">{tr('showQr')}</h2>
-      <p class="wrap-break-word text-sm text-base-content/70">{accountTitle(qrAccount)}</p>
-      {#if qrDataUrl}
-        <div class="grid w-full justify-items-center gap-3" transition:fade={FADE_TRANSITION}>
-          <img class="w-full max-w-64 rounded-box border border-base-300 bg-white p-2" src={qrDataUrl} alt={tr('showQr')} />
-          <a class="btn btn-block" href={qrDataUrl} download={`${qrAccount.label || 'account'}-qr.png`}>
-            <Download size={16} aria-hidden="true" />
-            QR
-          </a>
-        </div>
-      {/if}
-      <div class="modal-action mt-0 w-full">
-        <button class="btn btn-primary btn-block" type="button" onclick={closeQr}>{tr('cancel')}</button>
+  <MotionDialog
+    surfaceClass="grid w-[calc(100vw-1.5rem)] max-w-sm justify-items-center gap-3 p-4 text-center"
+    closeLabel={tr('cancel')}
+    onclose={closeQr}
+  >
+    <h2 class="text-lg font-bold">{tr('showQr')}</h2>
+    <p class="wrap-break-word text-sm text-base-content/70">{accountTitle(qrAccount)}</p>
+    {#if qrDataUrl}
+      <div class="grid w-full justify-items-center gap-3" transition:fade={FADE_TRANSITION}>
+        <img class="w-full max-w-64 rounded-box border border-base-300 bg-white p-2" src={qrDataUrl} alt={tr('showQr')} />
+        <a class="btn btn-block" href={qrDataUrl} download={`${qrAccount.label || 'account'}-qr.png`}>
+          <Download size={16} aria-hidden="true" />
+          QR
+        </a>
       </div>
+    {/if}
+    <div class="modal-action mt-0 w-full">
+      <button class="btn btn-primary btn-block" type="button" onclick={closeQr}>{tr('cancel')}</button>
     </div>
-    <button class="modal-backdrop" type="button" transition:fade={FADE_TRANSITION} onclick={closeQr}>close</button>
-  </dialog>
+  </MotionDialog>
 {/if}
 </div>

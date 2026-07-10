@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { onDestroy, untrack } from 'svelte';
+  import { prefersReducedMotion } from 'svelte/motion';
   import { CircleAlert, CircleCheck } from '@lucide/svelte';
 
   type Variant = 'notice' | 'error';
@@ -17,9 +19,7 @@
 
   let { message, variant = 'notice', nonce = 0 }: Props = $props();
 
-  // Springy overshoot for entrances/pulses, sharp ease-in for the exit.
-  const POP_EASE = 'cubic-bezier(0.34, 1.56, 0.64, 1)';
-  const OUT_EASE = 'cubic-bezier(0.4, 0, 1, 1)';
+  const EASE_OUT = 'cubic-bezier(0.23, 1, 0.32, 1)';
 
   let el = $state<HTMLDivElement | null>(null);
   // `shown` is null whenever nothing should be in the DOM, so the pill never
@@ -31,62 +31,86 @@
   let pendingEntrance = false;
   let anim: Animation | null = null;
 
-  function reducedMotion(): boolean {
-    return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
-  }
-
-  function play(keyframes: Keyframe[], duration: number, easing: string): Animation | null {
+  function play(
+    keyframes: Keyframe[],
+    reducedKeyframes: Keyframe[],
+    duration: number,
+    reducedDuration = 110
+  ): Animation | null {
     if (!el) return null;
+
+    // Read the painted state before canceling so rapid updates reverse without
+    // jumping back to the element's inline starting style.
+    const style = getComputedStyle(el);
+    const opacity = Number.parseFloat(style.opacity);
+    const presentation = {
+      opacity: Number.isFinite(opacity) ? opacity : 0,
+      transform: style.transform === 'none' ? 'translateY(0) scale(1)' : style.transform
+    };
     anim?.cancel();
-    if (reducedMotion()) {
-      const last = keyframes[keyframes.length - 1];
-      el.style.opacity = String(last.opacity ?? 1);
+
+    if (prefersReducedMotion.current) {
       el.style.transform = 'none';
-      return null;
+      anim = el.animate(
+        [{ opacity: presentation.opacity }, ...reducedKeyframes],
+        { duration: reducedDuration, easing: EASE_OUT, fill: 'forwards' }
+      );
+      return anim;
     }
-    anim = el.animate(keyframes, { duration, easing, fill: 'forwards' });
+
+    anim = el.animate(
+      [
+        {
+          opacity: presentation.opacity,
+          transform: presentation.transform
+        },
+        ...keyframes
+      ],
+      { duration, easing: EASE_OUT, fill: 'forwards' }
+    );
     return anim;
   }
 
   function popIn() {
     play(
       [
-        { opacity: 0, transform: 'translateY(10px) scale(0.9)' },
         { opacity: 1, transform: 'translateY(0) scale(1)' }
       ],
-      260,
-      POP_EASE
+      [{ opacity: 1 }],
+      200
     );
   }
 
-  function bump() {
+  function acknowledgeRepeat() {
     play(
       [
-        { transform: 'translateY(0) scale(1)', opacity: 1 },
-        { transform: 'translateY(0) scale(1.06)', offset: 0.4, opacity: 1 },
+        { transform: 'translateY(0) scale(0.98)', offset: 0.45, opacity: 1 },
         { transform: 'translateY(0) scale(1)', opacity: 1 }
       ],
-      260,
-      POP_EASE
+      [
+        { opacity: 0.86, offset: 0.45 },
+        { opacity: 1 }
+      ],
+      140
     );
   }
 
   function slideOut() {
     const out = play(
       [
-        { opacity: 1, transform: 'translateY(0) scale(1)' },
-        { opacity: 0, transform: 'translateY(6px) scale(0.96)' }
+        { opacity: 0, transform: 'translateY(4px) scale(0.98)' }
       ],
-      150,
-      OUT_EASE
+      [{ opacity: 0 }],
+      130,
+      120
     );
     if (out) {
-      // A natural finish means no newer message interrupted us: unmount.
-      // (cancel() from a follow-up animation does not fire onfinish.)
       out.onfinish = () => {
+        if (anim !== out || visible || message) return;
+        anim = null;
         shown = null;
       };
-    } else {
+    } else if (!visible) {
       shown = null;
     }
   }
@@ -96,21 +120,23 @@
     const incoming = { text: message, variant, nonce };
     const { text, variant: next } = incoming;
 
-    if (text) {
-      const fresh = !visible;
-      visible = true;
-      shown = { text, variant: next };
-      if (!el) {
-        pendingEntrance = true; // element mounts this tick; animate once it exists
-      } else if (fresh) {
-        popIn();
-      } else {
-        bump();
+    untrack(() => {
+      if (text) {
+        const fresh = !visible;
+        visible = true;
+        shown = { text, variant: next };
+        if (!el) {
+          pendingEntrance = true; // element mounts this tick; animate once it exists
+        } else if (fresh) {
+          popIn();
+        } else {
+          acknowledgeRepeat();
+        }
+      } else if (visible) {
+        visible = false;
+        slideOut();
       }
-    } else if (visible) {
-      visible = false;
-      slideOut();
-    }
+    });
   });
 
   // Run the entrance animation once the freshly mounted element is in the DOM.
@@ -118,6 +144,14 @@
     if (el && pendingEntrance) {
       pendingEntrance = false;
       popIn();
+    }
+  });
+
+  onDestroy(() => {
+    if (anim) {
+      anim.onfinish = null;
+      anim.cancel();
+      anim = null;
     }
   });
 </script>
@@ -130,7 +164,7 @@
       'error'
         ? 'bg-error text-error-content'
         : 'bg-primary text-primary-content'}"
-      style="opacity: 0;"
+      style="opacity: 0; transform: translateY(8px) scale(0.96);"
       role={shown.variant === 'error' ? 'alert' : 'status'}
       aria-live={shown.variant === 'error' ? 'assertive' : 'polite'}
     >

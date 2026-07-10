@@ -1,5 +1,7 @@
 <script lang="ts">
+  import { fade } from 'svelte/transition';
   import { Download, FileJson, FileText, ImageUp, Upload } from '@lucide/svelte';
+  import { FADE_TRANSITION } from './transitions';
   import { downloadBlob, exportEncryptedBackup, exportPlainOtpAuth } from '../../auth/backup';
   import { decodeQrFiles } from '../../auth/qr';
   import type { AppSettings, AuthenticatorAccount, ImportResult } from '../../auth/types';
@@ -202,10 +204,10 @@
   </div>
 
   {#if status}
-    <div class="alert alert-success py-2 text-sm" role="status">{status}</div>
+    <div class="alert alert-success py-2 text-sm" transition:fade={FADE_TRANSITION} role="status">{status}</div>
   {/if}
   {#if error}
-    <div class="alert alert-error py-2 text-sm" role="alert">{error}</div>
+    <div class="alert alert-error py-2 text-sm" transition:fade={FADE_TRANSITION} role="alert">{error}</div>
   {/if}
 
   <div class="border-t border-base-300"></div>

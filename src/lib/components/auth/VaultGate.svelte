@@ -1,6 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { fade } from 'svelte/transition';
   import { KeyRound, LockKeyhole } from '@lucide/svelte';
+  import { FADE_TRANSITION } from './transitions';
   import { tr } from '../../i18n/messages';
 
   interface Props {
@@ -74,7 +76,7 @@
       {/if}
 
       {#if localError}
-        <p class="text-sm text-error" role="alert">{localError}</p>
+        <p class="text-sm text-error" transition:fade={FADE_TRANSITION} role="alert">{localError}</p>
       {/if}
 
       <button class="btn btn-primary btn-block" type="submit" disabled={busy}>

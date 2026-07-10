@@ -1,13 +1,14 @@
 <script lang="ts">
-  import { fade, fly, slide } from 'svelte/transition';
+  import { fade } from 'svelte/transition';
   import { ArrowLeft, ChevronRight, DatabaseBackup, KeyRound, Moon, ShieldCheck, Sun, Trash2 } from '@lucide/svelte';
   import ImportExportPanel from './ImportExportPanel.svelte';
-  import { EXPAND_TRANSITION, FADE_TRANSITION, MODAL_TRANSITION } from './transitions';
+  import MotionDialog from './MotionDialog.svelte';
+  import { FADE_TRANSITION, panelReveal } from './transitions';
   import { authenticatorVault as vault } from '../../state/authenticator.svelte';
   import { LANGUAGES, tr } from '../../i18n/messages';
 
   interface Props {
-    onback: () => void;
+    onback: (event?: MouseEvent) => void;
   }
 
   let { onback }: Props = $props();
@@ -262,7 +263,7 @@
       </label>
 
       {#if securityPanel}
-        <div transition:slide={EXPAND_TRANSITION}>
+        <div transition:panelReveal>
           {#if securityPanel === 'password'}
             <div class="space-y-2 rounded-box bg-base-200/60 p-3">
               {#if intent === 'changing'}
@@ -353,16 +354,17 @@
 </div>
 
 {#if showBackup}
-  <dialog class="modal modal-open" open>
-    <div class="modal-box max-h-[88dvh] w-[calc(100vw-1.5rem)] max-w-md overflow-y-auto p-4" transition:fly={MODAL_TRANSITION}>
-      <h2 class="mb-3 text-lg font-bold">{tr('importExport')}</h2>
-      <ImportExportPanel
-        accounts={vault.accounts}
-        settings={vault.settings}
-        onimport={(text) => vault.importText(text)}
-        onimportencrypted={(text, password) => vault.importEncryptedBackupText(text, password)}
-      />
-    </div>
-    <button class="modal-backdrop" type="button" transition:fade={FADE_TRANSITION} onclick={() => (showBackup = false)}>close</button>
-  </dialog>
+  <MotionDialog
+    surfaceClass="max-h-[88dvh] w-[calc(100vw-1.5rem)] max-w-md overflow-y-auto p-4"
+    closeLabel={tr('cancel')}
+    onclose={() => (showBackup = false)}
+  >
+    <h2 class="mb-3 text-lg font-bold">{tr('importExport')}</h2>
+    <ImportExportPanel
+      accounts={vault.accounts}
+      settings={vault.settings}
+      onimport={(text) => vault.importText(text)}
+      onimportencrypted={(text, password) => vault.importEncryptedBackupText(text, password)}
+    />
+  </MotionDialog>
 {/if}
