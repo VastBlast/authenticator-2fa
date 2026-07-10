@@ -45,6 +45,10 @@ function wrapContentScriptEntries(): Plugin {
         return null
       }
 
+      if (chunk.imports.length > 0 || chunk.dynamicImports.length > 0 || chunk.exports.length > 0) {
+        this.error(`Content script ${chunk.name} must be self-contained`)
+      }
+
       return {
         code: `(() => {\n${code}\n})();\n`,
         map: null,

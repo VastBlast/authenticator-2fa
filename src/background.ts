@@ -54,7 +54,7 @@ async function startPageScan(): Promise<void> {
     throw new Error('No active tab is available to scan.');
   }
 
-  if (tab.url && isRestrictedPage(tab.url)) {
+  if (isRestrictedPage(tab.url)) {
     throw new Error('Page scan is unavailable on internal or extension pages.');
   }
 
@@ -72,7 +72,7 @@ async function pasteCodeIntoActivePage(code: unknown): Promise<Partial<MessageRe
     throw new Error('No active tab is available for auto-paste.');
   }
 
-  if (tab.url && isRestrictedPage(tab.url)) {
+  if (isRestrictedPage(tab.url)) {
     throw new Error('Auto-paste is unavailable on internal or extension pages.');
   }
 
@@ -171,7 +171,7 @@ function captureVisibleTab(windowId: number | undefined): Promise<string> {
 
 function sendTabMessage<T = unknown>(tabId: number, message: unknown): Promise<T> {
   return new Promise((resolve, reject) => {
-    chrome.tabs.sendMessage(tabId, message, (response: T) => {
+    chrome.tabs.sendMessage(tabId, message, { frameId: 0 }, (response: T) => {
       const errorMessage = chrome.runtime.lastError?.message;
       if (errorMessage) {
         reject(new Error(errorMessage));

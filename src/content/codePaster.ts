@@ -1,7 +1,10 @@
 import {
   canReplaceCodeValue,
   canReplaceWholeCodeValue,
+  hasStrongOtpFieldHint,
+  isCodeCompatibleWithTextControl,
   isCodeValueEmpty,
+  isValidOtpCode,
   normalizeCodeValue
 } from '../lib/auth/codePasteSafety';
 
@@ -25,10 +28,7 @@ interface PasteTarget {
   replace: boolean;
 }
 
-const MAX_CODE_LENGTH = 32;
 const OTP_SCORE_THRESHOLD = 45;
-const STRONG_OTP_PATTERN =
-  /\b(?:otp|totp|hotp|mfa|2fa|two[-\s]?factor|one[-\s]?time|verification|authentication|authenticator|login\s+code|passcode)\b/i;
 const CODE_PATTERN = /\bcode\b/i;
 const codePasterWindow = window as Window & { __twofaCodePasterInstalled?: boolean };
 
@@ -48,11 +48,7 @@ function handleMessage(
     return undefined;
   }
 
-  if (
-    typeof payload.code !== 'string' ||
-    payload.code.length === 0 ||
-    payload.code.length > MAX_CODE_LENGTH
-  ) {
+  if (typeof payload.code !== 'string' || !isValidOtpCode(payload.code)) {
     sendResponse({ ok: false, error: 'Paste code is invalid.' });
     return undefined;
   }
@@ -159,7 +155,9 @@ function createInputTarget(input: HTMLInputElement, code: string, active: boolea
 }
 
 function fillTarget(target: PasteTarget, code: string): boolean {
-  if (!canFillTarget(target, code)) {
+  const canFillDirectly = canDirectlyFillTarget(target, code);
+  const canUsePasteHandler = canTrySegmentedPasteHandler(target, code);
+  if (!canFillDirectly && !canUsePasteHandler) {
     return false;
   }
 
@@ -169,6 +167,10 @@ function fillTarget(target: PasteTarget, code: string): boolean {
     if (targetContainsCode(target, code)) {
       return true;
     }
+  }
+
+  if (!canFillDirectly) {
+    return false;
   }
 
   if (target.kind === 'group' && target.group) {
@@ -183,6 +185,10 @@ function fillTarget(target: PasteTarget, code: string): boolean {
 }
 
 function canFillTarget(target: PasteTarget, code: string): boolean {
+  return canDirectlyFillTarget(target, code) || canTrySegmentedPasteHandler(target, code);
+}
+
+function canDirectlyFillTarget(target: PasteTarget, code: string): boolean {
   if (target.kind === 'group' && target.group) {
     return canFillInputGroup(target.group, code);
   }
@@ -194,9 +200,29 @@ function canFillTarget(target: PasteTarget, code: string): boolean {
   return Boolean(getContentEditableEdit(target.element, code, target.replace));
 }
 
-function canFillInputGroup(group: HTMLInputElement[], code: string): boolean {
+function canTrySegmentedPasteHandler(target: PasteTarget, code: string): boolean {
+  if (!target.otpLike || !(target.element instanceof HTMLInputElement) || !targetValueIsEmpty(target)) {
+    return false;
+  }
+
   return (
-    group.length === Array.from(code).length &&
+    target.element.maxLength > 0 &&
+    target.element.maxLength <= 2 &&
+    isCodeCompatibleWithTextControl(code, -1, isNumericTextControl(target.element))
+  );
+}
+
+function canFillInputGroup(group: HTMLInputElement[], code: string): boolean {
+  const characters = Array.from(code);
+  return (
+    group.length === characters.length &&
+    group.every((input, index) =>
+      isCodeCompatibleWithTextControl(
+        characters[index],
+        input.maxLength,
+        isNumericTextControl(input)
+      )
+    ) &&
     canReplaceCodeValue(getInputGroupValue(group), code)
   );
 }
@@ -349,22 +375,23 @@ function scoreElement(
   group?: HTMLInputElement[] | null
 ): number {
   const hints = getElementHints(element, group);
+  const otpShape = hasOtpShape(element, code);
   let score = 0;
 
   if (element instanceof HTMLInputElement && element.autocomplete.toLowerCase() === 'one-time-code') {
     score += 120;
   }
-  if (STRONG_OTP_PATTERN.test(hints)) {
+  if (hasStrongOtpFieldHint(hints, otpShape)) {
     score += 80;
   }
-  if (CODE_PATTERN.test(hints) && (group || hasOtpShape(element, code))) {
+  if (CODE_PATTERN.test(hints) && (group || otpShape)) {
     // Generic "code" text is a weak signal; coupon and postal fields use it too.
     score += 15;
   }
   if (group) {
     score += 35;
   }
-  if (hasOtpShape(element, code)) {
+  if (otpShape) {
     score += 20;
   }
   if ('value' in element && typeof element.value === 'string' && element.value.trim() === '') {
@@ -445,8 +472,12 @@ function isSafeActiveInput(input: HTMLInputElement): boolean {
 function isVisibleEditable(element: HTMLElement): boolean {
   if (
     (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) &&
-    (element.disabled || element.readOnly)
+    (element.matches(':disabled') || element.readOnly)
   ) {
+    return false;
+  }
+
+  if (isInInertSubtree(element)) {
     return false;
   }
 
@@ -454,8 +485,22 @@ function isVisibleEditable(element: HTMLElement): boolean {
   return (
     style.display !== 'none' &&
     style.visibility !== 'hidden' &&
-    element.getClientRects().length > 0
+    Array.from(element.getClientRects()).some((rect) => rect.width > 0 && rect.height > 0)
   );
+}
+
+function isInInertSubtree(element: HTMLElement): boolean {
+  let current: Element | null = element;
+  while (current) {
+    if (current.hasAttribute('inert')) {
+      return true;
+    }
+
+    const root = current.getRootNode();
+    current = current.parentElement ?? (root instanceof ShadowRoot ? root.host : null);
+  }
+
+  return false;
 }
 
 function focusElement(element: HTMLElement): void {
@@ -512,6 +557,10 @@ function getTextControlEditRange(
   code: string,
   replace: boolean
 ): TextEditRange | null {
+  if (!isCodeCompatibleWithTextControl(code, control.maxLength, isNumericTextControl(control))) {
+    return null;
+  }
+
   const currentValue = control.value;
   if (canReplaceWholeCodeValue(currentValue, code, replace)) {
     return { start: 0, end: currentValue.length };
@@ -528,6 +577,13 @@ function getTextControlEditRange(
 
   const selectedValue = currentValue.slice(selection.start, selection.end);
   return canReplaceCodeValue(selectedValue, code) ? selection : null;
+}
+
+function isNumericTextControl(control: HTMLInputElement | HTMLTextAreaElement): boolean {
+  return (
+    (control instanceof HTMLInputElement && control.type === 'number') ||
+    ['numeric', 'decimal'].includes(control.inputMode.toLowerCase())
+  );
 }
 
 function getTextSelectionRange(

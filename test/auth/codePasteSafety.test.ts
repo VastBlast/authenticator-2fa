@@ -2,9 +2,93 @@ import { describe, expect, test } from 'vitest';
 import {
   canReplaceCodeValue,
   canReplaceWholeCodeValue,
+  hasStrongOtpFieldHint,
+  isCodeCompatibleWithTextControl,
   isCodeValueEmpty,
+  isValidOtpCode,
   normalizeCodeValue
 } from '../../src/lib/auth/codePasteSafety';
+
+describe('code paste input validation', () => {
+  test('accepts supported OTP-shaped values', () => {
+    expect(isValidOtpCode('01234')).toBe(true);
+    expect(isValidOtpCode('0123456789')).toBe(true);
+    expect(isValidOtpCode('BCDF2')).toBe(true);
+
+    expect(isValidOtpCode('1234')).toBe(false);
+    expect(isValidOtpCode('12345678901')).toBe(false);
+    expect(isValidOtpCode('123 456')).toBe(false);
+    expect(isValidOtpCode('<12345>')).toBe(false);
+  });
+
+  test('rejects codes that cannot fit or be represented by a text control', () => {
+    expect(isCodeCompatibleWithTextControl('012345', 6, true)).toBe(true);
+    expect(isCodeCompatibleWithTextControl('012345', -1, true)).toBe(true);
+    expect(isCodeCompatibleWithTextControl('012345', 5, true)).toBe(false);
+    expect(isCodeCompatibleWithTextControl('BCDF2', -1, true)).toBe(false);
+    expect(isCodeCompatibleWithTextControl('BCDF2', 5, false)).toBe(true);
+    expect(isCodeCompatibleWithTextControl('0123456789', 10, true)).toBe(true);
+    expect(isCodeCompatibleWithTextControl('0123456789', 9, true)).toBe(false);
+    expect(isCodeCompatibleWithTextControl('01234', 0, true)).toBe(false);
+  });
+});
+
+describe('OTP field hints', () => {
+  test('recognizes the reported identifiers only when the field has an OTP shape', () => {
+    expect(hasStrongOtpFieldHint('off google_auth_code 验证码', true)).toBe(true);
+    expect(hasStrongOtpFieldHint('off googleCode google-code', true)).toBe(true);
+    expect(hasStrongOtpFieldHint('googleAuthenticatorCode', true)).toBe(true);
+    expect(hasStrongOtpFieldHint('google-authenticator-code', true)).toBe(true);
+
+    expect(hasStrongOtpFieldHint('googleCode', false)).toBe(false);
+  });
+
+  test('recognizes compound forms of existing high-confidence hints', () => {
+    expect(hasStrongOtpFieldHint('verification_code', false)).toBe(true);
+    expect(hasStrongOtpFieldHint('oneTimeCode', false)).toBe(true);
+    expect(hasStrongOtpFieldHint('two_factor_code', false)).toBe(true);
+    expect(hasStrongOtpFieldHint('totpCode', false)).toBe(true);
+  });
+
+  test('preserves existing strong OTP hints', () => {
+    for (const hints of [
+      'otp',
+      'hotp',
+      'mfa',
+      '2fa',
+      'two-factor',
+      'one-time',
+      'verification',
+      'authentication',
+      'authenticator',
+      'login code',
+      'loginCode',
+      'passcode'
+    ]) {
+      expect(hasStrongOtpFieldHint(hints, false), hints).toBe(true);
+    }
+  });
+
+  test('does not promote unrelated or sensitive compound identifiers', () => {
+    for (const hints of [
+      'authCode',
+      'coupon_code',
+      'postalCode',
+      'recoveryCode',
+      'security_code',
+      'sourceCode',
+      'otp_secret',
+      'mfa_method',
+      'authentication_password',
+      'googleAuthorizationCode',
+      'googleCodeVerifier',
+      'googleCouponCode',
+      'notgoogleCode'
+    ]) {
+      expect(hasStrongOtpFieldHint(hints, true), hints).toBe(false);
+    }
+  });
+});
 
 describe('code paste replacement safety', () => {
   test('normalizes whitespace before comparing code values', () => {
