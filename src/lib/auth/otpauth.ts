@@ -75,8 +75,8 @@ export function parseOtpAuthUri(uri: string): AuthenticatorAccount {
     type,
     algorithm: parseAlgorithm(url.searchParams.get('algorithm')),
     digits: parseDigits(url.searchParams.get('digits'), type),
-    period: parsePositiveInt(url.searchParams.get('period')) ?? 30,
-    counter: parsePositiveInt(url.searchParams.get('counter')) ?? 0
+    period: parseOptionalNonNegativeInteger(url.searchParams.get('period'), 'Period') ?? 30,
+    counter: parseOptionalNonNegativeInteger(url.searchParams.get('counter'), 'Counter') ?? 0
   });
 }
 
@@ -252,14 +252,21 @@ function parseLabelPath(labelText: string): { issuer: string; label: string } {
 }
 
 function parseAlgorithm(value: string | null): OtpAlgorithm {
-  const normalized = (value ?? 'SHA1').replace(/[-_\s]/g, '').toUpperCase();
+  if (value === null) {
+    return 'SHA-1';
+  }
+
+  const normalized = value.replace(/[-_\s]/g, '').toUpperCase();
+  if (normalized === 'SHA1') {
+    return 'SHA-1';
+  }
   if (normalized === 'SHA256') {
     return 'SHA-256';
   }
   if (normalized === 'SHA512') {
     return 'SHA-512';
   }
-  return 'SHA-1';
+  throw new Error(`Unsupported OTP algorithm "${value}".`);
 }
 
 function migrationAlgorithm(value: number | undefined): OtpAlgorithm {
@@ -276,16 +283,25 @@ function parseDigits(value: string | null, type: OtpType): number {
   if (type === 'steam') {
     return 5;
   }
-  const digits = parsePositiveInt(value);
+  const digits = parseOptionalNonNegativeInteger(value, 'Digits');
   return digits ?? 6;
 }
 
-function parsePositiveInt(value: string | null): number | undefined {
-  if (!value) {
+function parseOptionalNonNegativeInteger(value: string | null, parameter: string): number | undefined {
+  if (value === null) {
     return undefined;
   }
-  const numeric = Number(value);
-  return Number.isInteger(numeric) && numeric >= 0 ? numeric : undefined;
+
+  const normalized = value.trim();
+  if (!/^\d+$/.test(normalized)) {
+    throw new Error(`${parameter} must be a non-negative whole number.`);
+  }
+
+  const numeric = Number(normalized);
+  if (!Number.isSafeInteger(numeric)) {
+    throw new Error(`${parameter} must be a non-negative whole number.`);
+  }
+  return numeric;
 }
 
 function decodeParameter(value: string | null): string {

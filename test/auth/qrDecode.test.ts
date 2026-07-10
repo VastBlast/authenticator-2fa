@@ -3,6 +3,8 @@ import { toBuffer } from 'qrcode';
 import sharp from 'sharp';
 import { describe, expect, test } from 'vitest';
 import { prepareZXingModule } from 'zxing-wasm/reader';
+import { generateOtpCode } from '../../src/lib/auth/otp';
+import { parseOtpAuthUri } from '../../src/lib/auth/otpauth';
 import { decodeQrImageData, QR_IMAGE_TOO_LARGE_ERROR } from '../../src/lib/auth/qrDecode';
 
 const wasm = readFileSync(
@@ -88,6 +90,35 @@ describe('decodeQrImageData', () => {
     });
 
     expect(decoded).toBe(payload);
+  });
+
+  test('imports non-block-aligned Base32 secrets with or without padding', async () => {
+    const unpaddedSecret = 'J3WWIV3PTGJPQV5QAICM';
+
+    for (const secret of [unpaddedSecret, `${unpaddedSecret}====`]) {
+      const payload = `otpauth://totp/Example:User?secret=${secret}&issuer=Example`;
+      const qr = await toBuffer(payload, {
+        errorCorrectionLevel: 'M',
+        margin: 1,
+        scale: 4,
+        type: 'png'
+      });
+      const { data, info } = await sharp(qr)
+        .ensureAlpha()
+        .raw()
+        .toBuffer({ resolveWithObject: true });
+
+      const decoded = await decodeQrImageData({
+        data,
+        width: info.width,
+        height: info.height
+      });
+      const account = parseOtpAuthUri(decoded);
+
+      expect(decoded).toBe(payload);
+      expect(account.secret).toBe(unpaddedSecret);
+      await expect(generateOtpCode(account, 59_000)).resolves.toMatchObject({ value: '850668' });
+    }
   });
 });
 
