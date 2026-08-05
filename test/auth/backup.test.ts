@@ -10,7 +10,8 @@ const validVaultData: VaultData = {
     language: 'en',
     theme: 'light',
     showCountdownSeconds: false,
-    autoPasteCodes: false
+    autoPasteCodes: false,
+    accountSortMode: 'manual'
   }
 };
 

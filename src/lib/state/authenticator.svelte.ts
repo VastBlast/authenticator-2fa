@@ -37,7 +37,7 @@ import type {
   VaultData,
   VaultEnvelope
 } from '../auth/types';
-import { DEFAULT_SETTINGS } from '../auth/types';
+import { DEFAULT_SETTINGS, normalizeAppSettings } from '../auth/types';
 
 export class AuthenticatorVault {
   initialized = $state(false);
@@ -55,10 +55,16 @@ export class AuthenticatorVault {
   private key: CryptoKey | null = null;
   private encryptedVault: VaultEnvelope | null = null;
   private plainVault: PlainVaultRecord | null = null;
+  private mutationQueue: Promise<void> = Promise.resolve();
+  private codeRefreshRequest = 0;
 
   sortedAccounts = $derived.by(() => [...this.accounts].sort(compareAccountOrder));
 
   async initialize(): Promise<void> {
+    await this.enqueueMutation(() => this.initializeNow());
+  }
+
+  private async initializeNow(): Promise<void> {
     this.busy = true;
     try {
       const stored = await loadStoredVault();
@@ -77,11 +83,18 @@ export class AuthenticatorVault {
   }
 
   async unlock(password: string): Promise<void> {
+    await this.enqueueMutation(() => this.unlockNow(password));
+  }
+
+  private async unlockNow(password: string): Promise<void> {
     if (!this.encryptedVault) {
-      await this.initialize();
+      await this.initializeNow();
     }
     if (!this.encryptedVault) {
       this.error = 'No encrypted vault exists yet.';
+      return;
+    }
+    if (!this.locked) {
       return;
     }
 
@@ -102,62 +115,68 @@ export class AuthenticatorVault {
   }
 
   async lock(): Promise<void> {
-    if (!this.passwordProtected) {
-      this.showNotice('Password protection is off.');
-      return;
-    }
+    await this.enqueueMutation(async () => {
+      if (!this.passwordProtected) {
+        this.showNotice('Password protection is off.');
+        return;
+      }
 
-    await clearVaultSessionKey();
-    this.key = null;
-    this.accounts = [];
-    this.codes = {};
-    this.locked = true;
-    this.showNotice('Vault locked.');
+      await clearVaultSessionKey();
+      this.key = null;
+      this.accounts = [];
+      this.codes = {};
+      this.locked = true;
+      this.showNotice('Vault locked.');
+    });
   }
 
   async addAccount(draft: AccountDraft): Promise<void> {
     const account = createAccount(draft);
-    await this.mergeAccounts([account]);
+    await this.enqueueMutation(() => this.mergeAccounts([account]));
   }
 
   async updateAccount(id: string, draft: Partial<AccountDraft>): Promise<void> {
-    const index = this.accounts.findIndex((account) => account.id === id);
-    if (index === -1) {
-      return;
-    }
-
-    const accounts = [...this.accounts];
-    accounts[index] = updateAccount(accounts[index], draft);
-    await this.persistData({ accounts, settings: this.settings }, 'Account updated.');
-    await this.refreshCodes();
+    const update = { ...draft };
+    await this.enqueueMutation(() => this.updateAccountNow(id, update));
   }
 
   async deleteAccount(id: string): Promise<void> {
-    const accounts = this.accounts.filter((account) => account.id !== id);
-    await this.persistData({ accounts, settings: this.settings }, 'Account removed.');
-    await this.refreshCodes();
+    await this.enqueueMutation(async () => {
+      const accounts = this.accounts.filter((account) => account.id !== id);
+      await this.persistData({ accounts, settings: this.settings }, 'Account removed.');
+      await this.refreshCodes();
+    });
   }
 
   async reorderAccounts(orderedIds: string[]): Promise<void> {
-    const accounts = reorderAccountsById(this.sortedAccounts, orderedIds);
-    if (!accounts) {
-      return;
-    }
+    const requestedOrder = [...orderedIds];
+    await this.enqueueMutation(async () => {
+      if (this.settings.accountSortMode !== 'manual') {
+        return;
+      }
 
-    await this.persistData({ accounts, settings: this.settings });
+      const accounts = reorderAccountsById(this.sortedAccounts, requestedOrder);
+      if (!accounts) {
+        return;
+      }
+
+      await this.persistData({ accounts, settings: this.settings });
+    });
   }
 
   async advanceHotp(id: string): Promise<void> {
-    const account = this.accounts.find((item) => item.id === id);
-    if (!account || account.type !== 'hotp') {
-      return;
-    }
-    await this.updateAccount(id, { counter: account.counter + 1 });
+    await this.enqueueMutation(async () => {
+      const account = this.accounts.find((item) => item.id === id);
+      if (!account || account.type !== 'hotp') {
+        return;
+      }
+      await this.updateAccountNow(id, { counter: account.counter + 1 });
+    });
   }
 
   async importText(text: string): Promise<ImportResult> {
     const result = importAnyText(text);
-    const merged = await this.mergeAccounts(result.accounts);
+    const merged = await this.enqueueMutation(() => this.mergeAccounts(result.accounts));
     return {
       ...result,
       imported: merged.imported,
@@ -167,7 +186,7 @@ export class AuthenticatorVault {
 
   async importEncryptedBackupText(text: string, password: string): Promise<ImportResult> {
     const result = await importEncryptedBackup(text, password);
-    const merged = await this.mergeAccounts(result.accounts);
+    const merged = await this.enqueueMutation(() => this.mergeAccounts(result.accounts));
     return {
       ...result,
       imported: merged.imported,
@@ -175,11 +194,24 @@ export class AuthenticatorVault {
     };
   }
 
-  async replaceSettings(settings: AppSettings): Promise<void> {
-    await this.persistData({ accounts: this.accounts, settings }, 'Settings saved.');
+  async updateSettings(settings: Partial<AppSettings>): Promise<void> {
+    const update = { ...settings };
+    await this.enqueueMutation(() =>
+      this.persistData(
+        {
+          accounts: this.accounts,
+          settings: { ...this.settings, ...update }
+        },
+        'Settings saved.'
+      )
+    );
   }
 
   async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    await this.enqueueMutation(() => this.changePasswordNow(currentPassword, newPassword));
+  }
+
+  private async changePasswordNow(currentPassword: string, newPassword: string): Promise<void> {
     this.busy = true;
     this.clearStatus();
     try {
@@ -216,6 +248,10 @@ export class AuthenticatorVault {
   }
 
   async removePassword(currentPassword: string): Promise<void> {
+    await this.enqueueMutation(() => this.removePasswordNow(currentPassword));
+  }
+
+  private async removePasswordNow(currentPassword: string): Promise<void> {
     if (!this.passwordProtected) {
       this.showNotice('Password protection is already off.');
       return;
@@ -255,6 +291,10 @@ export class AuthenticatorVault {
   }
 
   async resetVault(): Promise<void> {
+    await this.enqueueMutation(() => this.resetVaultNow());
+  }
+
+  private async resetVaultNow(): Promise<void> {
     this.busy = true;
     this.clearStatus();
     try {
@@ -277,12 +317,17 @@ export class AuthenticatorVault {
   }
 
   async refreshCodes(now = Date.now()): Promise<void> {
-    if (this.locked || this.accounts.length === 0) {
+    const request = ++this.codeRefreshRequest;
+    const accounts = this.accounts;
+    if (this.locked || accounts.length === 0) {
       this.codes = {};
       return;
     }
 
-    const entries = await Promise.all(this.accounts.map((account) => generateOtpCode(account, now)));
+    const entries = await Promise.all(accounts.map((account) => generateOtpCode(account, now)));
+    if (request !== this.codeRefreshRequest || this.locked || this.accounts !== accounts) {
+      return;
+    }
     this.codes = Object.fromEntries(entries.map((entry) => [entry.accountId, entry]));
   }
 
@@ -336,10 +381,30 @@ export class AuthenticatorVault {
       this.key = unlocked.key;
       this.applyUnlockedData(unlocked.data);
       this.locked = false;
-      await this.refreshCodes();
     } catch {
       await clearVaultSessionKey();
     }
+  }
+
+  private enqueueMutation<T>(operation: () => Promise<T>): Promise<T> {
+    const result = this.mutationQueue.then(() => operation());
+    this.mutationQueue = result.then(
+      () => undefined,
+      () => undefined
+    );
+    return result;
+  }
+
+  private async updateAccountNow(id: string, draft: Partial<AccountDraft>): Promise<void> {
+    const index = this.accounts.findIndex((account) => account.id === id);
+    if (index === -1) {
+      return;
+    }
+
+    const accounts = [...this.accounts];
+    accounts[index] = updateAccount(accounts[index], draft);
+    await this.persistData({ accounts, settings: this.settings }, 'Account updated.');
+    await this.refreshCodes();
   }
 
   private async mergeAccounts(incoming: AuthenticatorAccount[]): Promise<{ imported: number; skipped: number }> {
@@ -372,7 +437,6 @@ export class AuthenticatorVault {
 
       const envelope = await encryptVaultData(normalizedData, this.key, this.encryptedVault);
       await saveStoredVault(envelope);
-      await this.saveSessionKey(this.key, envelope);
       this.encryptedVault = envelope;
       this.plainVault = null;
     } else {
@@ -397,7 +461,7 @@ export class AuthenticatorVault {
 
   private applyUnlockedData(data: VaultData): void {
     this.accounts = normalizeAccountOrder(data.accounts);
-    this.settings = { ...DEFAULT_SETTINGS, ...data.settings };
+    this.settings = normalizeAppSettings(data.settings);
   }
 
   private getCurrentData(): VaultData {
@@ -418,12 +482,8 @@ function normalizeVaultData(data: VaultData): VaultData {
   // instead of Svelte state proxies.
   return {
     accounts: normalizeAccountOrder(data.accounts),
-    settings: normalizeSettings(data.settings)
+    settings: normalizeAppSettings(data.settings)
   };
-}
-
-function normalizeSettings(settings: Partial<AppSettings> | undefined): AppSettings {
-  return { ...DEFAULT_SETTINGS, ...settings };
 }
 
 function getErrorMessage(error: unknown): string {

@@ -1,4 +1,5 @@
 import { decodeQrDataUrlInWorker } from './lib/auth/qrWorker';
+import type { PageContext } from './lib/auth/accountRanking';
 import { getImportResultMessage, importTextIntoStoredVault } from './lib/auth/vaultImport';
 
 interface CaptureRect {
@@ -13,6 +14,7 @@ interface MessageResponse {
   ok: boolean;
   error?: string;
   pasted?: boolean;
+  pageContext?: PageContext | null;
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -23,6 +25,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message?.type === 'start-page-scan') {
     respond(sendResponse, startPageScan());
+    return true;
+  }
+
+  if (message?.type === 'get-active-page-context') {
+    respond(sendResponse, getActivePageContext(readWindowId(message.windowId)));
     return true;
   }
 
@@ -47,6 +54,49 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   return undefined;
 });
+
+chrome.tabs.onActivated.addListener(({ windowId }) => notifyActivePageChanged(windowId, true));
+chrome.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
+  if (!tab.active) {
+    return;
+  }
+  if (changeInfo.url !== undefined || changeInfo.status !== undefined) {
+    notifyActivePageChanged(tab.windowId, true);
+  } else if (changeInfo.title !== undefined) {
+    notifyActivePageChanged(tab.windowId, false);
+  }
+});
+chrome.windows.onFocusChanged.addListener((windowId) => {
+  if (windowId !== chrome.windows.WINDOW_ID_NONE) {
+    notifyActivePageChanged(windowId, true);
+  }
+});
+
+async function getActivePageContext(windowId: number | undefined): Promise<Partial<MessageResponse>> {
+  const tab = await getActiveTab(windowId);
+  if (!tab?.url || isRestrictedPage(tab.url)) {
+    return { pageContext: null };
+  }
+
+  try {
+    const url = new URL(tab.url);
+    if (!['http:', 'https:'].includes(url.protocol)) {
+      return { pageContext: null };
+    }
+    return {
+      pageContext: {
+        hostname: url.hostname,
+        ...(tab.title ? { title: tab.title.slice(0, 512) } : {})
+      }
+    };
+  } catch {
+    return { pageContext: null };
+  }
+}
+
+function notifyActivePageChanged(windowId: number, clearCurrent: boolean): void {
+  sendRuntimeMessage({ type: 'active-page-context-changed', windowId, clearCurrent });
+}
 
 async function startPageScan(): Promise<void> {
   const tab = await getActiveTab();
@@ -138,12 +188,17 @@ async function reportScanFailure(tabId: number | undefined, message: unknown): P
   sendRuntimeMessage({ type: 'page-scan:completed', ok: false, message: resultMessage });
 }
 
-function getActiveTab(): Promise<chrome.tabs.Tab | undefined> {
+function getActiveTab(windowId?: number): Promise<chrome.tabs.Tab | undefined> {
   return new Promise((resolve, reject) => {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    const query = windowId === undefined ? { active: true, currentWindow: true } : { active: true, windowId };
+    chrome.tabs.query(query, (tabs) => {
       settleChromeCallback(() => resolve(tabs[0]), reject);
     });
   });
+}
+
+function readWindowId(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : undefined;
 }
 
 function executeScript(tabId: number, file: string): Promise<void> {

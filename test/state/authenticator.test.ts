@@ -1,7 +1,11 @@
-import { beforeEach, describe, expect, test } from 'vitest';
-import { loadStoredVault } from '../../src/lib/auth/storage';
-import type { AuthenticatorAccount } from '../../src/lib/auth/types';
-import { isEncryptedVaultRecord, isPlainVaultRecord } from '../../src/lib/auth/vaultRecords';
+import { beforeEach, describe, expect, test, vi } from 'vitest';
+import { loadStoredVault, saveStoredVault } from '../../src/lib/auth/storage';
+import type { AppSettings, AuthenticatorAccount } from '../../src/lib/auth/types';
+import {
+  createPlainVaultRecord,
+  isEncryptedVaultRecord,
+  isPlainVaultRecord
+} from '../../src/lib/auth/vaultRecords';
 import { AuthenticatorVault } from '../../src/lib/state/authenticator.svelte';
 import { installMemoryStorage, installStructuredCloneChromeStorage } from '../helpers/storage';
 
@@ -98,6 +102,7 @@ describe('AuthenticatorVault persistence and locking', () => {
     const vault = new AuthenticatorVault();
     await vault.initialize();
     await vault.importText(MULTI_IMPORT);
+    await vault.updateSettings({ accountSortMode: 'manual' });
     const noticeBeforeReorder = vault.notice;
 
     const byLabel = accountsByLabel(vault.sortedAccounts);
@@ -130,6 +135,7 @@ describe('AuthenticatorVault persistence and locking', () => {
     const vault = new AuthenticatorVault();
     await vault.initialize();
     await vault.importText(MULTI_IMPORT);
+    await vault.updateSettings({ accountSortMode: 'manual' });
 
     const byLabel = accountsByLabel(vault.sortedAccounts);
     await vault.reorderAccounts([
@@ -149,6 +155,7 @@ describe('AuthenticatorVault persistence and locking', () => {
     const vault = new AuthenticatorVault();
     await vault.initialize();
     await vault.importText(MULTI_IMPORT);
+    await vault.updateSettings({ accountSortMode: 'manual' });
     const originalIds = vault.sortedAccounts.map((account) => account.id);
 
     await vault.reorderAccounts([originalIds[1], originalIds[0]]);
@@ -165,6 +172,7 @@ describe('AuthenticatorVault persistence and locking', () => {
     const vault = new AuthenticatorVault();
     await vault.initialize();
     await vault.importText(MULTI_IMPORT);
+    await vault.updateSettings({ accountSortMode: 'manual' });
 
     const byLabel = accountsByLabel(vault.sortedAccounts);
     await vault.reorderAccounts([
@@ -189,11 +197,12 @@ describe('AuthenticatorVault persistence and locking', () => {
 
     expect(vault.settings.theme).toBe('system');
 
-    await vault.replaceSettings({
+    await vault.updateSettings({
       language: 'fr',
       theme: 'dark',
       showCountdownSeconds: true,
-      autoPasteCodes: true
+      autoPasteCodes: true,
+      accountSortMode: 'contextual'
     });
 
     expect(vault.hasVault).toBe(true);
@@ -207,12 +216,148 @@ describe('AuthenticatorVault persistence and locking', () => {
     expect(reopened.settings.theme).toBe('dark');
     expect(reopened.settings.showCountdownSeconds).toBe(true);
     expect(reopened.settings.autoPasteCodes).toBe(true);
+    expect(reopened.settings.accountSortMode).toBe('contextual');
+  });
+
+  test('enables contextual sorting for legacy settings without a saved preference', async () => {
+    await saveStoredVault(
+      createPlainVaultRecord({
+        accounts: [],
+        settings: {
+          language: 'en',
+          theme: 'system',
+          showCountdownSeconds: false,
+          autoPasteCodes: false
+        } as AppSettings
+      })
+    );
+
+    const vault = new AuthenticatorVault();
+    await vault.initialize();
+
+    expect(vault.settings.accountSortMode).toBe('contextual');
+  });
+
+  test('merges concurrent settings updates without losing changes', async () => {
+    installStructuredCloneChromeStorage();
+    const vault = new AuthenticatorVault();
+    await vault.initialize();
+
+    await Promise.all([
+      vault.updateSettings({ theme: 'dark' }),
+      vault.updateSettings({ showCountdownSeconds: true }),
+      vault.updateSettings({ accountSortMode: 'contextual' })
+    ]);
+    await Promise.all([
+      vault.updateSettings({ autoPasteCodes: true }),
+      vault.updateSettings({ autoPasteCodes: false }),
+      vault.updateSettings({ autoPasteCodes: true })
+    ]);
+
+    expect(vault.settings.theme).toBe('dark');
+    expect(vault.settings.showCountdownSeconds).toBe(true);
+    expect(vault.settings.accountSortMode).toBe('contextual');
+    expect(vault.settings.autoPasteCodes).toBe(true);
+
+    const reopened = new AuthenticatorVault();
+    await reopened.initialize();
+    expect(reopened.settings.theme).toBe('dark');
+    expect(reopened.settings.showCountdownSeconds).toBe(true);
+    expect(reopened.settings.accountSortMode).toBe('contextual');
+    expect(reopened.settings.autoPasteCodes).toBe(true);
+  });
+
+  test('finishes a pending settings write before resetting the vault', async () => {
+    installStructuredCloneChromeStorage({ localWriteDelayMs: 10 });
+    const vault = new AuthenticatorVault();
+    await vault.initialize();
+
+    const settingsWrite = vault.updateSettings({ theme: 'dark' });
+    const reset = vault.resetVault();
+    await Promise.all([settingsWrite, reset]);
+
+    expect(vault.hasVault).toBe(false);
+    expect(vault.settings).toEqual({
+      language: 'en',
+      theme: 'system',
+      showCountdownSeconds: false,
+      autoPasteCodes: false,
+      accountSortMode: 'contextual'
+    });
+    expect(await loadStoredVault()).toBeNull();
+  });
+
+  test('finishes a pending encrypted settings write before locking', async () => {
+    installStructuredCloneChromeStorage({ localWriteDelayMs: 10 });
+    const vault = new AuthenticatorVault();
+    await vault.initialize();
+    await vault.importText(OTPAUTH_URI);
+    await vault.changePassword('', PASSWORD);
+
+    const settingsWrite = vault.updateSettings({ theme: 'dark' });
+    const lock = vault.lock();
+    await Promise.all([settingsWrite, lock]);
+
+    expect(vault.locked).toBe(true);
+    expect(vault.accounts).toHaveLength(0);
+
+    const reopened = new AuthenticatorVault();
+    await reopened.initialize();
+    expect(reopened.locked).toBe(true);
+    await reopened.unlock(PASSWORD);
+    expect(reopened.settings.theme).toBe('dark');
+  });
+
+  test('serializes unlock and lock in invocation order', async () => {
+    const vault = new AuthenticatorVault();
+    await vault.initialize();
+    await vault.importText(OTPAUTH_URI);
+    await vault.changePassword('', PASSWORD);
+    await vault.lock();
+
+    await Promise.all([vault.unlock(PASSWORD), vault.lock()]);
+
+    expect(vault.locked).toBe(true);
+    expect(vault.accounts).toHaveLength(0);
+    const reopened = new AuthenticatorVault();
+    await reopened.initialize();
+    expect(reopened.locked).toBe(true);
+  });
+
+  test('preserves manual order while contextual sorting is enabled', async () => {
+    installStructuredCloneChromeStorage();
+    const vault = new AuthenticatorVault();
+    await vault.initialize();
+    await vault.importText(MULTI_IMPORT);
+    await vault.updateSettings({ accountSortMode: 'manual' });
+
+    const byLabel = accountsByLabel(vault.sortedAccounts);
+    await vault.reorderAccounts([
+      byLabel.get('carol@example.com')?.id ?? '',
+      byLabel.get('alice@example.com')?.id ?? '',
+      byLabel.get('bob@example.com')?.id ?? ''
+    ]);
+    const manualIds = vault.sortedAccounts.map((account) => account.id);
+
+    await vault.updateSettings({ accountSortMode: 'contextual' });
+    await vault.reorderAccounts([...manualIds].reverse());
+
+    expect(vault.sortedAccounts.map((account) => account.id)).toEqual(manualIds);
+
+    const reopened = new AuthenticatorVault();
+    await reopened.initialize();
+    expect(reopened.settings.accountSortMode).toBe('contextual');
+    expect(reopened.sortedAccounts.map((account) => account.id)).toEqual(manualIds);
+
+    await reopened.updateSettings({ accountSortMode: 'manual' });
+    expect(reopened.sortedAccounts.map((account) => account.id)).toEqual(manualIds);
   });
 
   test('enables password protection and restores unlocked state for the extension session', async () => {
     const vault = new AuthenticatorVault();
     await vault.initialize();
     await vault.importText(OTPAUTH_URI);
+    await vault.updateSettings({ accountSortMode: 'contextual' });
     await vault.changePassword('', PASSWORD);
 
     expect(vault.error).toBe('');
@@ -226,6 +371,7 @@ describe('AuthenticatorVault persistence and locking', () => {
     expect(reopened.locked).toBe(false);
     expect(reopened.passwordProtected).toBe(true);
     expect(reopened.accounts).toHaveLength(1);
+    expect(reopened.settings.accountSortMode).toBe('contextual');
   });
 
   test('failed password setup does not switch live state to password protected', async () => {
@@ -262,6 +408,53 @@ describe('AuthenticatorVault persistence and locking', () => {
     expect(vault.locked).toBe(false);
     expect(vault.accounts).toHaveLength(1);
     expect(isEncryptedVaultRecord(await loadStoredVault())).toBe(true);
+  });
+
+  test('ordinary encrypted writes do not rewrite the unchanged session key', async () => {
+    const { sessionStorage } = installMemoryStorage();
+    const vault = new AuthenticatorVault();
+    await vault.initialize();
+    await vault.importText(OTPAUTH_URI);
+    await vault.changePassword('', PASSWORD);
+    sessionStorage.setItem = () => {
+      throw new Error('session failed');
+    };
+
+    await expect(vault.updateSettings({ theme: 'dark' })).resolves.toBeUndefined();
+
+    expect(vault.settings.theme).toBe('dark');
+    const reopened = new AuthenticatorVault();
+    await reopened.initialize();
+    expect(reopened.locked).toBe(false);
+    expect(reopened.settings.theme).toBe('dark');
+  });
+
+  test('does not publish a stale code after the vault is locked', async () => {
+    const vault = new AuthenticatorVault();
+    await vault.initialize();
+    await vault.importText(OTPAUTH_URI);
+    await vault.changePassword('', PASSWORD);
+
+    let releaseSign = () => {};
+    let markSignStarted = () => {};
+    const signReleased = new Promise<void>((resolve) => (releaseSign = resolve));
+    const signStarted = new Promise<void>((resolve) => (markSignStarted = resolve));
+    const originalSign = crypto.subtle.sign.bind(crypto.subtle);
+    const sign = vi.spyOn(crypto.subtle, 'sign').mockImplementation(async (algorithm, key, data) => {
+      markSignStarted();
+      await signReleased;
+      return originalSign(algorithm, key, data);
+    });
+
+    const refresh = vault.refreshCodes();
+    await signStarted;
+    await vault.lock();
+    releaseSign();
+    await refresh;
+    sign.mockRestore();
+
+    expect(vault.locked).toBe(true);
+    expect(vault.codes).toEqual({});
   });
 
   test('manual lock clears the session unlock and requires the password again', async () => {

@@ -2,22 +2,19 @@ import { importAnyText } from './importText';
 import {
   loadStoredVault,
   loadVaultSessionKey,
-  saveStoredVault,
-  saveVaultSessionKey
+  saveStoredVault
 } from './storage';
 import { normalizeImportedAccounts } from './otp';
 import type {
-  AppSettings,
   AuthenticatorAccount,
   ImportResult,
   PlainVaultRecord,
   VaultData,
   VaultEnvelope
 } from './types';
-import { DEFAULT_SETTINGS } from './types';
+import { DEFAULT_SETTINGS, normalizeAppSettings } from './types';
 import {
   encryptVaultData,
-  exportVaultKey,
   getVaultKeyFingerprint,
   importVaultKey,
   unlockVaultEnvelopeWithKey
@@ -51,7 +48,7 @@ export async function importTextIntoStoredVault(text: string): Promise<ImportRes
   if (merged.imported > 0) {
     await saveLoadedVault(loaded, {
       accounts: merged.accounts,
-      settings: normalizeSettings(loaded.data.settings)
+      settings: normalizeAppSettings(loaded.data.settings)
     });
   }
 
@@ -178,7 +175,7 @@ async function loadUnlockedStoredVault(): Promise<LoadedVault> {
       type: 'plain',
       data: {
         accounts: normalizeAccountOrder(stored.data.accounts),
-        settings: normalizeSettings(stored.data.settings)
+        settings: normalizeAppSettings(stored.data.settings)
       },
       record: stored
     };
@@ -199,7 +196,7 @@ async function loadUnlockedStoredVault(): Promise<LoadedVault> {
     type: 'encrypted',
     data: {
       accounts: normalizeAccountOrder(unlocked.data.accounts),
-      settings: normalizeSettings(unlocked.data.settings)
+      settings: normalizeAppSettings(unlocked.data.settings)
     },
     envelope: stored,
     key
@@ -209,21 +206,16 @@ async function loadUnlockedStoredVault(): Promise<LoadedVault> {
 async function saveLoadedVault(loaded: LoadedVault, data: VaultData): Promise<void> {
   const normalizedData = {
     accounts: normalizeAccountOrder(data.accounts),
-    settings: normalizeSettings(data.settings)
+    settings: normalizeAppSettings(data.settings)
   };
 
   if (loaded.type === 'encrypted') {
     const envelope = await encryptVaultData(normalizedData, loaded.key, loaded.envelope);
     await saveStoredVault(envelope);
-    await saveVaultSessionKey(getVaultKeyFingerprint(envelope), await exportVaultKey(loaded.key));
     return;
   }
 
   await saveStoredVault(createPlainVaultRecord(normalizedData, loaded.record));
-}
-
-function normalizeSettings(settings: Partial<AppSettings> | undefined): AppSettings {
-  return { ...DEFAULT_SETTINGS, ...settings };
 }
 
 function getSortOrder(account: AuthenticatorAccount): number {

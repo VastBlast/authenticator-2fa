@@ -27,6 +27,19 @@ describe('importTextIntoStoredVault', () => {
     expect(stored.data.accounts).toHaveLength(1);
     expect(stored.data.accounts[0].label).toBe('alice@example.com');
     expect(stored.data.accounts[0].sortOrder).toBe(0);
+    expect(stored.data.settings.accountSortMode).toBe('contextual');
+  });
+
+  test('preserves a manual sorting preference when importing into a plain vault', async () => {
+    const vault = new AuthenticatorVault();
+    await vault.initialize();
+    await vault.updateSettings({ accountSortMode: 'manual' });
+
+    await importTextIntoStoredVault(ALICE_URI);
+
+    const reopened = new AuthenticatorVault();
+    await reopened.initialize();
+    expect(reopened.settings.accountSortMode).toBe('manual');
   });
 
   test('rejects malformed JSON account imports before storage', async () => {
@@ -103,10 +116,15 @@ describe('importTextIntoStoredVault', () => {
   });
 
   test('imports into an encrypted vault while the session key is available', async () => {
+    const { sessionStorage } = installMemoryStorage();
     const vault = new AuthenticatorVault();
     await vault.initialize();
     await vault.importText(ALICE_URI);
+    await vault.updateSettings({ accountSortMode: 'contextual' });
     await vault.changePassword('', PASSWORD);
+    sessionStorage.setItem = () => {
+      throw new Error('session failed');
+    };
 
     const result = await importTextIntoStoredVault(BOB_URI);
 
@@ -116,6 +134,7 @@ describe('importTextIntoStoredVault', () => {
     await reopened.initialize();
     expect(reopened.locked).toBe(false);
     expect(reopened.passwordProtected).toBe(true);
+    expect(reopened.settings.accountSortMode).toBe('contextual');
     expect(reopened.sortedAccounts.map((account) => account.label)).toEqual([
       'alice@example.com',
       'bob@example.com'

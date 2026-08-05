@@ -4,6 +4,8 @@ export type OtpAlgorithm = 'SHA-1' | 'SHA-256' | 'SHA-512';
 
 export type ThemePreference = 'system' | 'light' | 'dark';
 
+export type AccountSortMode = 'manual' | 'contextual';
+
 export interface AuthenticatorAccount {
   id: string;
   issuer: string;
@@ -55,6 +57,7 @@ export interface AppSettings {
   theme: ThemePreference;
   showCountdownSeconds: boolean;
   autoPasteCodes: boolean;
+  accountSortMode: AccountSortMode;
 }
 
 export interface VaultEnvelope {
@@ -88,8 +91,17 @@ export const DEFAULT_SETTINGS: AppSettings = {
   language: 'en',
   theme: 'system',
   showCountdownSeconds: false,
-  autoPasteCodes: false
+  autoPasteCodes: false,
+  accountSortMode: 'contextual'
 };
+
+export function normalizeAppSettings(settings: Partial<AppSettings> | undefined): AppSettings {
+  return {
+    ...DEFAULT_SETTINGS,
+    ...settings,
+    accountSortMode: settings?.accountSortMode === 'manual' ? 'manual' : 'contextual'
+  };
+}
 
 export const OTP_ALGORITHMS: OtpAlgorithm[] = ['SHA-1', 'SHA-256', 'SHA-512'];
 

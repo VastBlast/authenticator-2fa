@@ -16,7 +16,7 @@ Browser extension for generating and managing two-factor authentication codes.
 
 - Generate TOTP, HOTP, and Steam-style 2FA codes.
 - Add accounts from QR images, page QR scans, pasted otpauth text, or manual entry.
-- Search, copy, and drag-reorder accounts.
+- Search, copy, manually reorder accounts, or prioritize likely codes for the current site.
 - Import/export otpauth text and encrypted backups.
 - Optional local vault password protection.
 - Local-first storage with no account service.
