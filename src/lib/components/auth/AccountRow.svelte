@@ -80,7 +80,10 @@
 >
   {#if suggestedForSite}
     <span
-      class="pointer-events-none absolute left-0 top-1/2 h-7 w-0.5 -translate-y-1/2 rounded-r-full bg-primary/70"
+      class={[
+        'pointer-events-none absolute left-0 top-1/2 z-10 h-7 w-0.75 -translate-y-1/2 rounded-r-full transition-colors',
+        expiring ? 'bg-error' : 'bg-primary'
+      ]}
       aria-hidden="true"
     ></span>
   {/if}
