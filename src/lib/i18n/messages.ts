@@ -86,6 +86,7 @@ export const MESSAGE_KEYS = [
   'codeEntry',
   'autoPasteCodes',
   'autoPasteCodesHint',
+  'system',
   'light',
   'dark',
   'scanPage',
@@ -199,6 +200,7 @@ const en: Record<MessageKey, string> = {
   autoPasteCodes: 'Auto paste code',
   autoPasteCodesHint:
     'When copying a code, the extension will automatically try to fill it in the 2FA code box on the page. Note: this is best effort and may not always work depending on the page.',
+  system: 'System',
   light: 'Light',
   dark: 'Dark',
   scanPage: 'Scan page',
@@ -298,6 +300,7 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     autoPasteCodes: 'Pegar código automáticamente',
     autoPasteCodesHint:
       'Al hacer clic en un código, lo copia e intenta llenar el campo de código en la página. Algunas páginas pueden impedirlo.',
+    system: 'Sistema',
     light: 'Claro',
     dark: 'Oscuro',
     scanPage: 'Escanear página',
@@ -394,6 +397,7 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     autoPasteCodes: 'कोड अपने आप पेस्ट करें',
     autoPasteCodesHint:
       'जब आप कोड पर क्लिक करते हैं, यह उसे कॉपी करता है और पेज के कोड बॉक्स में भरने की कोशिश करता है। कुछ पेज इसकी अनुमति नहीं देते।',
+    system: 'सिस्टम',
     light: 'लाइट',
     dark: 'डार्क',
     scanPage: 'पेज स्कैन करें',
@@ -490,6 +494,7 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     autoPasteCodes: 'لصق الرمز تلقائيا',
     autoPasteCodesHint:
       'عند النقر على رمز، يتم نسخه ثم محاولة تعبئته في خانة الرمز في الصفحة. قد لا تسمح بعض الصفحات بذلك.',
+    system: 'النظام',
     light: 'فاتح',
     dark: 'داكن',
     scanPage: 'مسح الصفحة',
@@ -586,6 +591,7 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     autoPasteCodes: 'কোড অটো পেস্ট করুন',
     autoPasteCodesHint:
       'কোডে ক্লিক করলে এটি কপি করে এবং পেজের কোড বক্সে বসানোর চেষ্টা করে। কিছু পেজ এটি অনুমতি নাও দিতে পারে।',
+    system: 'সিস্টেম',
     light: 'লাইট',
     dark: 'ডার্ক',
     scanPage: 'পেজ স্ক্যান',
@@ -682,6 +688,7 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     autoPasteCodes: 'Colar código automaticamente',
     autoPasteCodesHint:
       'Ao clicar em um código, ele é copiado e tenta preencher o campo de código na página. Algumas páginas podem bloquear isso.',
+    system: 'Sistema',
     light: 'Claro',
     dark: 'Escuro',
     scanPage: 'Escanear página',
@@ -778,6 +785,7 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     autoPasteCodes: 'Автовставка кода',
     autoPasteCodesHint:
       'При нажатии на код он копируется и пытается заполнить поле кода на странице. Некоторые страницы могут это блокировать.',
+    system: 'Системная',
     light: 'Светлая',
     dark: 'Темная',
     scanPage: 'Сканировать страницу',
@@ -874,6 +882,7 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     autoPasteCodes: 'コードを自動貼り付け',
     autoPasteCodesHint:
       'コードをクリックするとコピーし、ページのコード入力欄に入れようとします。一部のページでは使えない場合があります。',
+    system: 'システム',
     light: 'ライト',
     dark: 'ダーク',
     scanPage: 'ページをスキャン',
@@ -970,6 +979,7 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     autoPasteCodes: 'Coller le code automatiquement',
     autoPasteCodesHint:
       'Quand vous cliquez sur un code, il est copié puis l’app essaie de remplir le champ de code sur la page. Certaines pages peuvent le bloquer.',
+    system: 'Système',
     light: 'Clair',
     dark: 'Sombre',
     scanPage: 'Scanner la page',
@@ -1066,6 +1076,7 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     autoPasteCodes: 'Code automatisch einfügen',
     autoPasteCodesHint:
       'Wenn du einen Code anklickst, wird er kopiert und in das Codefeld der Seite eingefügt, wenn möglich. Manche Seiten blockieren das.',
+    system: 'System',
     light: 'Hell',
     dark: 'Dunkel',
     scanPage: 'Seite scannen',
@@ -1162,6 +1173,7 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     autoPasteCodes: '自动粘贴代码',
     autoPasteCodesHint:
       '点击代码时会复制它，并尝试填入页面上的代码输入框。有些页面可能不允许这样做。',
+    system: '跟随系统',
     light: '浅色',
     dark: '深色',
     scanPage: '扫描页面',

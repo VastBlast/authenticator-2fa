@@ -1,15 +1,32 @@
 <script lang="ts">
   import { fade } from 'svelte/transition';
-  import { ArrowLeft, ChevronRight, DatabaseBackup, KeyRound, Moon, ShieldCheck, Sun, Trash2 } from '@lucide/svelte';
+  import {
+    ArrowLeft,
+    ChevronRight,
+    DatabaseBackup,
+    KeyRound,
+    Monitor,
+    Moon,
+    ShieldCheck,
+    Sun,
+    Trash2
+  } from '@lucide/svelte';
   import ImportExportPanel from './ImportExportPanel.svelte';
   import MotionDialog from './MotionDialog.svelte';
   import { FADE_TRANSITION, panelReveal } from './transitions';
   import { authenticatorVault as vault } from '../../state/authenticator.svelte';
   import { LANGUAGES, tr } from '../../i18n/messages';
+  import type { ThemePreference } from '../../auth/types';
 
   interface Props {
     onback: (event?: MouseEvent) => void;
   }
+
+  const THEME_OPTIONS = [
+    { theme: 'system', icon: Monitor },
+    { theme: 'light', icon: Sun },
+    { theme: 'dark', icon: Moon }
+  ] as const;
 
   let { onback }: Props = $props();
 
@@ -59,7 +76,7 @@
     void vault.replaceSettings({ ...vault.settings, language });
   }
 
-  function setTheme(theme: 'light' | 'dark') {
+  function setTheme(theme: ThemePreference) {
     if (theme !== vault.settings.theme) {
       void vault.replaceSettings({ ...vault.settings, theme });
     }
@@ -155,23 +172,19 @@
 
       <div class="space-y-1.5">
         <span class="text-sm font-medium">{tr('theme')}</span>
-        <div class="join w-full">
-          <button
-            class={['btn join-item flex-1 btn-sm', vault.settings.theme === 'light' && 'btn-primary']}
-            type="button"
-            onclick={() => setTheme('light')}
-          >
-            <Sun size={16} aria-hidden="true" />
-            {tr('light')}
-          </button>
-          <button
-            class={['btn join-item flex-1 btn-sm', vault.settings.theme === 'dark' && 'btn-primary']}
-            type="button"
-            onclick={() => setTheme('dark')}
-          >
-            <Moon size={16} aria-hidden="true" />
-            {tr('dark')}
-          </button>
+        <div class="join w-full" role="group" aria-label={tr('theme')}>
+          {#each THEME_OPTIONS as option (option.theme)}
+            {@const ThemeIcon = option.icon}
+            <button
+              class={['btn join-item flex-1 btn-sm', vault.settings.theme === option.theme && 'btn-primary']}
+              type="button"
+              aria-pressed={vault.settings.theme === option.theme}
+              onclick={() => setTheme(option.theme)}
+            >
+              <ThemeIcon size={16} aria-hidden="true" />
+              {tr(option.theme)}
+            </button>
+          {/each}
         </div>
       </div>
 

@@ -187,6 +187,8 @@ describe('AuthenticatorVault persistence and locking', () => {
     const vault = new AuthenticatorVault();
     await vault.initialize();
 
+    expect(vault.settings.theme).toBe('system');
+
     await vault.replaceSettings({
       language: 'fr',
       theme: 'dark',

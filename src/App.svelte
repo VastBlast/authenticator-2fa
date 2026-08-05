@@ -123,6 +123,7 @@
   const reorderDisabled = $derived(query.trim().length > 0 || filteredAccounts.length < 2);
   const activeDragAccountId = $derived(dragState?.accountId ?? keyboardDraggingAccountId);
   const pageScanBusy = $derived(pageScanState !== 'idle');
+  const themeOverride = $derived(vault.settings.theme === 'system' ? undefined : vault.settings.theme);
 
   function showSettings(event: MouseEvent) {
     animateViewTransition = event.detail > 0;
@@ -160,9 +161,13 @@
 
   // Keep the browser popup frame on the same theme as the app surface.
   $effect(() => {
-    const { theme } = vault.settings;
-    document.documentElement.dataset.theme = theme;
-    document.body.dataset.theme = theme;
+    for (const element of [document.documentElement, document.body]) {
+      if (themeOverride) {
+        element.dataset.theme = themeOverride;
+      } else {
+        delete element.dataset.theme;
+      }
+    }
   });
 
   // Auto-dismiss transient status messages so they never pile up on screen.
@@ -806,7 +811,7 @@
   <title>{tr('appName')}</title>
 </svelte:head>
 
-<div class="contents" data-theme={vault.settings.theme}>
+<div class="contents" data-theme={themeOverride}>
 <main
   class="relative flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden bg-base-100 text-base-content"
 >
