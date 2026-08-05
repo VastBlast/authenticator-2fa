@@ -85,6 +85,7 @@ export const MESSAGE_KEYS = [
   'showCountdownSecondsHint',
   'autoSortCodes',
   'autoSortCodesHint',
+  'siteSuggestion',
   'settingsSaveFailed',
   'autoPasteCodes',
   'autoPasteCodesHint',
@@ -201,6 +202,7 @@ const en: Record<MessageKey, string> = {
   autoSortCodes: 'Auto-sort codes',
   autoSortCodesHint:
     'Show likely matches for the current site first when available. Turn this off to arrange codes yourself.',
+  siteSuggestion: 'Suggested for this site',
   settingsSaveFailed: 'Unable to save settings.',
   autoPasteCodes: 'Auto paste code',
   autoPasteCodesHint:
@@ -304,6 +306,7 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     autoSortCodes: 'Ordenar códigos automáticamente',
     autoSortCodesHint:
       'Cuando estén disponibles, muestra primero las coincidencias probables para el sitio actual. Desactiva esta opción para ordenar los códigos manualmente.',
+    siteSuggestion: 'Sugerido para este sitio',
     settingsSaveFailed: 'No se pudo guardar la configuración.',
     autoPasteCodes: 'Pegar código automáticamente',
     autoPasteCodesHint:
@@ -404,6 +407,7 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     autoSortCodes: 'कोड अपने आप क्रमबद्ध करें',
     autoSortCodesHint:
       'उपलब्ध होने पर मौजूदा साइट से संभावित रूप से मेल खाने वाले कोड पहले दिखाएं। कोड खुद क्रमबद्ध करने के लिए इसे बंद करें।',
+    siteSuggestion: 'इस साइट के लिए सुझाया गया',
     settingsSaveFailed: 'सेटिंग सहेजी नहीं जा सकीं।',
     autoPasteCodes: 'कोड अपने आप पेस्ट करें',
     autoPasteCodesHint:
@@ -504,6 +508,7 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     autoSortCodes: 'ترتيب الرموز تلقائيًا',
     autoSortCodesHint:
       'عند توفرها، اعرض أولًا الرموز التي يُرجح أن تطابق الموقع الحالي. أوقف هذا الخيار لترتيب الرموز بنفسك.',
+    siteSuggestion: 'مقترح لهذا الموقع',
     settingsSaveFailed: 'تعذّر حفظ الإعدادات.',
     autoPasteCodes: 'لصق الرمز تلقائيا',
     autoPasteCodesHint:
@@ -604,6 +609,7 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     autoSortCodes: 'কোড স্বয়ংক্রিয়ভাবে সাজান',
     autoSortCodesHint:
       'উপলভ্য হলে বর্তমান সাইটের সঙ্গে সম্ভাব্য মিল থাকা কোড আগে দেখান। নিজে কোড সাজাতে এটি বন্ধ করুন।',
+    siteSuggestion: 'এই সাইটের জন্য প্রস্তাবিত',
     settingsSaveFailed: 'সেটিংস সংরক্ষণ করা যায়নি।',
     autoPasteCodes: 'কোড অটো পেস্ট করুন',
     autoPasteCodesHint:
@@ -704,6 +710,7 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     autoSortCodes: 'Ordenar códigos automaticamente',
     autoSortCodesHint:
       'Quando disponíveis, mostra primeiro as correspondências prováveis para o site atual. Desative para organizar os códigos manualmente.',
+    siteSuggestion: 'Sugerido para este site',
     settingsSaveFailed: 'Não foi possível salvar as configurações.',
     autoPasteCodes: 'Colar código automaticamente',
     autoPasteCodesHint:
@@ -804,6 +811,7 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     autoSortCodes: 'Сортировать коды автоматически',
     autoSortCodesHint:
       'Когда возможно, сначала показывать вероятные совпадения для текущего сайта. Отключите, чтобы упорядочить коды вручную.',
+    siteSuggestion: 'Предложено для этого сайта',
     settingsSaveFailed: 'Не удалось сохранить настройки.',
     autoPasteCodes: 'Автовставка кода',
     autoPasteCodesHint:
@@ -904,6 +912,7 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     autoSortCodes: 'コードを自動で並べ替え',
     autoSortCodesHint:
       '利用できる場合、現在のサイトに一致する可能性が高いコードを先に表示します。自分で並べ替えるにはオフにします。',
+    siteSuggestion: 'このサイトの候補',
     settingsSaveFailed: '設定を保存できませんでした。',
     autoPasteCodes: 'コードを自動貼り付け',
     autoPasteCodesHint:
@@ -1004,6 +1013,7 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     autoSortCodes: 'Trier les codes automatiquement',
     autoSortCodesHint:
       'Lorsque c’est possible, affiche d’abord les correspondances probables pour le site actuel. Désactivez cette option pour organiser les codes vous-même.',
+    siteSuggestion: 'Suggéré pour ce site',
     settingsSaveFailed: 'Impossible d’enregistrer les paramètres.',
     autoPasteCodes: 'Coller le code automatiquement',
     autoPasteCodesHint:
@@ -1104,6 +1114,7 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     autoSortCodes: 'Codes automatisch sortieren',
     autoSortCodesHint:
       'Zeigt, wenn verfügbar, wahrscheinliche Treffer für die aktuelle Website zuerst. Schalte dies aus, um die Codes selbst anzuordnen.',
+    siteSuggestion: 'Für diese Website vorgeschlagen',
     settingsSaveFailed: 'Einstellungen konnten nicht gespeichert werden.',
     autoPasteCodes: 'Code automatisch einfügen',
     autoPasteCodesHint:
@@ -1203,6 +1214,7 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     showCountdownSecondsHint: '在圆形倒计时内显示秒数。',
     autoSortCodes: '自动排序验证码',
     autoSortCodesHint: '可用时，优先显示可能与当前网站匹配的验证码。关闭后可手动排列验证码。',
+    siteSuggestion: '为此网站推荐',
     settingsSaveFailed: '无法保存设置。',
     autoPasteCodes: '自动粘贴代码',
     autoPasteCodesHint:

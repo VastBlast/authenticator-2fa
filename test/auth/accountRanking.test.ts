@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import {
+  getAccountPageRanking,
   getAccountPageMatchScore,
   rankAccountsForPage
 } from '../../src/lib/auth/accountRanking';
@@ -9,12 +10,14 @@ import type { AuthenticatorAccount } from '../../src/lib/auth/types';
 describe('contextual account ranking', () => {
   test('puts an issuer matching the current site first', () => {
     const accounts = [account('GitHub'), account('Instagram'), account('Example')];
+    const ranking = getAccountPageRanking(accounts, { hostname: 'www.instagram.com' });
 
-    expect(labels(rankAccountsForPage(accounts, { hostname: 'www.instagram.com' }))).toEqual([
+    expect(labels(ranking.accounts)).toEqual([
       'Instagram',
       'GitHub',
       'Example'
     ]);
+    expect(ranking.suggestedAccountIds).toEqual(new Set([accounts[1].id]));
   });
 
   test('matches compact names, punctuation, diacritics, and public suffixes', () => {
@@ -261,6 +264,7 @@ describe('contextual account ranking', () => {
     const snapshot = [...accounts];
 
     expect(rankAccountsForPage(accounts, null)).toEqual(snapshot);
+    expect(getAccountPageRanking(accounts, null).suggestedAccountIds.size).toBe(0);
     expect(rankAccountsForPage(accounts, { hostname: 'not a hostname' })).toEqual(snapshot);
     expect(rankAccountsForPage(accounts, { hostname: 'chrome://extensions' })).toEqual(snapshot);
     expect(accounts).toEqual(snapshot);

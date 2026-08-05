@@ -29,6 +29,11 @@ interface MatchWeights {
   aliasToken: number;
 }
 
+export interface AccountPageRanking {
+  accounts: AuthenticatorAccount[];
+  suggestedAccountIds: ReadonlySet<string>;
+}
+
 const NAME_NOISE = new Set([
   '2fa',
   'account',
@@ -105,15 +110,32 @@ export function rankAccountsForPage(
   accounts: readonly AuthenticatorAccount[],
   context: PageContext | null
 ): AuthenticatorAccount[] {
+  return getAccountPageRanking(accounts, context).accounts;
+}
+
+export function getAccountPageRanking(
+  accounts: readonly AuthenticatorAccount[],
+  context: PageContext | null
+): AccountPageRanking {
   const page = getPageIdentity(context);
   if (!page) {
-    return [...accounts];
+    return { accounts: [...accounts], suggestedAccountIds: new Set() };
   }
 
-  return accounts
-    .map((account, index) => ({ account, index, score: scoreAccount(account, page) }))
-    .sort((left, right) => right.score - left.score || left.index - right.index)
-    .map(({ account }) => account);
+  const scoredAccounts = accounts.map((account, index) => ({
+    account,
+    index,
+    score: scoreAccount(account, page)
+  }));
+
+  return {
+    accounts: scoredAccounts
+      .sort((left, right) => right.score - left.score || left.index - right.index)
+      .map(({ account }) => account),
+    suggestedAccountIds: new Set(
+      scoredAccounts.filter(({ score }) => score > 0).map(({ account }) => account.id)
+    )
+  };
 }
 
 export function getAccountPageMatchScore(

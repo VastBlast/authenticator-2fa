@@ -34,7 +34,7 @@
     rubberbandOffset
   } from './lib/components/auth/reorder';
   import { accountToOtpAuthUri } from './lib/auth/otpauth';
-  import { rankAccountsForPage, type PageContext } from './lib/auth/accountRanking';
+  import { getAccountPageRanking, type PageContext } from './lib/auth/accountRanking';
   import { decodeQrFiles, renderQrDataUrl } from './lib/auth/qr';
   import type { AccountDraft, AuthenticatorAccount, ImportResult } from './lib/auth/types';
   import { authenticatorVault as vault } from './lib/state/authenticator.svelte';
@@ -122,10 +122,10 @@
   let browserWindowId: number | undefined;
 
   const manualSort = $derived(vault.settings.accountSortMode === 'manual');
-  const contextualAccounts = $derived.by(() =>
-    manualSort ? vault.sortedAccounts : rankAccountsForPage(vault.sortedAccounts, pageContext)
+  const pageRanking = $derived.by(() =>
+    getAccountPageRanking(vault.sortedAccounts, manualSort ? null : pageContext)
   );
-  const orderedAccounts = $derived.by(() => dragAccounts ?? contextualAccounts);
+  const orderedAccounts = $derived.by(() => dragAccounts ?? pageRanking.accounts);
   const filteredAccounts = $derived.by(() => {
     const needle = query.trim().toLowerCase();
     if (!needle) {
@@ -989,6 +989,7 @@
                   <AccountRow
                     {account}
                     code={vault.codes[account.id]}
+                    suggestedForSite={pageRanking.suggestedAccountIds.has(account.id)}
                     showReorder={manualSort}
                     reorderDisabled={reorderDisabled}
                     reorderPending={reorderSaving}

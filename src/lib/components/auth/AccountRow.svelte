@@ -8,6 +8,7 @@
   interface Props {
     account: AuthenticatorAccount;
     code?: OtpCode;
+    suggestedForSite?: boolean;
     showReorder?: boolean;
     reorderDisabled?: boolean;
     reorderPending?: boolean;
@@ -23,6 +24,7 @@
   let {
     account,
     code,
+    suggestedForSite = false,
     showReorder = true,
     reorderDisabled = false,
     reorderPending = false,
@@ -39,6 +41,9 @@
   const displayCode = $derived(value ? groupDigits(value) : '••••••');
   const expiring = $derived(account.type !== 'hotp' && (code?.remaining ?? 99) <= 5);
   const title = $derived(account.issuer ? `${account.issuer} ${account.label}` : account.label);
+  const contextualTitle = $derived(
+    suggestedForSite ? `${title} — ${tr('siteSuggestion')}` : title
+  );
 
   async function copy() {
     if (!value) {
@@ -65,13 +70,21 @@
 
 <li
   class={[
-    'flex items-center transition-colors',
+    'relative flex items-center transition-colors',
     dragging && 'bg-base-100 shadow-lg ring-1 ring-primary/30'
   ]}
   style={dragStyle}
-  aria-label={title}
+  aria-label={contextualTitle}
+  title={suggestedForSite ? tr('siteSuggestion') : undefined}
   data-account-id={account.id}
 >
+  {#if suggestedForSite}
+    <span
+      class="pointer-events-none absolute left-0 top-1/2 h-7 w-0.5 -translate-y-1/2 rounded-r-full bg-primary/70"
+      aria-hidden="true"
+    ></span>
+  {/if}
+
   {#if showReorder}
     <button
       class={[
@@ -106,7 +119,7 @@
     onclick={copy}
     oncontextmenu={copyFromContextMenu}
     disabled={!value}
-    aria-label={`${tr('copy')}: ${title}`}
+    aria-label={`${tr('copy')}: ${contextualTitle}`}
   >
     <span class="flex min-w-0 grow flex-col">
       <span class="flex min-w-0 items-center gap-1.5 text-sm leading-tight text-base-content/60">
