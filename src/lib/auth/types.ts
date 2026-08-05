@@ -2,6 +2,8 @@ export type OtpType = 'totp' | 'hotp' | 'steam';
 
 export type OtpAlgorithm = 'SHA-1' | 'SHA-256' | 'SHA-512';
 
+export type ThemePreference = 'system' | 'light' | 'dark';
+
 export interface AuthenticatorAccount {
   id: string;
   issuer: string;
@@ -50,7 +52,7 @@ export interface VaultData {
 
 export interface AppSettings {
   language: string;
-  theme: 'light' | 'dark';
+  theme: ThemePreference;
   showCountdownSeconds: boolean;
   autoPasteCodes: boolean;
 }
@@ -84,7 +86,7 @@ export type StoredVault = VaultEnvelope | PlainVaultRecord;
 
 export const DEFAULT_SETTINGS: AppSettings = {
   language: 'en',
-  theme: 'light',
+  theme: 'system',
   showCountdownSeconds: false,
   autoPasteCodes: false
 };
