@@ -14,6 +14,8 @@ export default defineConfig({
   plugins: [tailwindcss(), svelte(), wrapContentScriptEntries()],
   publicDir: 'assets/extension',
   build: {
+    // Extension module imports cannot reuse document preloads across script worlds.
+    modulePreload: false,
     outDir: 'dist/app',
     emptyOutDir: true,
     rollupOptions: {
