@@ -8,6 +8,7 @@
   interface Props {
     account: AuthenticatorAccount;
     code?: OtpCode;
+    showReorder?: boolean;
     reorderDisabled?: boolean;
     reorderPending?: boolean;
     dragging?: boolean;
@@ -22,6 +23,7 @@
   let {
     account,
     code,
+    showReorder = true,
     reorderDisabled = false,
     reorderPending = false,
     dragging = false,
@@ -70,38 +72,41 @@
   aria-label={title}
   data-account-id={account.id}
 >
-  <button
-    class={[
-      'btn btn-ghost btn-sm btn-square m-0.5 size-10 shrink-0 touch-none text-base-content/45',
-      reorderDisabled
-        ? 'pointer-events-none opacity-35'
-        : reorderPending
-          ? 'pointer-events-none cursor-default opacity-55'
-          : 'cursor-grab hover:text-base-content active:cursor-grabbing'
-    ]}
-    type="button"
-    disabled={reorderDisabled}
-    aria-label={`${tr('reorderAccount')}: ${title}`}
-    aria-disabled={reorderDisabled || reorderPending}
-    aria-pressed={dragging}
-    title={tr('reorderAccount')}
-    onpointerdown={(event) => onreorderstart(account, event)}
-    onkeydown={(event) => onreorderkey(account, event)}
-    onblur={() => onreorderblur(account)}
-  >
-    <GripVertical size={18} aria-hidden="true" />
-  </button>
+  {#if showReorder}
+    <button
+      class={[
+        'btn btn-ghost btn-sm btn-square m-0.5 size-10 shrink-0 touch-none text-base-content/45',
+        reorderDisabled
+          ? 'pointer-events-none opacity-35'
+          : reorderPending
+            ? 'pointer-events-none cursor-default opacity-55'
+            : 'cursor-grab hover:text-base-content active:cursor-grabbing'
+      ]}
+      type="button"
+      disabled={reorderDisabled}
+      aria-label={`${tr('reorderAccount')}: ${title}`}
+      aria-disabled={reorderDisabled || reorderPending}
+      aria-pressed={dragging}
+      title={tr('reorderAccount')}
+      onpointerdown={(event) => onreorderstart(account, event)}
+      onkeydown={(event) => onreorderkey(account, event)}
+      onblur={() => onreorderblur(account)}
+    >
+      <GripVertical size={18} aria-hidden="true" />
+    </button>
+  {/if}
 
   <button
     class={[
-      'auth-code-action flex min-w-0 grow items-center gap-3 px-2 py-[0.6rem] text-left hover:bg-base-200/70 focus-visible:bg-base-200/70 focus:outline-none',
+      'auth-code-action flex min-w-0 grow items-center gap-3 py-[0.6rem] text-left hover:bg-base-200/70 focus-visible:bg-base-200/70 focus:outline-none',
+      showReorder ? 'px-2' : 'pl-4 pr-2',
       value ? 'cursor-pointer' : 'cursor-default'
     ]}
     type="button"
     onclick={copy}
     oncontextmenu={copyFromContextMenu}
     disabled={!value}
-    aria-label={tr('copy')}
+    aria-label={`${tr('copy')}: ${title}`}
   >
     <span class="flex min-w-0 grow flex-col">
       <span class="flex min-w-0 items-center gap-1.5 text-sm leading-tight text-base-content/60">
@@ -136,7 +141,7 @@
       <button
         class="btn btn-ghost btn-sm btn-circle"
         type="button"
-        aria-label={tr('next')}
+        aria-label={`${tr('next')}: ${title}`}
         title={tr('next')}
         onclick={() => vault.advanceHotp(account.id)}
       >
@@ -146,7 +151,7 @@
     <button
       class="btn btn-ghost btn-sm btn-circle text-base-content/45 hover:text-base-content"
       type="button"
-      aria-label={tr('edit')}
+      aria-label={`${tr('edit')}: ${title}`}
       onclick={() => onactions(account)}
     >
       <EllipsisVertical size={18} aria-hidden="true" />

@@ -34,6 +34,7 @@
     rubberbandOffset
   } from './lib/components/auth/reorder';
   import { accountToOtpAuthUri } from './lib/auth/otpauth';
+  import { rankAccountsForPage, type PageContext } from './lib/auth/accountRanking';
   import { decodeQrFiles, renderQrDataUrl } from './lib/auth/qr';
   import type { AccountDraft, AuthenticatorAccount, ImportResult } from './lib/auth/types';
   import { authenticatorVault as vault } from './lib/state/authenticator.svelte';
@@ -47,12 +48,19 @@
     ok?: boolean;
     error?: string;
     pasted?: boolean;
+    pageContext?: PageContext | null;
   }
 
   interface PageScanCompletedMessage {
     type: 'page-scan:completed';
     ok: boolean;
     message: string;
+  }
+
+  interface ActivePageContextChangedMessage {
+    type: 'active-page-context-changed';
+    windowId: number;
+    clearCurrent: boolean;
   }
 
   interface AccountDragRect {
@@ -108,8 +116,16 @@
   let pageScanState = $state<PageScanState>('idle');
   let pageScanMessage = $state('');
   let pageScanError = $state('');
+  let pageContext = $state.raw<PageContext | null>(null);
+  let pageContextReady = $state(false);
+  let pageContextRequest = 0;
+  let browserWindowId: number | undefined;
 
-  const orderedAccounts = $derived.by(() => dragAccounts ?? vault.sortedAccounts);
+  const manualSort = $derived(vault.settings.accountSortMode === 'manual');
+  const contextualAccounts = $derived.by(() =>
+    manualSort ? vault.sortedAccounts : rankAccountsForPage(vault.sortedAccounts, pageContext)
+  );
+  const orderedAccounts = $derived.by(() => dragAccounts ?? contextualAccounts);
   const filteredAccounts = $derived.by(() => {
     const needle = query.trim().toLowerCase();
     if (!needle) {
@@ -120,12 +136,15 @@
         account.label.toLowerCase().includes(needle) || account.issuer.toLowerCase().includes(needle)
     );
   });
-  const reorderDisabled = $derived(query.trim().length > 0 || filteredAccounts.length < 2);
+  const reorderDisabled = $derived(
+    !manualSort || query.trim().length > 0 || filteredAccounts.length < 2
+  );
   const activeDragAccountId = $derived(dragState?.accountId ?? keyboardDraggingAccountId);
   const pageScanBusy = $derived(pageScanState !== 'idle');
   const themeOverride = $derived(vault.settings.theme === 'system' ? undefined : vault.settings.theme);
 
   function showSettings(event: MouseEvent) {
+    cleanupAccountDrag();
     animateViewTransition = event.detail > 0;
     view = 'settings';
   }
@@ -142,6 +161,12 @@
     const listener = (message: unknown) => {
       if (isPageScanCompleted(message)) {
         void handlePageScanCompleted(message);
+      } else if (
+        isActivePageContextChanged(message) &&
+        !manualSort &&
+        (browserWindowId === undefined || message.windowId === browserWindowId)
+      ) {
+        void refreshPageContext(message.clearCurrent);
       }
     };
     if (hasRuntimeMessaging()) {
@@ -192,15 +217,72 @@
   });
 
   async function initializeApp() {
-    await vault.initialize();
+    try {
+      browserWindowId = await getCurrentBrowserWindowId();
+      await vault.initialize();
+      await refreshPageContext();
+    } finally {
+      pageContextReady = true;
+    }
   }
 
   async function createVault(password: string) {
-    await vault.create(password);
+    pageContextReady = false;
+    try {
+      await vault.create(password);
+      await refreshPageContext();
+    } finally {
+      pageContextReady = true;
+    }
   }
 
   async function unlockVault(password: string) {
-    await vault.unlock(password);
+    pageContextReady = false;
+    try {
+      await vault.unlock(password);
+      await refreshPageContext();
+    } finally {
+      pageContextReady = true;
+    }
+  }
+
+  async function setContextualSorting(enabled: boolean) {
+    const accountSortMode = enabled ? 'contextual' : 'manual';
+    if (vault.settings.accountSortMode === accountSortMode) {
+      return;
+    }
+
+    cleanupAccountDrag();
+    try {
+      await vault.updateSettings({ accountSortMode });
+      await refreshPageContext();
+    } catch (error) {
+      vault.error = getErrorMessage(error, tr('settingsSaveFailed'));
+    }
+  }
+
+  async function refreshPageContext(clearCurrent = true) {
+    const request = ++pageContextRequest;
+    if (clearCurrent) {
+      pageContext = null;
+    }
+    if (vault.settings.accountSortMode === 'manual' || !hasRuntimeMessaging()) {
+      pageContext = null;
+      return;
+    }
+
+    try {
+      const response = await sendRuntimeMessage({
+        type: 'get-active-page-context',
+        windowId: browserWindowId
+      });
+      if (request === pageContextRequest) {
+        pageContext = parsePageContext(response.pageContext);
+      }
+    } catch {
+      // Context is optional. Manual order is the quiet fallback when the
+      // browser cannot expose active-tab metadata.
+    }
   }
 
   function openAddDialog(mode: AddMode = 'qr') {
@@ -398,6 +480,18 @@
     });
   }
 
+  function getCurrentBrowserWindowId(): Promise<number | undefined> {
+    if (typeof chrome === 'undefined' || typeof chrome.windows?.getCurrent !== 'function') {
+      return Promise.resolve(undefined);
+    }
+
+    return new Promise((resolve) => {
+      chrome.windows.getCurrent((currentWindow) => {
+        resolve(chrome.runtime.lastError ? undefined : currentWindow.id);
+      });
+    });
+  }
+
   function isPageScanCompleted(message: unknown): message is PageScanCompletedMessage {
     return (
       typeof message === 'object' &&
@@ -406,6 +500,37 @@
       typeof (message as { ok?: unknown }).ok === 'boolean' &&
       typeof (message as { message?: unknown }).message === 'string'
     );
+  }
+
+  function isActivePageContextChanged(
+    message: unknown
+  ): message is ActivePageContextChangedMessage {
+    return (
+      typeof message === 'object' &&
+      message !== null &&
+      (message as { type?: unknown }).type === 'active-page-context-changed' &&
+      Number.isSafeInteger((message as { windowId?: unknown }).windowId) &&
+      typeof (message as { clearCurrent?: unknown }).clearCurrent === 'boolean'
+    );
+  }
+
+  function parsePageContext(value: unknown): PageContext | null {
+    if (!value || typeof value !== 'object') {
+      return null;
+    }
+
+    const context = value as { hostname?: unknown; title?: unknown };
+    if (
+      typeof context.hostname !== 'string' ||
+      context.hostname.length === 0 ||
+      context.hostname.length > 253
+    ) {
+      return null;
+    }
+    return {
+      hostname: context.hostname,
+      ...(typeof context.title === 'string' ? { title: context.title.slice(0, 512) } : {})
+    };
   }
 
   async function handlePageScanCompleted(message: PageScanCompletedMessage) {
@@ -430,6 +555,7 @@
     showAdd = false;
     view = 'codes';
     await vault.initialize();
+    await refreshPageContext();
   }
 
   function getErrorMessage(error: unknown, fallback: string): string {
@@ -815,7 +941,7 @@
 <main
   class="relative flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden bg-base-100 text-base-content"
 >
-  {#if !vault.initialized}
+  {#if !vault.initialized || (!vault.locked && !pageContextReady)}
     <div class="grid h-full place-items-center">
       <span class="loading loading-spinner loading-lg text-primary"></span>
     </div>
@@ -834,7 +960,7 @@
           class="absolute inset-0 z-10 flex min-h-0 flex-col overflow-hidden bg-base-100"
           transition:viewTransition={{ x: 20, instant: !animateViewTransition }}
         >
-          <SettingsView onback={showCodes} />
+          <SettingsView onback={showCodes} oncontextualsortchange={setContextualSorting} />
         </div>
       {:else}
         <div
@@ -856,13 +982,14 @@
             {#if filteredAccounts.length > 0}
               <ul
                 class="divide-y divide-base-200"
-                aria-label={tr('reorderAccounts')}
+                aria-label={tr('accounts')}
                 bind:this={accountListElement}
               >
                 {#each filteredAccounts as account (account.id)}
                   <AccountRow
                     {account}
                     code={vault.codes[account.id]}
+                    showReorder={manualSort}
                     reorderDisabled={reorderDisabled}
                     reorderPending={reorderSaving}
                     dragging={activeDragAccountId === account.id}

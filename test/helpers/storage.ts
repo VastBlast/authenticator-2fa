@@ -46,8 +46,10 @@ export function installMemoryStorage(): { localStorage: MemoryStorage; sessionSt
   return { localStorage, sessionStorage };
 }
 
-export function installStructuredCloneChromeStorage(): void {
-  const local = createChromeStorageArea();
+export function installStructuredCloneChromeStorage(
+  { localWriteDelayMs = 0 }: { localWriteDelayMs?: number } = {}
+): void {
+  const local = createChromeStorageArea(localWriteDelayMs);
   const session = createChromeStorageArea();
 
   Object.defineProperty(globalThis, 'chrome', {
@@ -64,7 +66,7 @@ export function installStructuredCloneChromeStorage(): void {
   });
 }
 
-function createChromeStorageArea() {
+function createChromeStorageArea(writeDelayMs = 0) {
   const values = new Map<string, unknown>();
 
   return {
@@ -74,10 +76,17 @@ function createChromeStorageArea() {
     set(items: Record<string, unknown>, callback: () => void): void {
       // Firefox extension storage structured-clones values and rejects proxies.
       const cloned = structuredClone(items) as Record<string, unknown>;
-      for (const [key, value] of Object.entries(cloned)) {
-        values.set(key, value);
+      const commit = () => {
+        for (const [key, value] of Object.entries(cloned)) {
+          values.set(key, value);
+        }
+        callback();
+      };
+      if (writeDelayMs > 0) {
+        setTimeout(commit, writeDelayMs);
+      } else {
+        commit();
       }
-      callback();
     },
     remove(key: string, callback: () => void): void {
       values.delete(key);

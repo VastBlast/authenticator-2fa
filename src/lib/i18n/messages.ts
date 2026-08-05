@@ -83,7 +83,9 @@ export const MESSAGE_KEYS = [
   'theme',
   'showCountdownSeconds',
   'showCountdownSecondsHint',
-  'codeEntry',
+  'autoSortCodes',
+  'autoSortCodesHint',
+  'settingsSaveFailed',
   'autoPasteCodes',
   'autoPasteCodesHint',
   'system',
@@ -196,7 +198,10 @@ const en: Record<MessageKey, string> = {
   theme: 'Theme',
   showCountdownSeconds: 'Show timer',
   showCountdownSecondsHint: 'Show seconds inside the countdown pie.',
-  codeEntry: 'Code entry',
+  autoSortCodes: 'Auto-sort codes',
+  autoSortCodesHint:
+    'Show likely matches for the current site first when available. Turn this off to arrange codes yourself.',
+  settingsSaveFailed: 'Unable to save settings.',
   autoPasteCodes: 'Auto paste code',
   autoPasteCodesHint:
     'When copying a code, the extension will automatically try to fill it in the 2FA code box on the page. Note: this is best effort and may not always work depending on the page.',
@@ -296,7 +301,10 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     theme: 'Tema',
     showCountdownSeconds: 'Mostrar temporizador',
     showCountdownSecondsHint: 'Muestra los segundos dentro del indicador circular.',
-    codeEntry: 'Entrada de códigos',
+    autoSortCodes: 'Ordenar códigos automáticamente',
+    autoSortCodesHint:
+      'Cuando estén disponibles, muestra primero las coincidencias probables para el sitio actual. Desactiva esta opción para ordenar los códigos manualmente.',
+    settingsSaveFailed: 'No se pudo guardar la configuración.',
     autoPasteCodes: 'Pegar código automáticamente',
     autoPasteCodesHint:
       'Al hacer clic en un código, lo copia e intenta llenar el campo de código en la página. Algunas páginas pueden impedirlo.',
@@ -393,7 +401,10 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     theme: 'थीम',
     showCountdownSeconds: 'टाइमर दिखाएं',
     showCountdownSecondsHint: 'काउंटडाउन पाई के अंदर सेकंड दिखाएं।',
-    codeEntry: 'कोड एंट्री',
+    autoSortCodes: 'कोड अपने आप क्रमबद्ध करें',
+    autoSortCodesHint:
+      'उपलब्ध होने पर मौजूदा साइट से संभावित रूप से मेल खाने वाले कोड पहले दिखाएं। कोड खुद क्रमबद्ध करने के लिए इसे बंद करें।',
+    settingsSaveFailed: 'सेटिंग सहेजी नहीं जा सकीं।',
     autoPasteCodes: 'कोड अपने आप पेस्ट करें',
     autoPasteCodesHint:
       'जब आप कोड पर क्लिक करते हैं, यह उसे कॉपी करता है और पेज के कोड बॉक्स में भरने की कोशिश करता है। कुछ पेज इसकी अनुमति नहीं देते।',
@@ -490,7 +501,10 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     theme: 'السمة',
     showCountdownSeconds: 'إظهار المؤقت',
     showCountdownSecondsHint: 'اعرض الثواني داخل مؤشر العد التنازلي الدائري.',
-    codeEntry: 'إدخال الرموز',
+    autoSortCodes: 'ترتيب الرموز تلقائيًا',
+    autoSortCodesHint:
+      'عند توفرها، اعرض أولًا الرموز التي يُرجح أن تطابق الموقع الحالي. أوقف هذا الخيار لترتيب الرموز بنفسك.',
+    settingsSaveFailed: 'تعذّر حفظ الإعدادات.',
     autoPasteCodes: 'لصق الرمز تلقائيا',
     autoPasteCodesHint:
       'عند النقر على رمز، يتم نسخه ثم محاولة تعبئته في خانة الرمز في الصفحة. قد لا تسمح بعض الصفحات بذلك.',
@@ -587,7 +601,10 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     theme: 'থিম',
     showCountdownSeconds: 'টাইমার দেখান',
     showCountdownSecondsHint: 'কাউন্টডাউন পাইয়ের ভিতরে সেকেন্ড দেখান।',
-    codeEntry: 'কোড এন্ট্রি',
+    autoSortCodes: 'কোড স্বয়ংক্রিয়ভাবে সাজান',
+    autoSortCodesHint:
+      'উপলভ্য হলে বর্তমান সাইটের সঙ্গে সম্ভাব্য মিল থাকা কোড আগে দেখান। নিজে কোড সাজাতে এটি বন্ধ করুন।',
+    settingsSaveFailed: 'সেটিংস সংরক্ষণ করা যায়নি।',
     autoPasteCodes: 'কোড অটো পেস্ট করুন',
     autoPasteCodesHint:
       'কোডে ক্লিক করলে এটি কপি করে এবং পেজের কোড বক্সে বসানোর চেষ্টা করে। কিছু পেজ এটি অনুমতি নাও দিতে পারে।',
@@ -684,7 +701,10 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     theme: 'Tema',
     showCountdownSeconds: 'Mostrar temporizador',
     showCountdownSecondsHint: 'Mostra os segundos dentro do indicador circular.',
-    codeEntry: 'Entrada de códigos',
+    autoSortCodes: 'Ordenar códigos automaticamente',
+    autoSortCodesHint:
+      'Quando disponíveis, mostra primeiro as correspondências prováveis para o site atual. Desative para organizar os códigos manualmente.',
+    settingsSaveFailed: 'Não foi possível salvar as configurações.',
     autoPasteCodes: 'Colar código automaticamente',
     autoPasteCodesHint:
       'Ao clicar em um código, ele é copiado e tenta preencher o campo de código na página. Algumas páginas podem bloquear isso.',
@@ -781,7 +801,10 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     theme: 'Тема',
     showCountdownSeconds: 'Показывать таймер',
     showCountdownSecondsHint: 'Показывает секунды внутри кругового индикатора.',
-    codeEntry: 'Ввод кодов',
+    autoSortCodes: 'Сортировать коды автоматически',
+    autoSortCodesHint:
+      'Когда возможно, сначала показывать вероятные совпадения для текущего сайта. Отключите, чтобы упорядочить коды вручную.',
+    settingsSaveFailed: 'Не удалось сохранить настройки.',
     autoPasteCodes: 'Автовставка кода',
     autoPasteCodesHint:
       'При нажатии на код он копируется и пытается заполнить поле кода на странице. Некоторые страницы могут это блокировать.',
@@ -878,7 +901,10 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     theme: 'テーマ',
     showCountdownSeconds: 'タイマーを表示',
     showCountdownSecondsHint: 'カウントダウン円の内側に秒数を表示します。',
-    codeEntry: 'コード入力',
+    autoSortCodes: 'コードを自動で並べ替え',
+    autoSortCodesHint:
+      '利用できる場合、現在のサイトに一致する可能性が高いコードを先に表示します。自分で並べ替えるにはオフにします。',
+    settingsSaveFailed: '設定を保存できませんでした。',
     autoPasteCodes: 'コードを自動貼り付け',
     autoPasteCodesHint:
       'コードをクリックするとコピーし、ページのコード入力欄に入れようとします。一部のページでは使えない場合があります。',
@@ -975,7 +1001,10 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     theme: 'Thème',
     showCountdownSeconds: 'Afficher le minuteur',
     showCountdownSecondsHint: 'Affiche les secondes dans l’indicateur circulaire.',
-    codeEntry: 'Saisie des codes',
+    autoSortCodes: 'Trier les codes automatiquement',
+    autoSortCodesHint:
+      'Lorsque c’est possible, affiche d’abord les correspondances probables pour le site actuel. Désactivez cette option pour organiser les codes vous-même.',
+    settingsSaveFailed: 'Impossible d’enregistrer les paramètres.',
     autoPasteCodes: 'Coller le code automatiquement',
     autoPasteCodesHint:
       'Quand vous cliquez sur un code, il est copié puis l’app essaie de remplir le champ de code sur la page. Certaines pages peuvent le bloquer.',
@@ -1072,7 +1101,10 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     theme: 'Design',
     showCountdownSeconds: 'Timer anzeigen',
     showCountdownSecondsHint: 'Zeigt die Sekunden im kreisförmigen Countdown an.',
-    codeEntry: 'Codeeingabe',
+    autoSortCodes: 'Codes automatisch sortieren',
+    autoSortCodesHint:
+      'Zeigt, wenn verfügbar, wahrscheinliche Treffer für die aktuelle Website zuerst. Schalte dies aus, um die Codes selbst anzuordnen.',
+    settingsSaveFailed: 'Einstellungen konnten nicht gespeichert werden.',
     autoPasteCodes: 'Code automatisch einfügen',
     autoPasteCodesHint:
       'Wenn du einen Code anklickst, wird er kopiert und in das Codefeld der Seite eingefügt, wenn möglich. Manche Seiten blockieren das.',
@@ -1169,7 +1201,9 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     theme: '主题',
     showCountdownSeconds: '显示计时器',
     showCountdownSecondsHint: '在圆形倒计时内显示秒数。',
-    codeEntry: '代码输入',
+    autoSortCodes: '自动排序验证码',
+    autoSortCodesHint: '可用时，优先显示可能与当前网站匹配的验证码。关闭后可手动排列验证码。',
+    settingsSaveFailed: '无法保存设置。',
     autoPasteCodes: '自动粘贴代码',
     autoPasteCodesHint:
       '点击代码时会复制它，并尝试填入页面上的代码输入框。有些页面可能不允许这样做。',

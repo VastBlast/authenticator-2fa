@@ -13,13 +13,15 @@
   } from '@lucide/svelte';
   import ImportExportPanel from './ImportExportPanel.svelte';
   import MotionDialog from './MotionDialog.svelte';
+  import Toast from './Toast.svelte';
   import { FADE_TRANSITION, panelReveal } from './transitions';
   import { authenticatorVault as vault } from '../../state/authenticator.svelte';
   import { LANGUAGES, tr } from '../../i18n/messages';
-  import type { ThemePreference } from '../../auth/types';
+  import type { AppSettings, ThemePreference } from '../../auth/types';
 
   interface Props {
     onback: (event?: MouseEvent) => void;
+    oncontextualsortchange: (enabled: boolean) => void | Promise<void>;
   }
 
   const THEME_OPTIONS = [
@@ -28,7 +30,7 @@
     { theme: 'dark', icon: Moon }
   ] as const;
 
-  let { onback }: Props = $props();
+  let { onback, oncontextualsortchange }: Props = $props();
 
   type Intent = 'idle' | 'enabling' | 'disabling' | 'changing';
 
@@ -38,6 +40,8 @@
   let resetConfirmation = $state('');
   let securityError = $state('');
   let showBackup = $state(false);
+  let sortSaving = $state(false);
+  let securitySaving = $state(false);
   let intent = $state<Intent>('idle');
   let currentPasswordInput = $state<HTMLInputElement | undefined>();
   let newPasswordInput = $state<HTMLInputElement | undefined>();
@@ -45,8 +49,9 @@
   const wantsProtection = $derived(
     vault.passwordProtected ? intent !== 'disabling' : intent === 'enabling'
   );
+  const securityPending = $derived(vault.busy || securitySaving);
   const canApply = $derived(
-    !vault.busy &&
+    !securityPending &&
       newPassword.length >= 8 &&
       newPassword === confirmNewPassword &&
       (intent !== 'changing' || Boolean(currentPassword))
@@ -54,6 +59,7 @@
   // Surface vault-level errors (wrong password, etc.) only while a password
   // change is in progress, alongside local validation messages.
   const passwordError = $derived(securityError || (intent === 'idle' ? '' : vault.error));
+  const settingsToastError = $derived(intent === 'idle' ? vault.error : '');
   const securityPanel = $derived.by((): 'password' | 'disable' | 'change' | null => {
     if (intent === 'enabling' || intent === 'changing') {
       return 'password';
@@ -73,24 +79,36 @@
   });
 
   function setLanguage(language: string) {
-    void vault.replaceSettings({ ...vault.settings, language });
+    saveSettings({ language });
   }
 
   function setTheme(theme: ThemePreference) {
     if (theme !== vault.settings.theme) {
-      void vault.replaceSettings({ ...vault.settings, theme });
+      saveSettings({ theme });
     }
   }
 
   function setShowCountdownSeconds(showCountdownSeconds: boolean) {
-    if (showCountdownSeconds !== vault.settings.showCountdownSeconds) {
-      void vault.replaceSettings({ ...vault.settings, showCountdownSeconds });
-    }
+    saveSettings({ showCountdownSeconds });
   }
 
   function setAutoPasteCodes(autoPasteCodes: boolean) {
-    if (autoPasteCodes !== vault.settings.autoPasteCodes) {
-      void vault.replaceSettings({ ...vault.settings, autoPasteCodes });
+    saveSettings({ autoPasteCodes });
+  }
+
+  function saveSettings(settings: Partial<AppSettings>) {
+    void vault.updateSettings(settings).catch((error: unknown) => {
+      vault.error = error instanceof Error && error.message ? error.message : tr('settingsSaveFailed');
+    });
+  }
+
+  async function setAutoSortCodes(input: HTMLInputElement) {
+    sortSaving = true;
+    try {
+      await oncontextualsortchange(input.checked);
+    } finally {
+      input.checked = vault.settings.accountSortMode === 'contextual';
+      sortSaving = false;
     }
   }
 
@@ -120,40 +138,64 @@
   }
 
   async function applyPassword() {
+    if (securitySaving) {
+      return;
+    }
     securityError = '';
     vault.error = '';
     if (newPassword !== confirmNewPassword) {
       securityError = 'New passwords do not match.';
       return;
     }
-    await vault.changePassword(intent === 'changing' ? currentPassword : '', newPassword);
-    if (!vault.error) {
-      cancel();
+    securitySaving = true;
+    try {
+      await vault.changePassword(intent === 'changing' ? currentPassword : '', newPassword);
+      if (!vault.error) {
+        cancel();
+      }
+    } finally {
+      securitySaving = false;
     }
   }
 
   async function disableProtection() {
+    if (securitySaving) {
+      return;
+    }
     securityError = '';
     vault.error = '';
     if (!currentPassword) {
       securityError = 'Enter the current password.';
       return;
     }
-    await vault.removePassword(currentPassword);
-    if (!vault.error) {
-      cancel();
+    securitySaving = true;
+    try {
+      await vault.removePassword(currentPassword);
+      if (!vault.error) {
+        cancel();
+      }
+    } finally {
+      securitySaving = false;
     }
   }
 
   async function resetVault() {
+    if (securitySaving) {
+      return;
+    }
     securityError = '';
     if (resetConfirmation !== 'DELETE') {
       securityError = tr('deleteVaultConfirm');
       return;
     }
-    await vault.resetVault();
-    resetConfirmation = '';
-    onback();
+    securitySaving = true;
+    try {
+      await vault.resetVault();
+      resetConfirmation = '';
+      onback();
+    } finally {
+      securitySaving = false;
+    }
   }
 </script>
 
@@ -215,9 +257,23 @@
       </label>
     </section>
 
-    <!-- Code entry -->
+    <!-- Codes -->
     <section class="space-y-3">
-      <h2 class="text-xs font-bold uppercase tracking-wide text-base-content/50">{tr('codeEntry')}</h2>
+      <h2 class="text-xs font-bold uppercase tracking-wide text-base-content/50">{tr('accounts')}</h2>
+
+      <label class="flex items-center justify-between gap-3">
+        <span class="min-w-0">
+          <span class="block text-sm font-medium">{tr('autoSortCodes')}</span>
+          <span class="block text-xs text-base-content/60">{tr('autoSortCodesHint')}</span>
+        </span>
+        <input
+          class="toggle toggle-primary shrink-0"
+          type="checkbox"
+          checked={vault.settings.accountSortMode === 'contextual'}
+          disabled={sortSaving}
+          onchange={(event) => void setAutoSortCodes(event.currentTarget)}
+        />
+      </label>
 
       <label class="flex items-center justify-between gap-3">
         <span class="min-w-0">
@@ -271,7 +327,7 @@
           type="checkbox"
           checked={wantsProtection}
           onchange={toggleProtection}
-          disabled={vault.busy}
+          disabled={securityPending}
         />
       </label>
 
@@ -288,6 +344,7 @@
                     bind:this={currentPasswordInput}
                     bind:value={currentPassword}
                     autocomplete="current-password"
+                    disabled={securityPending}
                   />
                 </label>
               {/if}
@@ -299,17 +356,18 @@
                   bind:this={newPasswordInput}
                   bind:value={newPassword}
                   autocomplete="new-password"
+                  disabled={securityPending}
                 />
                 <span class="text-xs text-base-content/50">{tr('passwordHint')}</span>
               </label>
               <label class="grid gap-1.5">
                 <span class="text-sm font-medium">{tr('confirmPassword')}</span>
-                <input class="input input-sm w-full" type="password" bind:value={confirmNewPassword} autocomplete="new-password" />
+                <input class="input input-sm w-full" type="password" bind:value={confirmNewPassword} autocomplete="new-password" disabled={securityPending} />
               </label>
               <div class="grid grid-cols-2 gap-2 pt-1">
-                <button class="btn btn-sm" type="button" onclick={cancel}>{tr('cancel')}</button>
+                <button class="btn btn-sm" type="button" onclick={cancel} disabled={securityPending}>{tr('cancel')}</button>
                 <button class="btn btn-primary btn-sm" type="button" onclick={applyPassword} disabled={!canApply}>
-                  {#if vault.busy}
+                  {#if securityPending}
                     <span class="loading loading-spinner loading-xs"></span>
                   {/if}
                   {intent === 'changing' ? tr('changePassword') : tr('setPassword')}
@@ -326,12 +384,13 @@
                   bind:this={currentPasswordInput}
                   bind:value={currentPassword}
                   autocomplete="current-password"
+                  disabled={securityPending}
                 />
               </label>
               <div class="grid grid-cols-2 gap-2 pt-1">
-                <button class="btn btn-sm" type="button" onclick={cancel}>{tr('cancel')}</button>
-                <button class="btn btn-warning btn-sm" type="button" onclick={disableProtection} disabled={vault.busy || !currentPassword}>
-                  {#if vault.busy}
+                <button class="btn btn-sm" type="button" onclick={cancel} disabled={securityPending}>{tr('cancel')}</button>
+                <button class="btn btn-warning btn-sm" type="button" onclick={disableProtection} disabled={securityPending || !currentPassword}>
+                  {#if securityPending}
                     <span class="loading loading-spinner loading-xs"></span>
                   {/if}
                   {tr('turnOff')}
@@ -354,10 +413,10 @@
       <div class="space-y-2 rounded-box border border-error/30 bg-error/5 p-3">
         <label class="grid gap-1.5">
           <span class="text-sm font-medium text-error">{tr('deleteVault')}</span>
-          <input class="input input-sm w-full" bind:value={resetConfirmation} autocomplete="off" placeholder="DELETE" />
+          <input class="input input-sm w-full" bind:value={resetConfirmation} autocomplete="off" placeholder="DELETE" disabled={securityPending} />
         </label>
         <p class="text-xs text-base-content/60">{tr('deleteVaultConfirm')}</p>
-        <button class="btn btn-error btn-block btn-sm" type="button" onclick={resetVault} disabled={vault.busy || resetConfirmation !== 'DELETE'}>
+        <button class="btn btn-error btn-block btn-sm" type="button" onclick={resetVault} disabled={securityPending || resetConfirmation !== 'DELETE'}>
           <Trash2 size={16} aria-hidden="true" />
           {tr('deleteVault')}
         </button>
@@ -365,6 +424,12 @@
     </section>
   </div>
 </div>
+
+<Toast
+  message={settingsToastError || vault.notice}
+  variant={settingsToastError ? 'error' : 'notice'}
+  nonce={vault.noticeKey}
+/>
 
 {#if showBackup}
   <MotionDialog
