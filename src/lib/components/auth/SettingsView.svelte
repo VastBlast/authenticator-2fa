@@ -263,19 +263,6 @@
 
       <label class="flex items-center justify-between gap-3">
         <span class="min-w-0">
-          <span class="block text-sm font-medium">{tr('hideCodes')}</span>
-          <span class="block text-xs text-base-content/60">{tr('hideCodesHint')}</span>
-        </span>
-        <input
-          class="toggle toggle-primary shrink-0"
-          type="checkbox"
-          checked={vault.settings.hideCodes}
-          onchange={(event) => saveSettings({ hideCodes: event.currentTarget.checked })}
-        />
-      </label>
-
-      <label class="flex items-center justify-between gap-3">
-        <span class="min-w-0">
           <span class="block text-sm font-medium">{tr('autoSortCodes')}</span>
           <span class="block text-xs text-base-content/60">{tr('autoSortCodesHint')}</span>
         </span>
@@ -301,6 +288,19 @@
           type="checkbox"
           checked={vault.settings.autoPasteCodes}
           onchange={(event) => setAutoPasteCodes((event.target as HTMLInputElement).checked)}
+        />
+      </label>
+
+      <label class="flex items-center justify-between gap-3">
+        <span class="min-w-0">
+          <span class="block text-sm font-medium">{tr('hideCodes')}</span>
+          <span class="block text-xs text-base-content/60">{tr('hideCodesHint')}</span>
+        </span>
+        <input
+          class="toggle toggle-primary shrink-0"
+          type="checkbox"
+          checked={vault.settings.hideCodes}
+          onchange={(event) => saveSettings({ hideCodes: event.currentTarget.checked })}
         />
       </label>
     </section>
