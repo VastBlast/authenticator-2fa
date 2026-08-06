@@ -196,11 +196,13 @@ describe('AuthenticatorVault persistence and locking', () => {
     await vault.initialize();
 
     expect(vault.settings.theme).toBe('system');
+    expect(vault.settings.hideCodes).toBe(false);
 
     await vault.updateSettings({
       language: 'fr',
       theme: 'dark',
       showCountdownSeconds: true,
+      hideCodes: true,
       autoPasteCodes: true,
       accountSortMode: 'contextual'
     });
@@ -215,11 +217,12 @@ describe('AuthenticatorVault persistence and locking', () => {
     expect(reopened.settings.language).toBe('fr');
     expect(reopened.settings.theme).toBe('dark');
     expect(reopened.settings.showCountdownSeconds).toBe(true);
+    expect(reopened.settings.hideCodes).toBe(true);
     expect(reopened.settings.autoPasteCodes).toBe(true);
     expect(reopened.settings.accountSortMode).toBe('contextual');
   });
 
-  test('enables contextual sorting for legacy settings without a saved preference', async () => {
+  test('applies defaults to legacy settings without newer preferences', async () => {
     await saveStoredVault(
       createPlainVaultRecord({
         accounts: [],
@@ -236,6 +239,7 @@ describe('AuthenticatorVault persistence and locking', () => {
     await vault.initialize();
 
     expect(vault.settings.accountSortMode).toBe('contextual');
+    expect(vault.settings.hideCodes).toBe(false);
   });
 
   test('merges concurrent settings updates without losing changes', async () => {
@@ -246,7 +250,8 @@ describe('AuthenticatorVault persistence and locking', () => {
     await Promise.all([
       vault.updateSettings({ theme: 'dark' }),
       vault.updateSettings({ showCountdownSeconds: true }),
-      vault.updateSettings({ accountSortMode: 'contextual' })
+      vault.updateSettings({ accountSortMode: 'contextual' }),
+      vault.updateSettings({ hideCodes: true })
     ]);
     await Promise.all([
       vault.updateSettings({ autoPasteCodes: true }),
@@ -256,6 +261,7 @@ describe('AuthenticatorVault persistence and locking', () => {
 
     expect(vault.settings.theme).toBe('dark');
     expect(vault.settings.showCountdownSeconds).toBe(true);
+    expect(vault.settings.hideCodes).toBe(true);
     expect(vault.settings.accountSortMode).toBe('contextual');
     expect(vault.settings.autoPasteCodes).toBe(true);
 
@@ -263,6 +269,7 @@ describe('AuthenticatorVault persistence and locking', () => {
     await reopened.initialize();
     expect(reopened.settings.theme).toBe('dark');
     expect(reopened.settings.showCountdownSeconds).toBe(true);
+    expect(reopened.settings.hideCodes).toBe(true);
     expect(reopened.settings.accountSortMode).toBe('contextual');
     expect(reopened.settings.autoPasteCodes).toBe(true);
   });
@@ -281,6 +288,7 @@ describe('AuthenticatorVault persistence and locking', () => {
       language: 'en',
       theme: 'system',
       showCountdownSeconds: false,
+      hideCodes: false,
       autoPasteCodes: false,
       accountSortMode: 'contextual'
     });

@@ -56,6 +56,7 @@ export interface AppSettings {
   language: string;
   theme: ThemePreference;
   showCountdownSeconds: boolean;
+  hideCodes: boolean;
   autoPasteCodes: boolean;
   accountSortMode: AccountSortMode;
 }
@@ -91,6 +92,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   language: 'en',
   theme: 'system',
   showCountdownSeconds: false,
+  hideCodes: false,
   autoPasteCodes: false,
   accountSortMode: 'contextual'
 };
@@ -99,6 +101,7 @@ export function normalizeAppSettings(settings: Partial<AppSettings> | undefined)
   return {
     ...DEFAULT_SETTINGS,
     ...settings,
+    hideCodes: settings?.hideCodes === true,
     accountSortMode: settings?.accountSortMode === 'manual' ? 'manual' : 'contextual'
   };
 }

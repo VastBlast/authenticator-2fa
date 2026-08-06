@@ -10,6 +10,7 @@ const validVaultData: VaultData = {
     language: 'en',
     theme: 'light',
     showCountdownSeconds: false,
+    hideCodes: false,
     autoPasteCodes: false,
     accountSortMode: 'manual'
   }

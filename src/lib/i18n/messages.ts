@@ -83,6 +83,9 @@ export const MESSAGE_KEYS = [
   'theme',
   'showCountdownSeconds',
   'showCountdownSecondsHint',
+  'hideCodes',
+  'hideCodesHint',
+  'codeHidden',
   'autoSortCodes',
   'autoSortCodesHint',
   'siteSuggestion',
@@ -199,6 +202,10 @@ const en: Record<MessageKey, string> = {
   theme: 'Theme',
   showCountdownSeconds: 'Show timer',
   showCountdownSecondsHint: 'Show seconds inside the countdown pie.',
+  hideCodes: 'Hide codes',
+  hideCodesHint:
+    'Mask codes in the account list. Select an account to copy its code; auto-paste still works.',
+  codeHidden: 'Code hidden',
   autoSortCodes: 'Auto-sort codes',
   autoSortCodesHint:
     'Show likely matches for the current site first when available. Turn this off to arrange codes yourself.',
@@ -303,6 +310,10 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     theme: 'Tema',
     showCountdownSeconds: 'Mostrar temporizador',
     showCountdownSecondsHint: 'Muestra los segundos dentro del indicador circular.',
+    hideCodes: 'Ocultar códigos',
+    hideCodesHint:
+      'Oculta los códigos en la lista de cuentas. Selecciona una cuenta para copiar su código; el pegado automático sigue funcionando.',
+    codeHidden: 'Código oculto',
     autoSortCodes: 'Ordenar códigos automáticamente',
     autoSortCodesHint:
       'Cuando estén disponibles, muestra primero las coincidencias probables para el sitio actual. Desactiva esta opción para ordenar los códigos manualmente.',
@@ -404,6 +415,10 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     theme: 'थीम',
     showCountdownSeconds: 'टाइमर दिखाएं',
     showCountdownSecondsHint: 'काउंटडाउन पाई के अंदर सेकंड दिखाएं।',
+    hideCodes: 'कोड छिपाएं',
+    hideCodesHint:
+      'खाता सूची में कोड छिपाएं। कोड कॉपी करने के लिए खाता चुनें; ऑटो-पेस्ट फिर भी काम करता है।',
+    codeHidden: 'कोड छिपा है',
     autoSortCodes: 'कोड अपने आप क्रमबद्ध करें',
     autoSortCodesHint:
       'उपलब्ध होने पर मौजूदा साइट से संभावित रूप से मेल खाने वाले कोड पहले दिखाएं। कोड खुद क्रमबद्ध करने के लिए इसे बंद करें।',
@@ -505,6 +520,10 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     theme: 'السمة',
     showCountdownSeconds: 'إظهار المؤقت',
     showCountdownSecondsHint: 'اعرض الثواني داخل مؤشر العد التنازلي الدائري.',
+    hideCodes: 'إخفاء الرموز',
+    hideCodesHint:
+      'أخفِ الرموز في قائمة الحسابات. حدد حسابًا لنسخ رمزه؛ ويستمر اللصق التلقائي في العمل.',
+    codeHidden: 'الرمز مخفي',
     autoSortCodes: 'ترتيب الرموز تلقائيًا',
     autoSortCodesHint:
       'عند توفرها، اعرض أولًا الرموز التي يُرجح أن تطابق الموقع الحالي. أوقف هذا الخيار لترتيب الرموز بنفسك.',
@@ -606,6 +625,10 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     theme: 'থিম',
     showCountdownSeconds: 'টাইমার দেখান',
     showCountdownSecondsHint: 'কাউন্টডাউন পাইয়ের ভিতরে সেকেন্ড দেখান।',
+    hideCodes: 'কোড লুকান',
+    hideCodesHint:
+      'অ্যাকাউন্ট তালিকায় কোড লুকিয়ে রাখুন। কোড কপি করতে একটি অ্যাকাউন্ট নির্বাচন করুন; অটো-পেস্ট তবুও কাজ করে।',
+    codeHidden: 'কোড লুকানো',
     autoSortCodes: 'কোড স্বয়ংক্রিয়ভাবে সাজান',
     autoSortCodesHint:
       'উপলভ্য হলে বর্তমান সাইটের সঙ্গে সম্ভাব্য মিল থাকা কোড আগে দেখান। নিজে কোড সাজাতে এটি বন্ধ করুন।',
@@ -707,6 +730,10 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     theme: 'Tema',
     showCountdownSeconds: 'Mostrar temporizador',
     showCountdownSecondsHint: 'Mostra os segundos dentro do indicador circular.',
+    hideCodes: 'Ocultar códigos',
+    hideCodesHint:
+      'Oculte os códigos na lista de contas. Selecione uma conta para copiar o código; a colagem automática continua funcionando.',
+    codeHidden: 'Código oculto',
     autoSortCodes: 'Ordenar códigos automaticamente',
     autoSortCodesHint:
       'Quando disponíveis, mostra primeiro as correspondências prováveis para o site atual. Desative para organizar os códigos manualmente.',
@@ -808,6 +835,10 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     theme: 'Тема',
     showCountdownSeconds: 'Показывать таймер',
     showCountdownSecondsHint: 'Показывает секунды внутри кругового индикатора.',
+    hideCodes: 'Скрывать коды',
+    hideCodesHint:
+      'Скрывает коды в списке аккаунтов. Выберите аккаунт, чтобы скопировать код; автовставка продолжит работать.',
+    codeHidden: 'Код скрыт',
     autoSortCodes: 'Сортировать коды автоматически',
     autoSortCodesHint:
       'Когда возможно, сначала показывать вероятные совпадения для текущего сайта. Отключите, чтобы упорядочить коды вручную.',
@@ -909,6 +940,10 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     theme: 'テーマ',
     showCountdownSeconds: 'タイマーを表示',
     showCountdownSecondsHint: 'カウントダウン円の内側に秒数を表示します。',
+    hideCodes: 'コードを非表示',
+    hideCodesHint:
+      'アカウント一覧のコードを隠します。アカウントを選択するとコードをコピーでき、自動貼り付けも引き続き機能します。',
+    codeHidden: 'コードは非表示',
     autoSortCodes: 'コードを自動で並べ替え',
     autoSortCodesHint:
       '利用できる場合、現在のサイトに一致する可能性が高いコードを先に表示します。自分で並べ替えるにはオフにします。',
@@ -1010,6 +1045,10 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     theme: 'Thème',
     showCountdownSeconds: 'Afficher le minuteur',
     showCountdownSecondsHint: 'Affiche les secondes dans l’indicateur circulaire.',
+    hideCodes: 'Masquer les codes',
+    hideCodesHint:
+      'Masque les codes dans la liste des comptes. Sélectionnez un compte pour copier son code ; le collage automatique continue de fonctionner.',
+    codeHidden: 'Code masqué',
     autoSortCodes: 'Trier les codes automatiquement',
     autoSortCodesHint:
       'Lorsque c’est possible, affiche d’abord les correspondances probables pour le site actuel. Désactivez cette option pour organiser les codes vous-même.',
@@ -1111,6 +1150,10 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     theme: 'Design',
     showCountdownSeconds: 'Timer anzeigen',
     showCountdownSecondsHint: 'Zeigt die Sekunden im kreisförmigen Countdown an.',
+    hideCodes: 'Codes ausblenden',
+    hideCodesHint:
+      'Blendet Codes in der Kontoliste aus. Wähle ein Konto aus, um den Code zu kopieren; automatisches Einfügen funktioniert weiterhin.',
+    codeHidden: 'Code ausgeblendet',
     autoSortCodes: 'Codes automatisch sortieren',
     autoSortCodesHint:
       'Zeigt, wenn verfügbar, wahrscheinliche Treffer für die aktuelle Website zuerst. Schalte dies aus, um die Codes selbst anzuordnen.',
@@ -1212,6 +1255,9 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     theme: '主题',
     showCountdownSeconds: '显示计时器',
     showCountdownSecondsHint: '在圆形倒计时内显示秒数。',
+    hideCodes: '隐藏验证码',
+    hideCodesHint: '在账户列表中隐藏验证码。选择账户即可复制验证码；自动粘贴仍然有效。',
+    codeHidden: '验证码已隐藏',
     autoSortCodes: '自动排序验证码',
     autoSortCodesHint: '可用时，优先显示可能与当前网站匹配的验证码。关闭后可手动排列验证码。',
     siteSuggestion: '为此网站推荐',
