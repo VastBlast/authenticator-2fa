@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { EllipsisVertical, EyeOff, GripVertical, RefreshCw } from '@lucide/svelte';
+  import { EllipsisVertical, GripVertical, RefreshCw } from '@lucide/svelte';
   import CountdownRing from './CountdownRing.svelte';
   import { authenticatorVault as vault } from '../../state/authenticator.svelte';
   import { tr } from '../../i18n/messages';
@@ -131,21 +131,14 @@
           <span class="truncate">{account.label}</span>
         {/if}
       </span>
-      {#if vault.settings.hideCodes}
-        <span class="mt-[0.3rem] flex min-h-9 items-center gap-2 text-sm font-medium text-base-content/50">
-          <EyeOff size={18} aria-hidden="true" />
-          {tr('codeHidden')}
-        </span>
-      {:else}
-        <span
-          class={[
-            'auth-code-value font-(family-name:--auth-code-font) text-[2.35rem] font-[450] leading-[0.95] mt-[0.3rem] tracking-normal lining-nums tabular-nums',
-            expiring ? 'text-error' : 'text-primary'
-          ]}
-        >
-          {displayCode}
-        </span>
-      {/if}
+      <span
+        class={[
+          'auth-code-value font-(family-name:--auth-code-font) text-[2.35rem] font-[450] leading-[0.95] mt-[0.3rem] tracking-normal lining-nums tabular-nums',
+          vault.settings.hideCodes ? 'text-base-content/35' : expiring ? 'text-error' : 'text-primary'
+        ]}
+      >
+        {vault.settings.hideCodes ? '••• •••' : displayCode}
+      </span>
     </span>
 
     {#if account.type === 'hotp'}
