@@ -1,7 +1,6 @@
 <script lang="ts">
   import { fade } from 'svelte/transition';
   import {
-    ArrowLeft,
     ChevronRight,
     DatabaseBackup,
     KeyRound,
@@ -12,9 +11,9 @@
     Trash2
   } from '@lucide/svelte';
   import ImportExportPanel from './ImportExportPanel.svelte';
-  import MotionDialog from './MotionDialog.svelte';
   import Toast from './Toast.svelte';
-  import { FADE_TRANSITION, panelReveal } from './transitions';
+  import ViewHeader from './ViewHeader.svelte';
+  import { FADE_TRANSITION, panelReveal, viewTransition } from './transitions';
   import { authenticatorVault as vault } from '../../state/authenticator.svelte';
   import { LANGUAGES, tr } from '../../i18n/messages';
   import type { AppSettings, ThemePreference } from '../../auth/types';
@@ -38,8 +37,7 @@
   let newPassword = $state('');
   let confirmNewPassword = $state('');
   let resetConfirmation = $state('');
-  let securityError = $state('');
-  let showBackup = $state(false);
+  let showTransfer = $state(false);
   let sortSaving = $state(false);
   let securitySaving = $state(false);
   let intent = $state<Intent>('idle');
@@ -50,6 +48,9 @@
     vault.passwordProtected ? intent !== 'disabling' : intent === 'enabling'
   );
   const securityPending = $derived(vault.busy || securitySaving);
+  const passwordsMismatch = $derived(
+    confirmNewPassword.length > 0 && confirmNewPassword !== newPassword
+  );
   const canApply = $derived(
     !securityPending &&
       newPassword.length >= 8 &&
@@ -57,8 +58,8 @@
       (intent !== 'changing' || Boolean(currentPassword))
   );
   // Surface vault-level errors (wrong password, etc.) only while a password
-  // change is in progress, alongside local validation messages.
-  const passwordError = $derived(securityError || (intent === 'idle' ? '' : vault.error));
+  // change is in progress.
+  const passwordError = $derived(intent === 'idle' ? '' : vault.error);
   const settingsToastError = $derived(intent === 'idle' ? vault.error : '');
   const securityPanel = $derived.by((): 'password' | 'disable' | 'change' | null => {
     if (intent === 'enabling' || intent === 'changing') {
@@ -114,7 +115,6 @@
 
   function resetForm() {
     currentPassword = newPassword = confirmNewPassword = '';
-    securityError = '';
     vault.error = '';
   }
 
@@ -141,12 +141,7 @@
     if (securitySaving) {
       return;
     }
-    securityError = '';
     vault.error = '';
-    if (newPassword !== confirmNewPassword) {
-      securityError = 'New passwords do not match.';
-      return;
-    }
     securitySaving = true;
     try {
       await vault.changePassword(intent === 'changing' ? currentPassword : '', newPassword);
@@ -162,12 +157,7 @@
     if (securitySaving) {
       return;
     }
-    securityError = '';
     vault.error = '';
-    if (!currentPassword) {
-      securityError = 'Enter the current password.';
-      return;
-    }
     securitySaving = true;
     try {
       await vault.removePassword(currentPassword);
@@ -180,12 +170,7 @@
   }
 
   async function resetVault() {
-    if (securitySaving) {
-      return;
-    }
-    securityError = '';
-    if (resetConfirmation !== 'DELETE') {
-      securityError = tr('deleteVaultConfirm');
+    if (securitySaving || resetConfirmation !== 'DELETE') {
       return;
     }
     securitySaving = true;
@@ -199,13 +184,10 @@
   }
 </script>
 
-<div class="flex h-full flex-col overflow-hidden">
-  <header class="flex items-center gap-2 border-b border-base-200 px-2 py-2">
-    <button class="btn btn-ghost btn-sm btn-circle" type="button" aria-label="Back" onclick={onback}>
-      <ArrowLeft size={18} aria-hidden="true" />
-    </button>
-    <h1 class="text-base font-bold tracking-tight">{tr('settings')}</h1>
-  </header>
+<!-- The transfer screen covers this view, so settings stay out of the tab order
+     while it is open. -->
+<div class="flex h-full flex-col overflow-hidden" inert={showTransfer}>
+  <ViewHeader title={tr('settings')} {onback} />
 
   <div class="grow space-y-5 overflow-y-auto p-3">
     <!-- Appearance -->
@@ -328,7 +310,7 @@
       <button
         class="btn btn-block btn-sm justify-between border border-base-content/20 bg-base-200"
         type="button"
-        onclick={() => (showBackup = true)}
+        onclick={() => (showTransfer = true)}
       >
         <span class="flex items-center gap-2">
           <DatabaseBackup size={16} aria-hidden="true" />
@@ -393,6 +375,9 @@
               <label class="grid gap-1.5">
                 <span class="text-sm font-medium">{tr('confirmPassword')}</span>
                 <input class="input input-sm w-full" type="password" bind:value={confirmNewPassword} autocomplete="new-password" disabled={securityPending} />
+                {#if passwordsMismatch}
+                  <span class="text-xs text-error">{tr('passwordMismatch')}</span>
+                {/if}
               </label>
               <div class="grid grid-cols-2 gap-2 pt-1">
                 <button class="btn btn-sm" type="button" onclick={cancel} disabled={securityPending}>{tr('cancel')}</button>
@@ -455,24 +440,22 @@
   </div>
 </div>
 
+<!-- The transfer screen reports import and export results inline, so the shared
+     toast stays quiet while it is open. -->
 <Toast
-  message={settingsToastError || vault.notice}
+  message={showTransfer ? '' : settingsToastError || vault.notice}
   variant={settingsToastError ? 'error' : 'notice'}
   nonce={vault.noticeKey}
 />
 
-{#if showBackup}
-  <MotionDialog
-    surfaceClass="max-h-[88dvh] w-[calc(100vw-1.5rem)] max-w-md overflow-y-auto p-4"
-    closeLabel={tr('cancel')}
-    onclose={() => (showBackup = false)}
-  >
-    <h2 class="mb-3 text-lg font-bold">{tr('importExport')}</h2>
+{#if showTransfer}
+  <div class="fixed inset-0 z-30 bg-base-100" transition:viewTransition={{ x: 20 }}>
     <ImportExportPanel
       accounts={vault.accounts}
       settings={vault.settings}
       onimport={(text) => vault.importText(text)}
       onimportencrypted={(text, password) => vault.importEncryptedBackupText(text, password)}
+      onclose={() => (showTransfer = false)}
     />
-  </MotionDialog>
+  </div>
 {/if}

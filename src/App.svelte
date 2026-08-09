@@ -35,6 +35,8 @@
     moveItem,
     rubberbandOffset
   } from './lib/components/auth/reorder';
+  import { getImportFailureMessage } from './lib/components/auth/importFeedback';
+  import { getErrorMessage } from './lib/auth/errors';
   import { accountToOtpAuthUri } from './lib/auth/otpauth';
   import {
     getAccountListView,
@@ -397,19 +399,12 @@
     }
 
     await runAddImport(async () => {
-      addStatus = `Reading QR image${files.length === 1 ? '' : 's'}…`;
       const decoded = await decodeQrFiles(files);
       return vault.importText(decoded.join('\n'));
     });
   }
 
   async function importAddText() {
-    if (!addImportText.trim()) {
-      addError = 'Paste authenticator text before importing.';
-      addStatus = '';
-      return;
-    }
-
     await runAddImport(
       async () => vault.importText(addImportText),
       () => (addImportText = '')
@@ -420,12 +415,12 @@
     addBusy = true;
     addError = '';
     pageScanError = '';
-    addStatus = 'Importing account…';
+    addStatus = tr('importing');
     try {
       const result = await action();
       if (result.imported === 0) {
         addStatus = '';
-        addError = getNoImportMessage(result);
+        addError = getImportFailureMessage(result);
         return;
       }
 
@@ -435,7 +430,7 @@
       view = 'codes';
     } catch (error) {
       addStatus = '';
-      addError = getErrorMessage(error, 'Unable to import QR code.');
+      addError = getErrorMessage(error, tr('importFailed'));
     } finally {
       addBusy = false;
     }
@@ -573,20 +568,6 @@
     view = 'codes';
     await vault.initialize();
     await refreshPageContext();
-  }
-
-  function getErrorMessage(error: unknown, fallback: string): string {
-    return error instanceof Error && error.message ? error.message : fallback;
-  }
-
-  function getNoImportMessage(result: ImportResult): string {
-    if (result.errors[0]) {
-      return result.errors[0];
-    }
-    if (result.skipped > 0) {
-      return 'No new account was imported. It may already exist.';
-    }
-    return 'No account was found to import.';
   }
 
   async function deleteSelected() {
@@ -948,11 +929,20 @@
     return account.issuer ? `${account.issuer} · ${account.label}` : account.label;
   }
 
+  // Without this, a file dropped on the window replaces the app with that file.
+  // Import screens add their own handlers on top and still see the event.
+  function blockFileNavigation(event: DragEvent) {
+    if (event.dataTransfer?.types.includes('Files')) {
+      event.preventDefault();
+    }
+  }
 </script>
 
 <svelte:head>
   <title>{tr('appName')}</title>
 </svelte:head>
+
+<svelte:window ondragover={blockFileNavigation} ondrop={blockFileNavigation} />
 
 {#snippet accountRows(accounts: AuthenticatorAccount[])}
   {#each accounts as account (account.id)}

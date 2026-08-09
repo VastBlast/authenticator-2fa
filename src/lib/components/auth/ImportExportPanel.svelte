@@ -1,9 +1,10 @@
 <script lang="ts">
   import { fade } from 'svelte/transition';
-  import { Download, FileJson, FileText, ImageUp, Upload } from '@lucide/svelte';
-  import { FADE_TRANSITION } from './transitions';
-  import { downloadBlob, exportEncryptedBackup, exportPlainOtpAuth } from '../../auth/backup';
-  import { decodeQrFiles } from '../../auth/qr';
+  import { Download, Upload } from '@lucide/svelte';
+  import ExportPanel from './ExportPanel.svelte';
+  import ImportPanel from './ImportPanel.svelte';
+  import ViewHeader from './ViewHeader.svelte';
+  import { PANEL_TRANSITION } from './transitions';
   import type { AppSettings, AuthenticatorAccount, ImportResult } from '../../auth/types';
   import { tr } from '../../i18n/messages';
 
@@ -12,226 +13,57 @@
     settings: AppSettings;
     onimport: (text: string) => Promise<ImportResult>;
     onimportencrypted: (text: string, password: string) => Promise<ImportResult>;
+    onclose: () => void;
   }
 
-  let { accounts, settings, onimport, onimportencrypted }: Props = $props();
+  const TABS = [
+    { id: 'import', icon: Upload },
+    { id: 'export', icon: Download }
+  ] as const;
 
-  let importText = $state('');
-  let importPassword = $state('');
-  let exportPassword = $state('');
-  let status = $state('');
-  let error = $state('');
-  let busy = $state(false);
+  let { accounts, settings, onimport, onimportencrypted, onclose }: Props = $props();
 
-  async function runImport() {
-    if (!importText.trim()) {
-      error = 'Paste authenticator text before importing.';
-      status = '';
-      return;
+  let tab = $state<'import' | 'export'>('import');
+
+  function closeOnEscape(event: KeyboardEvent) {
+    if (event.key === 'Escape' && !event.defaultPrevented) {
+      event.preventDefault();
+      onclose();
     }
-
-    await run(async () => {
-      const result = await onimport(importText);
-      setImportStatus(result);
-      if (result.imported > 0) {
-        importText = '';
-      }
-    });
-  }
-
-  async function importEncryptedFile(event: Event) {
-    if (!importPassword) {
-      error = 'Enter the backup password before selecting the encrypted backup.';
-      status = '';
-      resetFileInput(event);
-      return;
-    }
-
-    const text = await readFirstFile(event);
-    if (!text) {
-      return;
-    }
-    await run(async () => {
-      const result = await onimportencrypted(text, importPassword);
-      setImportStatus(result);
-      importPassword = '';
-    });
-  }
-
-  async function importTextFile(event: Event) {
-    const text = await readFirstFile(event);
-    if (!text) {
-      return;
-    }
-
-    await run(async () => {
-      status = 'Reading import file.';
-      const result = await onimport(text);
-      setImportStatus(result);
-    });
-  }
-
-  async function importQrImages(event: Event) {
-    const target = event.target as HTMLInputElement;
-    const files = Array.from(target.files ?? []);
-    target.value = '';
-    if (files.length === 0) {
-      return;
-    }
-
-    await run(async () => {
-      status = 'Reading QR image.';
-      const decoded = await decodeQrFiles(files);
-      const result = await onimport(decoded.join('\n'));
-      setImportStatus(result, ` from QR image${decoded.length === 1 ? '' : 's'}`);
-    });
-  }
-
-  function exportOtpText() {
-    downloadBlob(exportPlainOtpAuth(accounts), 'authenticator-otpauth.txt');
-    status = 'Plain otpauth export downloaded.';
-    error = '';
-  }
-
-  async function exportEncrypted() {
-    await run(async () => {
-      const blob = await exportEncryptedBackup(accounts, settings, exportPassword);
-      downloadBlob(blob, 'authenticator-encrypted-backup.json');
-      exportPassword = '';
-      status = 'Encrypted backup exported.';
-    });
-  }
-
-  async function run(action: () => Promise<void>) {
-    busy = true;
-    status = '';
-    error = '';
-    try {
-      await action();
-    } catch (actionError) {
-      error = actionError instanceof Error ? actionError.message : 'Operation failed.';
-    } finally {
-      busy = false;
-    }
-  }
-
-  async function readFirstFile(event: Event): Promise<string> {
-    const target = event.target as HTMLInputElement;
-    const file = target.files?.[0];
-    target.value = '';
-    return file ? file.text() : '';
-  }
-
-  function resetFileInput(event: Event): void {
-    (event.target as HTMLInputElement).value = '';
-  }
-
-  function setImportStatus(result: ImportResult, source = ''): void {
-    if (result.imported === 0) {
-      error = result.errors[0] ?? (result.skipped > 0 ? 'No new accounts were imported.' : 'No accounts found to import.');
-      status = '';
-      return;
-    }
-
-    const skipped = result.skipped > 0 ? `, ${result.skipped} skipped` : '';
-    status = `${result.imported} imported${source}${skipped}.`;
   }
 </script>
 
-<section class="grid gap-4">
-  <div class="grid gap-1">
-    <h2 class="text-base font-bold leading-tight">{tr('importTitle')}</h2>
-    <p class="text-sm leading-snug text-base-content/65">{tr('importText')}</p>
-  </div>
+<svelte:window onkeydown={closeOnEscape} />
 
-  <div class="grid gap-3">
-    <label class="grid gap-1.5 text-sm font-semibold">
-      <span>{tr('manual')}</span>
-      <textarea
-        class="textarea min-h-36 w-full font-mono text-sm leading-relaxed"
-        bind:value={importText}
-        placeholder="otpauth://totp/..."
-        spellcheck="false"
-      ></textarea>
-    </label>
+<div class="flex h-full flex-col overflow-hidden bg-base-100">
+  <ViewHeader title={tr('importExport')} onback={onclose} />
 
-    <button class="btn btn-primary btn-block" type="button" onclick={runImport} disabled={busy || !importText.trim()}>
-      <Upload size={16} aria-hidden="true" />
-      {#if busy}
-        <span class="loading loading-spinner loading-sm"></span>
-      {/if}
-      {tr('import')}
-    </button>
-
-    <div class="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2">
-      <label class="grid gap-1.5 text-sm font-semibold">
-        <span class="flex min-w-0 items-center gap-2">
-          <FileText size={16} aria-hidden="true" />
-          {tr('importFile')}
-        </span>
-        <input
-          class="file-input"
-          type="file"
-          accept=".txt,.json,text/plain,application/json"
-          disabled={busy}
-          onchange={importTextFile}
-        />
-      </label>
-
-      <label class="grid gap-1.5 text-sm font-semibold">
-        <span class="flex min-w-0 items-center gap-2">
-          <ImageUp size={16} aria-hidden="true" />
-          {tr('qrImage')}
-        </span>
-        <input class="file-input" type="file" accept="image/*" multiple disabled={busy} onchange={importQrImages} />
-      </label>
-    </div>
-
-    <div class="grid gap-3 rounded-box border border-base-300 bg-base-200/50 p-3">
-      <label class="grid gap-1.5 text-sm font-semibold">
-        <span>{tr('backupPassword')}</span>
-        <input class="input w-full" type="password" bind:value={importPassword} autocomplete="current-password" />
-      </label>
-
-      <label class="grid gap-1.5 text-sm font-semibold">
-        <span class="flex min-w-0 items-center gap-2">
-          <FileJson size={16} aria-hidden="true" />
-          {tr('importEncrypted')}
-        </span>
-        <input class="file-input" type="file" accept=".json,application/json" disabled={busy} onchange={importEncryptedFile} />
-      </label>
+  <div class="px-3 pt-3">
+    <div class="join w-full" role="group" aria-label={tr('importExport')}>
+      {#each TABS as item (item.id)}
+        {@const TabIcon = item.icon}
+        <button
+          class={['btn join-item flex-1 btn-sm', tab === item.id && 'btn-primary']}
+          type="button"
+          aria-pressed={tab === item.id}
+          onclick={() => (tab = item.id)}
+        >
+          <TabIcon size={15} aria-hidden="true" />
+          {tr(item.id)}
+        </button>
+      {/each}
     </div>
   </div>
 
-  {#if status}
-    <div class="alert alert-success py-2 text-sm" transition:fade={FADE_TRANSITION} role="status">{status}</div>
-  {/if}
-  {#if error}
-    <div class="alert alert-error py-2 text-sm" transition:fade={FADE_TRANSITION} role="alert">{error}</div>
-  {/if}
-
-  <div class="border-t border-base-300"></div>
-
-  <div class="grid gap-1">
-    <h2 class="text-base font-bold leading-tight">{tr('exportTitle')}</h2>
+  <div class="grow overflow-y-auto p-3">
+    {#if tab === 'import'}
+      <div in:fade={PANEL_TRANSITION}>
+        <ImportPanel {onimport} {onimportencrypted} />
+      </div>
+    {:else}
+      <div in:fade={PANEL_TRANSITION}>
+        <ExportPanel {accounts} {settings} />
+      </div>
+    {/if}
   </div>
-
-  <div class="grid gap-3">
-    <div class="alert alert-warning py-2 text-sm" role="alert">{tr('plainWarning')}</div>
-
-    <button class="btn btn-block" type="button" onclick={exportOtpText} disabled={accounts.length === 0 || busy}>
-      <Download size={16} aria-hidden="true" />
-      {tr('exportOtp')}
-    </button>
-
-    <label class="grid gap-1.5 text-sm font-semibold">
-      <span>{tr('backupPassword')}</span>
-      <input class="input w-full" type="password" bind:value={exportPassword} autocomplete="new-password" />
-    </label>
-
-    <button class="btn btn-primary btn-block" type="button" onclick={exportEncrypted} disabled={accounts.length === 0 || !exportPassword || busy}>
-      <Download size={16} aria-hidden="true" />
-      {tr('exportEncrypted')}
-    </button>
-  </div>
-</section>
+</div>
