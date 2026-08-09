@@ -90,6 +90,7 @@ export const MESSAGE_KEYS = [
   'siteSuggestion',
   'showAllCodes',
   'showSiteMatches',
+  'alwaysShowAllCodes',
   'settingsSaveFailed',
   'autoPasteCodes',
   'autoPasteCodesHint',
@@ -212,6 +213,7 @@ const en: Record<MessageKey, string> = {
   siteSuggestion: 'Suggested for this site',
   showAllCodes: 'Show all codes',
   showSiteMatches: 'Show site matches only',
+  alwaysShowAllCodes: 'Always show all codes',
   settingsSaveFailed: 'Unable to save settings.',
   autoPasteCodes: 'Auto paste code',
   autoPasteCodesHint:
@@ -321,6 +323,7 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     siteSuggestion: 'Sugerido para este sitio',
     showAllCodes: 'Mostrar todos los códigos',
     showSiteMatches: 'Mostrar solo coincidencias del sitio',
+    alwaysShowAllCodes: 'Mostrar siempre todos los códigos',
     settingsSaveFailed: 'No se pudo guardar la configuración.',
     autoPasteCodes: 'Pegar código automáticamente',
     autoPasteCodesHint:
@@ -427,6 +430,7 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     siteSuggestion: 'इस साइट के लिए सुझाया गया',
     showAllCodes: 'सभी कोड दिखाएं',
     showSiteMatches: 'सिर्फ़ साइट से मेल खाने वाले कोड दिखाएं',
+    alwaysShowAllCodes: 'हमेशा सभी कोड दिखाएं',
     settingsSaveFailed: 'सेटिंग सहेजी नहीं जा सकीं।',
     autoPasteCodes: 'कोड अपने आप पेस्ट करें',
     autoPasteCodesHint:
@@ -533,6 +537,7 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     siteSuggestion: 'مقترح لهذا الموقع',
     showAllCodes: 'عرض كل الرموز',
     showSiteMatches: 'عرض رموز الموقع المطابقة فقط',
+    alwaysShowAllCodes: 'عرض كل الرموز دائمًا',
     settingsSaveFailed: 'تعذّر حفظ الإعدادات.',
     autoPasteCodes: 'لصق الرمز تلقائيا',
     autoPasteCodesHint:
@@ -639,6 +644,7 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     siteSuggestion: 'এই সাইটের জন্য প্রস্তাবিত',
     showAllCodes: 'সব কোড দেখান',
     showSiteMatches: 'শুধু সাইটের সঙ্গে মিল থাকা কোড দেখান',
+    alwaysShowAllCodes: 'সব সময় সব কোড দেখান',
     settingsSaveFailed: 'সেটিংস সংরক্ষণ করা যায়নি।',
     autoPasteCodes: 'কোড অটো পেস্ট করুন',
     autoPasteCodesHint:
@@ -745,6 +751,7 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     siteSuggestion: 'Sugerido para este site',
     showAllCodes: 'Mostrar todos os códigos',
     showSiteMatches: 'Mostrar apenas correspondências do site',
+    alwaysShowAllCodes: 'Mostrar sempre todos os códigos',
     settingsSaveFailed: 'Não foi possível salvar as configurações.',
     autoPasteCodes: 'Colar código automaticamente',
     autoPasteCodesHint:
@@ -851,6 +858,7 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     siteSuggestion: 'Предложено для этого сайта',
     showAllCodes: 'Показать все коды',
     showSiteMatches: 'Показать только совпадения для сайта',
+    alwaysShowAllCodes: 'Всегда показывать все коды',
     settingsSaveFailed: 'Не удалось сохранить настройки.',
     autoPasteCodes: 'Автовставка кода',
     autoPasteCodesHint:
@@ -957,6 +965,7 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     siteSuggestion: 'このサイトの候補',
     showAllCodes: 'すべてのコードを表示',
     showSiteMatches: 'サイトに一致するコードのみ表示',
+    alwaysShowAllCodes: '常にすべてのコードを表示',
     settingsSaveFailed: '設定を保存できませんでした。',
     autoPasteCodes: 'コードを自動貼り付け',
     autoPasteCodesHint:
@@ -1063,6 +1072,7 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     siteSuggestion: 'Suggéré pour ce site',
     showAllCodes: 'Afficher tous les codes',
     showSiteMatches: 'Afficher uniquement les correspondances du site',
+    alwaysShowAllCodes: 'Toujours afficher tous les codes',
     settingsSaveFailed: 'Impossible d’enregistrer les paramètres.',
     autoPasteCodes: 'Coller le code automatiquement',
     autoPasteCodesHint:
@@ -1169,6 +1179,7 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     siteSuggestion: 'Für diese Website vorgeschlagen',
     showAllCodes: 'Alle Codes anzeigen',
     showSiteMatches: 'Nur Website-Treffer anzeigen',
+    alwaysShowAllCodes: 'Immer alle Codes anzeigen',
     settingsSaveFailed: 'Einstellungen konnten nicht gespeichert werden.',
     autoPasteCodes: 'Code automatisch einfügen',
     autoPasteCodesHint:
@@ -1273,6 +1284,7 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     siteSuggestion: '为此网站推荐',
     showAllCodes: '显示所有验证码',
     showSiteMatches: '仅显示网站匹配项',
+    alwaysShowAllCodes: '始终显示所有验证码',
     settingsSaveFailed: '无法保存设置。',
     autoPasteCodes: '自动粘贴代码',
     autoPasteCodesHint:

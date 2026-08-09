@@ -124,7 +124,8 @@
   let pageScanError = $state('');
   let pageContext = $state.raw<PageContext | null>(null);
   let pageContextReady = $state(false);
-  let allCodesRevealed = $state(false);
+  let showAllCodesOverride = $state<boolean | null>(null);
+  let alwaysShowAllCodesPending = $state<boolean | null>(null);
   let pageContextRequest = 0;
   let browserWindowId: number | undefined;
 
@@ -133,10 +134,13 @@
     getAccountPageRanking(vault.sortedAccounts, manualSort ? null : pageContext)
   );
   const orderedAccounts = $derived.by(() => dragAccounts ?? pageRanking.accounts);
+  const alwaysShowAllCodes = $derived(
+    alwaysShowAllCodesPending ?? vault.settings.alwaysShowAllCodes
+  );
   const accountListView = $derived(
     getAccountListView(orderedAccounts, pageRanking.suggestedAccountIds, {
       query,
-      revealAll: allCodesRevealed
+      revealAll: showAllCodesOverride ?? alwaysShowAllCodes
     })
   );
   const filteredAccounts = $derived(accountListView.accounts);
@@ -265,11 +269,61 @@
     }
   }
 
+  async function setAlwaysShowAllCodes(input: HTMLInputElement) {
+    if (alwaysShowAllCodesPending !== null) {
+      input.checked = alwaysShowAllCodes;
+      return;
+    }
+
+    const enabled = input.checked;
+    const previousOverride = showAllCodesOverride;
+    showAllCodesOverride = null;
+    alwaysShowAllCodesPending = enabled;
+    try {
+      await vault.updateSettings({ alwaysShowAllCodes: enabled });
+      showAllCodesOverride = null;
+    } catch (error) {
+      showAllCodesOverride = previousOverride;
+      vault.error = getErrorMessage(error, tr('settingsSaveFailed'));
+    } finally {
+      alwaysShowAllCodesPending = null;
+      input.checked = vault.settings.alwaysShowAllCodes;
+    }
+  }
+
+  async function toggleContextualAccountView() {
+    if (alwaysShowAllCodesPending !== null) {
+      return;
+    }
+
+    if (accountListView.contextualAction === 'showAll') {
+      showAllCodesOverride = true;
+      return;
+    }
+
+    const previousOverride = showAllCodesOverride;
+    showAllCodesOverride = false;
+    if (!vault.settings.alwaysShowAllCodes) {
+      return;
+    }
+
+    alwaysShowAllCodesPending = false;
+    try {
+      await vault.updateSettings({ alwaysShowAllCodes: false });
+      showAllCodesOverride = null;
+    } catch (error) {
+      showAllCodesOverride = previousOverride;
+      vault.error = getErrorMessage(error, tr('settingsSaveFailed'));
+    } finally {
+      alwaysShowAllCodesPending = null;
+    }
+  }
+
   async function refreshPageContext(clearCurrent = true) {
     const request = ++pageContextRequest;
     if (clearCurrent) {
       pageContext = null;
-      allCodesRevealed = false;
+      showAllCodesOverride = null;
     }
     if (vault.settings.accountSortMode === 'manual' || !hasRuntimeMessaging()) {
       pageContext = null;
@@ -284,7 +338,7 @@
       if (request === pageContextRequest) {
         const nextContext = parsePageContext(response.pageContext);
         if (nextContext?.hostname !== pageContext?.hostname) {
-          allCodesRevealed = false;
+          showAllCodesOverride = null;
         }
         pageContext = nextContext;
       }
@@ -1014,14 +1068,14 @@
                 {/each}
               </ul>
               {#if accountListView.contextualAction}
-                <div class="px-3 py-3">
+                <div class="space-y-1 px-3 pb-2 pt-3">
                   <button
                     class="btn btn-block btn-sm"
                     type="button"
                     aria-controls="account-list"
                     aria-expanded={accountListView.contextualAction === 'showMatches'}
-                    onclick={() =>
-                      (allCodesRevealed = accountListView.contextualAction === 'showAll')}
+                    disabled={alwaysShowAllCodesPending !== null}
+                    onclick={() => void toggleContextualAccountView()}
                   >
                     {#if accountListView.contextualAction === 'showAll'}
                       {tr('showAllCodes')}
@@ -1031,6 +1085,23 @@
                       <ChevronUp size={16} aria-hidden="true" />
                     {/if}
                   </button>
+                  <label
+                    class={[
+                      'flex min-h-10 items-center justify-center gap-2 rounded-field text-center text-sm text-base-content/70',
+                      alwaysShowAllCodesPending === null
+                        ? 'cursor-pointer'
+                        : 'cursor-wait opacity-60'
+                    ]}
+                  >
+                    <input
+                      class="checkbox checkbox-sm shrink-0"
+                      type="checkbox"
+                      checked={alwaysShowAllCodes}
+                      disabled={alwaysShowAllCodesPending !== null}
+                      onchange={(event) => void setAlwaysShowAllCodes(event.currentTarget)}
+                    />
+                    <span>{tr('alwaysShowAllCodes')}</span>
+                  </label>
                 </div>
               {/if}
             {:else if vault.accounts.length === 0}
