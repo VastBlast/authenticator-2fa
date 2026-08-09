@@ -5,7 +5,6 @@
   import {
     ClipboardPaste,
     ChevronDown,
-    ChevronUp,
     Download,
     ImageUp,
     KeyRound,
@@ -28,6 +27,7 @@
   import {
     FADE_TRANSITION,
     PANEL_TRANSITION,
+    panelReveal,
     viewTransition
   } from './lib/components/auth/transitions';
   import {
@@ -124,8 +124,7 @@
   let pageScanError = $state('');
   let pageContext = $state.raw<PageContext | null>(null);
   let pageContextReady = $state(false);
-  let showAllCodesOverride = $state<boolean | null>(null);
-  let alwaysShowAllCodesPending = $state<boolean | null>(null);
+  let allCodesRevealed = $state(false);
   let pageContextRequest = 0;
   let browserWindowId: number | undefined;
 
@@ -134,16 +133,15 @@
     getAccountPageRanking(vault.sortedAccounts, manualSort ? null : pageContext)
   );
   const orderedAccounts = $derived.by(() => dragAccounts ?? pageRanking.accounts);
-  const alwaysShowAllCodes = $derived(
-    alwaysShowAllCodesPending ?? vault.settings.alwaysShowAllCodes
-  );
   const accountListView = $derived(
     getAccountListView(orderedAccounts, pageRanking.suggestedAccountIds, {
       query,
-      revealAll: showAllCodesOverride ?? alwaysShowAllCodes
+      alwaysShowAll: vault.settings.alwaysShowAllCodes,
+      revealAll: allCodesRevealed
     })
   );
   const filteredAccounts = $derived(accountListView.accounts);
+  const codesRevealed = $derived(accountListView.contextualAction === 'showMatches');
   const reorderDisabled = $derived(
     !manualSort || query.trim().length > 0 || filteredAccounts.length < 2
   );
@@ -269,61 +267,17 @@
     }
   }
 
-  async function setAlwaysShowAllCodes(input: HTMLInputElement) {
-    if (alwaysShowAllCodesPending !== null) {
-      input.checked = alwaysShowAllCodes;
-      return;
-    }
-
-    const enabled = input.checked;
-    const previousOverride = showAllCodesOverride;
-    showAllCodesOverride = null;
-    alwaysShowAllCodesPending = enabled;
-    try {
-      await vault.updateSettings({ alwaysShowAllCodes: enabled });
-      showAllCodesOverride = null;
-    } catch (error) {
-      showAllCodesOverride = previousOverride;
-      vault.error = getErrorMessage(error, tr('settingsSaveFailed'));
-    } finally {
-      alwaysShowAllCodesPending = null;
-      input.checked = vault.settings.alwaysShowAllCodes;
-    }
-  }
-
-  async function toggleContextualAccountView() {
-    if (alwaysShowAllCodesPending !== null) {
-      return;
-    }
-
-    if (accountListView.contextualAction === 'showAll') {
-      showAllCodesOverride = true;
-      return;
-    }
-
-    const previousOverride = showAllCodesOverride;
-    showAllCodesOverride = false;
-    if (!vault.settings.alwaysShowAllCodes) {
-      return;
-    }
-
-    alwaysShowAllCodesPending = false;
-    try {
-      await vault.updateSettings({ alwaysShowAllCodes: false });
-      showAllCodesOverride = null;
-    } catch (error) {
-      showAllCodesOverride = previousOverride;
-      vault.error = getErrorMessage(error, tr('settingsSaveFailed'));
-    } finally {
-      alwaysShowAllCodesPending = null;
-    }
+  // Revealing every code is a per-visit choice, so this never rewrites
+  // settings. Preferring the full list hides this control altogether.
+  function toggleContextualAccountView() {
+    allCodesRevealed = !allCodesRevealed;
   }
 
   async function refreshPageContext(clearCurrent = true) {
     const request = ++pageContextRequest;
     if (clearCurrent) {
       pageContext = null;
-      showAllCodesOverride = null;
+      allCodesRevealed = false;
     }
     if (vault.settings.accountSortMode === 'manual' || !hasRuntimeMessaging()) {
       pageContext = null;
@@ -338,7 +292,7 @@
       if (request === pageContextRequest) {
         const nextContext = parsePageContext(response.pageContext);
         if (nextContext?.hostname !== pageContext?.hostname) {
-          showAllCodesOverride = null;
+          allCodesRevealed = false;
         }
         pageContext = nextContext;
       }
@@ -1000,6 +954,26 @@
   <title>{tr('appName')}</title>
 </svelte:head>
 
+{#snippet accountRows(accounts: AuthenticatorAccount[])}
+  {#each accounts as account (account.id)}
+    <AccountRow
+      {account}
+      code={vault.codes[account.id]}
+      suggestedForSite={pageRanking.suggestedAccountIds.has(account.id)}
+      showReorder={manualSort}
+      reorderDisabled={reorderDisabled}
+      reorderPending={reorderSaving}
+      dragging={activeDragAccountId === account.id}
+      dragStyle={getAccountDragStyle(account)}
+      oncodecopy={copyCode}
+      onactions={(item) => (actionsFor = item)}
+      onreorderstart={startAccountDrag}
+      onreorderkey={handleAccountDragKey}
+      onreorderblur={handleAccountDragBlur}
+    />
+  {/each}
+{/snippet}
+
 <div class="contents" data-theme={themeOverride}>
 <main
   class="relative flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden bg-base-100 text-base-content"
@@ -1032,7 +1006,12 @@
         >
           <AppBar onsettings={showSettings} />
 
-          <div class="flex grow flex-col overflow-y-auto pb-20" bind:this={scrollContainerElement}>
+          <!-- The reserved gutter keeps the list from shifting sideways when
+               revealing more codes makes the scrollbar appear. -->
+          <div
+            class="auth-scroll-area flex grow flex-col overflow-y-auto pb-20"
+            bind:this={scrollContainerElement}
+          >
             {#if vault.accounts.length > 0}
               <div class="auth-sticky-search sticky top-0 z-10 bg-base-100/95 px-3 py-2 backdrop-blur">
                 <label class="auth-search-input input input-md w-full items-center gap-2">
@@ -1044,64 +1023,48 @@
 
             {#if filteredAccounts.length > 0}
               <ul
-                id="account-list"
                 class="divide-y divide-base-200"
                 aria-label={tr('accounts')}
                 bind:this={accountListElement}
               >
-                {#each filteredAccounts as account (account.id)}
-                  <AccountRow
-                    {account}
-                    code={vault.codes[account.id]}
-                    suggestedForSite={pageRanking.suggestedAccountIds.has(account.id)}
-                    showReorder={manualSort}
-                    reorderDisabled={reorderDisabled}
-                    reorderPending={reorderSaving}
-                    dragging={activeDragAccountId === account.id}
-                    dragStyle={getAccountDragStyle(account)}
-                    oncodecopy={copyCode}
-                    onactions={(item) => (actionsFor = item)}
-                    onreorderstart={startAccountDrag}
-                    onreorderkey={handleAccountDragKey}
-                    onreorderblur={handleAccountDragBlur}
-                  />
-                {/each}
+                {@render accountRows(filteredAccounts)}
               </ul>
+
               {#if accountListView.contextualAction}
-                <div class="space-y-1 px-3 pb-2 pt-3">
+                <!-- Sits between the site matches and the rest, so it stays in
+                     the same place whichever way the list is showing. -->
+                <div class="flex items-center gap-2 px-3 py-2.5">
+                  <span class="h-px grow bg-base-200/70" aria-hidden="true"></span>
                   <button
-                    class="btn btn-block btn-sm"
+                    class="btn btn-xs h-7 shrink-0 gap-1.5 rounded-full border-0 bg-base-200/70 px-3 text-xs font-medium text-base-content/70 shadow-none hover:bg-base-200 hover:text-base-content"
                     type="button"
-                    aria-controls="account-list"
-                    aria-expanded={accountListView.contextualAction === 'showMatches'}
-                    disabled={alwaysShowAllCodesPending !== null}
-                    onclick={() => void toggleContextualAccountView()}
+                    aria-controls="other-codes"
+                    aria-expanded={codesRevealed}
+                    onclick={toggleContextualAccountView}
                   >
-                    {#if accountListView.contextualAction === 'showAll'}
-                      {tr('showAllCodes')}
-                      <ChevronDown size={16} aria-hidden="true" />
-                    {:else}
-                      {tr('showSiteMatches')}
-                      <ChevronUp size={16} aria-hidden="true" />
+                    {codesRevealed ? tr('showSiteMatches') : tr('showAllCodes')}
+                    {#if !codesRevealed}
+                      <span class="tabular-nums opacity-55">{accountListView.hiddenCount}</span>
                     {/if}
-                  </button>
-                  <label
-                    class={[
-                      'flex min-h-10 items-center justify-center gap-2 rounded-field text-center text-sm text-base-content/70',
-                      alwaysShowAllCodesPending === null
-                        ? 'cursor-pointer'
-                        : 'cursor-wait opacity-60'
-                    ]}
-                  >
-                    <input
-                      class="checkbox checkbox-sm shrink-0"
-                      type="checkbox"
-                      checked={alwaysShowAllCodes}
-                      disabled={alwaysShowAllCodesPending !== null}
-                      onchange={(event) => void setAlwaysShowAllCodes(event.currentTarget)}
+                    <ChevronDown
+                      class={['transition-transform duration-200', codesRevealed && 'rotate-180']}
+                      size={14}
+                      aria-hidden="true"
                     />
-                    <span>{tr('alwaysShowAllCodes')}</span>
-                  </label>
+                  </button>
+                  <span class="h-px grow bg-base-200/70" aria-hidden="true"></span>
+                </div>
+
+                <div id="other-codes">
+                  {#if codesRevealed}
+                    <ul
+                      class="divide-y divide-base-200"
+                      aria-label={tr('otherCodes')}
+                      transition:panelReveal
+                    >
+                      {@render accountRows(accountListView.revealedAccounts)}
+                    </ul>
+                  {/if}
                 </div>
               {/if}
             {:else if vault.accounts.length === 0}

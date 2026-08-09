@@ -275,6 +275,23 @@
         />
       </label>
 
+      {#if vault.settings.accountSortMode === 'contextual'}
+        <div transition:panelReveal>
+          <label class="flex items-center justify-between gap-3 border-s-2 border-base-200 ps-3">
+            <span class="min-w-0">
+              <span class="block text-sm font-medium">{tr('alwaysShowAllCodes')}</span>
+              <span class="block text-xs text-base-content/60">{tr('alwaysShowAllCodesHint')}</span>
+            </span>
+            <input
+              class="toggle toggle-primary toggle-sm shrink-0"
+              type="checkbox"
+              checked={vault.settings.alwaysShowAllCodes}
+              onchange={(event) => saveSettings({ alwaysShowAllCodes: event.currentTarget.checked })}
+            />
+          </label>
+        </div>
+      {/if}
+
       <label class="flex items-center justify-between gap-3">
         <span class="min-w-0">
           <span class="flex flex-wrap items-center gap-1.5 text-sm font-medium">

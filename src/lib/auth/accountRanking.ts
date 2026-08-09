@@ -35,7 +35,12 @@ export interface AccountPageRanking {
 }
 
 export interface AccountListView {
+  /** Accounts rendered above the reveal control. */
   accounts: AuthenticatorAccount[];
+  /** Accounts rendered below the reveal control once every code is revealed. */
+  revealedAccounts: AuthenticatorAccount[];
+  /** How many accounts the reveal control adds to the list. */
+  hiddenCount: number;
   contextualAction: 'showAll' | 'showMatches' | null;
 }
 
@@ -146,30 +151,43 @@ export function getAccountPageRanking(
 export function getAccountListView(
   accounts: readonly AuthenticatorAccount[],
   suggestedAccountIds: ReadonlySet<string>,
-  options: { query: string; revealAll: boolean }
+  options: { query: string; alwaysShowAll: boolean; revealAll: boolean }
 ): AccountListView {
   const needle = options.query.trim().toLowerCase();
   if (needle) {
-    return {
-      accounts: accounts.filter(
+    return flatListView(
+      accounts.filter(
         (account) =>
           account.label.toLowerCase().includes(needle) ||
           account.issuer.toLowerCase().includes(needle)
-      ),
-      contextualAction: null
-    };
+      )
+    );
+  }
+
+  // Preferring the full list drops the grouping altogether, so there is
+  // nothing left to reveal or collapse.
+  if (options.alwaysShowAll) {
+    return flatListView([...accounts]);
   }
 
   if (suggestedAccountIds.size > 0) {
     const suggestedAccounts = accounts.filter((account) => suggestedAccountIds.has(account.id));
-    if (suggestedAccounts.length > 0 && suggestedAccounts.length < accounts.length) {
-      return options.revealAll
-        ? { accounts: [...accounts], contextualAction: 'showMatches' }
-        : { accounts: suggestedAccounts, contextualAction: 'showAll' };
+    const otherAccounts = accounts.filter((account) => !suggestedAccountIds.has(account.id));
+    if (suggestedAccounts.length > 0 && otherAccounts.length > 0) {
+      return {
+        accounts: suggestedAccounts,
+        revealedAccounts: options.revealAll ? otherAccounts : [],
+        hiddenCount: otherAccounts.length,
+        contextualAction: options.revealAll ? 'showMatches' : 'showAll'
+      };
     }
   }
 
-  return { accounts: [...accounts], contextualAction: null };
+  return flatListView([...accounts]);
+}
+
+function flatListView(accounts: AuthenticatorAccount[]): AccountListView {
+  return { accounts, revealedAccounts: [], hiddenCount: 0, contextualAction: null };
 }
 
 export function getAccountPageMatchScore(

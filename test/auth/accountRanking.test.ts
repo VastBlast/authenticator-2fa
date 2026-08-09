@@ -21,38 +21,67 @@ describe('contextual account ranking', () => {
     expect(ranking.suggestedAccountIds).toEqual(new Set([accounts[1].id]));
   });
 
-  test('shows only site matches until all codes are revealed', () => {
+  test('keeps site matches and the remaining codes in separate groups', () => {
     const accounts = [account('GitHub'), account('Instagram', 'alice'), account('Instagram', 'bob')];
     const ranking = getAccountPageRanking(accounts, { hostname: 'instagram.com' });
 
     const collapsed = getAccountListView(ranking.accounts, ranking.suggestedAccountIds, {
       query: '',
+      alwaysShowAll: false,
       revealAll: false
     });
     expect(labels(collapsed.accounts)).toEqual(['Instagram', 'Instagram']);
+    expect(collapsed.revealedAccounts).toEqual([]);
+    expect(collapsed.hiddenCount).toBe(1);
     expect(collapsed.contextualAction).toBe('showAll');
 
     const expanded = getAccountListView(ranking.accounts, ranking.suggestedAccountIds, {
       query: '',
+      alwaysShowAll: false,
       revealAll: true
     });
-    expect(expanded.accounts).toEqual(ranking.accounts);
+    expect([...expanded.accounts, ...expanded.revealedAccounts]).toEqual(ranking.accounts);
+    expect(labels(expanded.revealedAccounts)).toEqual(['GitHub']);
+    expect(expanded.hiddenCount).toBe(1);
     expect(expanded.contextualAction).toBe('showMatches');
+  });
+
+  test('drops the grouping entirely when all codes are always shown', () => {
+    const accounts = [account('GitHub'), account('Instagram')];
+    const ranking = getAccountPageRanking(accounts, { hostname: 'instagram.com' });
+
+    expect(
+      getAccountListView(ranking.accounts, ranking.suggestedAccountIds, {
+        query: '',
+        alwaysShowAll: true,
+        revealAll: false
+      })
+    ).toEqual({
+      accounts: ranking.accounts,
+      revealedAccounts: [],
+      hiddenCount: 0,
+      contextualAction: null
+    });
   });
 
   test('falls back to all codes when every or no account matches', () => {
     const accounts = [account('GitHub'), account('Instagram')];
+    const flatView = { accounts, revealedAccounts: [], hiddenCount: 0, contextualAction: null };
 
-    expect(getAccountListView(accounts, new Set(), { query: '', revealAll: false })).toEqual({
-      accounts,
-      contextualAction: null
-    });
+    expect(
+      getAccountListView(accounts, new Set(), {
+        query: '',
+        alwaysShowAll: false,
+        revealAll: false
+      })
+    ).toEqual(flatView);
     expect(
       getAccountListView(accounts, new Set(accounts.map(({ id }) => id)), {
         query: '',
+        alwaysShowAll: false,
         revealAll: false
       })
-    ).toEqual({ accounts, contextualAction: null });
+    ).toEqual(flatView);
   });
 
   test('searches every code without offering a redundant reveal action', () => {
@@ -63,9 +92,15 @@ describe('contextual account ranking', () => {
     expect(
       getAccountListView(accounts, new Set([instagram.id]), {
         query: ' WORK ',
+        alwaysShowAll: false,
         revealAll: false
       })
-    ).toEqual({ accounts: [github], contextualAction: null });
+    ).toEqual({
+      accounts: [github],
+      revealedAccounts: [],
+      hiddenCount: 0,
+      contextualAction: null
+    });
   });
 
   test('matches compact names, punctuation, diacritics, and public suffixes', () => {

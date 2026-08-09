@@ -90,7 +90,9 @@ export const MESSAGE_KEYS = [
   'siteSuggestion',
   'showAllCodes',
   'showSiteMatches',
+  'otherCodes',
   'alwaysShowAllCodes',
+  'alwaysShowAllCodesHint',
   'settingsSaveFailed',
   'autoPasteCodes',
   'autoPasteCodesHint',
@@ -209,11 +211,13 @@ const en: Record<MessageKey, string> = {
     'Mask codes in the account list. Select an account to copy its code; auto-paste still works.',
   autoSortCodes: 'Filter codes by site',
   autoSortCodesHint:
-    'Show likely matches for the current site. Search or reveal all codes anytime; turn this off to reorder codes.',
+    'Show only likely matches for the current site. Turn this off to arrange codes yourself.',
   siteSuggestion: 'Suggested for this site',
   showAllCodes: 'Show all codes',
-  showSiteMatches: 'Show site matches only',
+  showSiteMatches: 'Site matches only',
+  otherCodes: 'Other codes',
   alwaysShowAllCodes: 'Always show all codes',
+  alwaysShowAllCodesHint: 'Open the full list instead of only the current site’s matches.',
   settingsSaveFailed: 'Unable to save settings.',
   autoPasteCodes: 'Auto paste code',
   autoPasteCodesHint:
@@ -319,11 +323,14 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
       'Oculta los códigos en la lista de cuentas. Selecciona una cuenta para copiar su código; el pegado automático sigue funcionando.',
     autoSortCodes: 'Filtrar códigos por sitio',
     autoSortCodesHint:
-      'Muestra coincidencias probables para el sitio actual. Puedes buscar o mostrar todos los códigos; desactiva esta opción para reordenarlos.',
+      'Muestra solo las coincidencias probables para el sitio actual. Desactiva esta opción para ordenar los códigos manualmente.',
     siteSuggestion: 'Sugerido para este sitio',
     showAllCodes: 'Mostrar todos los códigos',
-    showSiteMatches: 'Mostrar solo coincidencias del sitio',
+    showSiteMatches: 'Solo coincidencias del sitio',
+    otherCodes: 'Otros códigos',
     alwaysShowAllCodes: 'Mostrar siempre todos los códigos',
+    alwaysShowAllCodesHint:
+      'Abre la lista completa en lugar de solo las coincidencias del sitio actual.',
     settingsSaveFailed: 'No se pudo guardar la configuración.',
     autoPasteCodes: 'Pegar código automáticamente',
     autoPasteCodesHint:
@@ -426,11 +433,13 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
       'खाता सूची में कोड छिपाएं। कोड कॉपी करने के लिए खाता चुनें; ऑटो-पेस्ट फिर भी काम करता है।',
     autoSortCodes: 'साइट के अनुसार कोड फ़िल्टर करें',
     autoSortCodesHint:
-      'मौजूदा साइट से संभावित रूप से मेल खाने वाले कोड दिखाएं। सभी कोड खोजे या दिखाए जा सकते हैं; उन्हें क्रमबद्ध करने के लिए इसे बंद करें।',
+      'सिर्फ़ मौजूदा साइट से संभावित रूप से मेल खाने वाले कोड दिखाएं। कोड खुद क्रमबद्ध करने के लिए इसे बंद करें।',
     siteSuggestion: 'इस साइट के लिए सुझाया गया',
     showAllCodes: 'सभी कोड दिखाएं',
-    showSiteMatches: 'सिर्फ़ साइट से मेल खाने वाले कोड दिखाएं',
+    showSiteMatches: 'सिर्फ़ साइट के मेल',
+    otherCodes: 'अन्य कोड',
     alwaysShowAllCodes: 'हमेशा सभी कोड दिखाएं',
+    alwaysShowAllCodesHint: 'सिर्फ़ मौजूदा साइट के मेल के बजाय पूरी सूची खोलें।',
     settingsSaveFailed: 'सेटिंग सहेजी नहीं जा सकीं।',
     autoPasteCodes: 'कोड अपने आप पेस्ट करें',
     autoPasteCodesHint:
@@ -533,11 +542,13 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
       'أخفِ الرموز في قائمة الحسابات. حدد حسابًا لنسخ رمزه؛ ويستمر اللصق التلقائي في العمل.',
     autoSortCodes: 'تصفية الرموز حسب الموقع',
     autoSortCodesHint:
-      'اعرض الرموز التي يُرجح أن تطابق الموقع الحالي. يمكنك البحث في كل الرموز أو عرضها؛ أوقف هذا الخيار لإعادة ترتيبها.',
+      'اعرض الرموز التي يُرجح أن تطابق الموقع الحالي فقط. أوقف هذا الخيار لترتيب الرموز بنفسك.',
     siteSuggestion: 'مقترح لهذا الموقع',
     showAllCodes: 'عرض كل الرموز',
-    showSiteMatches: 'عرض رموز الموقع المطابقة فقط',
+    showSiteMatches: 'مطابقات الموقع فقط',
+    otherCodes: 'رموز أخرى',
     alwaysShowAllCodes: 'عرض كل الرموز دائمًا',
+    alwaysShowAllCodesHint: 'افتح القائمة الكاملة بدلًا من مطابقات الموقع الحالي فقط.',
     settingsSaveFailed: 'تعذّر حفظ الإعدادات.',
     autoPasteCodes: 'لصق الرمز تلقائيا',
     autoPasteCodesHint:
@@ -640,11 +651,13 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
       'অ্যাকাউন্ট তালিকায় কোড লুকিয়ে রাখুন। কোড কপি করতে একটি অ্যাকাউন্ট নির্বাচন করুন; অটো-পেস্ট তবুও কাজ করে।',
     autoSortCodes: 'সাইট অনুযায়ী কোড ফিল্টার করুন',
     autoSortCodesHint:
-      'বর্তমান সাইটের সঙ্গে সম্ভাব্য মিল থাকা কোড দেখান। সব কোড খোঁজা বা দেখানো যাবে; সেগুলো সাজাতে এটি বন্ধ করুন।',
+      'শুধু বর্তমান সাইটের সঙ্গে সম্ভাব্য মিল থাকা কোড দেখান। নিজে কোড সাজাতে এটি বন্ধ করুন।',
     siteSuggestion: 'এই সাইটের জন্য প্রস্তাবিত',
     showAllCodes: 'সব কোড দেখান',
-    showSiteMatches: 'শুধু সাইটের সঙ্গে মিল থাকা কোড দেখান',
+    showSiteMatches: 'শুধু সাইটের মিল',
+    otherCodes: 'অন্যান্য কোড',
     alwaysShowAllCodes: 'সব সময় সব কোড দেখান',
+    alwaysShowAllCodesHint: 'শুধু বর্তমান সাইটের মিলের বদলে পুরো তালিকা খুলুন।',
     settingsSaveFailed: 'সেটিংস সংরক্ষণ করা যায়নি।',
     autoPasteCodes: 'কোড অটো পেস্ট করুন',
     autoPasteCodesHint:
@@ -747,11 +760,14 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
       'Oculte os códigos na lista de contas. Selecione uma conta para copiar o código; a colagem automática continua funcionando.',
     autoSortCodes: 'Filtrar códigos por site',
     autoSortCodesHint:
-      'Mostra correspondências prováveis para o site atual. Pode pesquisar ou mostrar todos os códigos; desative para os reordenar.',
+      'Mostra apenas as correspondências prováveis para o site atual. Desative para organizar os códigos manualmente.',
     siteSuggestion: 'Sugerido para este site',
     showAllCodes: 'Mostrar todos os códigos',
-    showSiteMatches: 'Mostrar apenas correspondências do site',
+    showSiteMatches: 'Apenas o site atual',
+    otherCodes: 'Outros códigos',
     alwaysShowAllCodes: 'Mostrar sempre todos os códigos',
+    alwaysShowAllCodesHint:
+      'Abre a lista completa em vez de apenas as correspondências do site atual.',
     settingsSaveFailed: 'Não foi possível salvar as configurações.',
     autoPasteCodes: 'Colar código automaticamente',
     autoPasteCodesHint:
@@ -854,11 +870,14 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
       'Скрывает коды в списке аккаунтов. Выберите аккаунт, чтобы скопировать код; автовставка продолжит работать.',
     autoSortCodes: 'Фильтровать коды по сайту',
     autoSortCodesHint:
-      'Показывает вероятные совпадения для текущего сайта. Все коды можно найти через поиск или показать; отключите, чтобы менять их порядок.',
+      'Показывать только вероятные совпадения для текущего сайта. Отключите, чтобы упорядочить коды вручную.',
     siteSuggestion: 'Предложено для этого сайта',
     showAllCodes: 'Показать все коды',
-    showSiteMatches: 'Показать только совпадения для сайта',
+    showSiteMatches: 'Только совпадения сайта',
+    otherCodes: 'Другие коды',
     alwaysShowAllCodes: 'Всегда показывать все коды',
+    alwaysShowAllCodesHint:
+      'Открывать полный список вместо совпадений только для текущего сайта.',
     settingsSaveFailed: 'Не удалось сохранить настройки.',
     autoPasteCodes: 'Автовставка кода',
     autoPasteCodesHint:
@@ -961,11 +980,13 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
       'アカウント一覧のコードを隠します。アカウントを選択するとコードをコピーでき、自動貼り付けも引き続き機能します。',
     autoSortCodes: 'サイト別にコードを絞り込む',
     autoSortCodesHint:
-      '現在のサイトに一致する可能性が高いコードを表示します。すべてのコードの検索や表示もできます。並べ替えるにはオフにします。',
+      '現在のサイトに一致する可能性が高いコードだけを表示します。自分で並べ替えるにはオフにします。',
     siteSuggestion: 'このサイトの候補',
     showAllCodes: 'すべてのコードを表示',
-    showSiteMatches: 'サイトに一致するコードのみ表示',
+    showSiteMatches: 'サイトの候補のみ',
+    otherCodes: 'その他のコード',
     alwaysShowAllCodes: '常にすべてのコードを表示',
+    alwaysShowAllCodesHint: '現在のサイトの候補だけでなく、最初から一覧全体を表示します。',
     settingsSaveFailed: '設定を保存できませんでした。',
     autoPasteCodes: 'コードを自動貼り付け',
     autoPasteCodesHint:
@@ -1068,11 +1089,14 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
       'Masque les codes dans la liste des comptes. Sélectionnez un compte pour copier son code ; le collage automatique continue de fonctionner.',
     autoSortCodes: 'Filtrer les codes par site',
     autoSortCodesHint:
-      'Affiche les correspondances probables pour le site actuel. Vous pouvez rechercher ou afficher tous les codes ; désactivez cette option pour les réorganiser.',
+      'Affiche uniquement les correspondances probables pour le site actuel. Désactivez cette option pour organiser les codes vous-même.',
     siteSuggestion: 'Suggéré pour ce site',
     showAllCodes: 'Afficher tous les codes',
-    showSiteMatches: 'Afficher uniquement les correspondances du site',
+    showSiteMatches: 'Site actuel uniquement',
+    otherCodes: 'Autres codes',
     alwaysShowAllCodes: 'Toujours afficher tous les codes',
+    alwaysShowAllCodesHint:
+      'Ouvre la liste complète au lieu des seules correspondances du site actuel.',
     settingsSaveFailed: 'Impossible d’enregistrer les paramètres.',
     autoPasteCodes: 'Coller le code automatiquement',
     autoPasteCodesHint:
@@ -1175,11 +1199,14 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
       'Blendet Codes in der Kontoliste aus. Wähle ein Konto aus, um den Code zu kopieren; automatisches Einfügen funktioniert weiterhin.',
     autoSortCodes: 'Codes nach Website filtern',
     autoSortCodesHint:
-      'Zeigt wahrscheinliche Treffer für die aktuelle Website. Du kannst alle Codes durchsuchen oder anzeigen; schalte dies zum Sortieren aus.',
+      'Zeigt nur wahrscheinliche Treffer für die aktuelle Website. Schalte dies aus, um die Codes selbst anzuordnen.',
     siteSuggestion: 'Für diese Website vorgeschlagen',
     showAllCodes: 'Alle Codes anzeigen',
-    showSiteMatches: 'Nur Website-Treffer anzeigen',
+    showSiteMatches: 'Nur Website-Treffer',
+    otherCodes: 'Weitere Codes',
     alwaysShowAllCodes: 'Immer alle Codes anzeigen',
+    alwaysShowAllCodesHint:
+      'Öffnet die vollständige Liste statt nur der Treffer für die aktuelle Website.',
     settingsSaveFailed: 'Einstellungen konnten nicht gespeichert werden.',
     autoPasteCodes: 'Code automatisch einfügen',
     autoPasteCodesHint:
@@ -1280,11 +1307,13 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     hideCodes: '隐藏验证码',
     hideCodesHint: '在账户列表中隐藏验证码。选择账户即可复制验证码；自动粘贴仍然有效。',
     autoSortCodes: '按网站筛选验证码',
-    autoSortCodesHint: '显示可能与当前网站匹配的验证码。仍可搜索或显示所有验证码；关闭后可手动排序。',
+    autoSortCodesHint: '仅显示可能与当前网站匹配的验证码。关闭后可手动排列验证码。',
     siteSuggestion: '为此网站推荐',
     showAllCodes: '显示所有验证码',
-    showSiteMatches: '仅显示网站匹配项',
+    showSiteMatches: '仅当前网站',
+    otherCodes: '其他验证码',
     alwaysShowAllCodes: '始终显示所有验证码',
+    alwaysShowAllCodesHint: '打开时显示完整列表，而不仅是当前网站的匹配项。',
     settingsSaveFailed: '无法保存设置。',
     autoPasteCodes: '自动粘贴代码',
     autoPasteCodesHint:

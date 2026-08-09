@@ -188,6 +188,10 @@ select:not(:disabled),
   background-color: color-mix(in oklab, var(--color-base-200) 45%, var(--color-base-100));
 }
 
+.auth-scroll-area {
+  scrollbar-gutter: stable;
+}
+
 .auth-search-input.input {
   border-color: transparent;
   background-color: color-mix(in oklab, var(--color-base-200) 55%, var(--color-base-100));
