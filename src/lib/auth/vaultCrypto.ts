@@ -4,7 +4,7 @@ import type { VaultData, VaultEnvelope } from './types';
 const KDF_ITERATIONS = 310_000;
 const MIN_KDF_ITERATIONS = 100_000;
 const MAX_KDF_ITERATIONS = 1_000_000;
-const VAULT_PARAMETERS_ERROR = 'Vault encryption parameters are not supported.';
+export const VAULT_PARAMETERS_ERROR = 'Vault encryption parameters are not supported.';
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
