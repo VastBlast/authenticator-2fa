@@ -10,7 +10,8 @@ const vaultData: VaultData = {
     showCountdownSeconds: false,
     hideCodes: false,
     autoPasteCodes: false,
-    accountSortMode: 'manual'
+    accountSortMode: 'manual',
+    alwaysShowAllCodes: false
   }
 };
 

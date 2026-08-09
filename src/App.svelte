@@ -4,6 +4,7 @@
   import { fade } from 'svelte/transition';
   import {
     ClipboardPaste,
+    ChevronDown,
     Download,
     ImageUp,
     KeyRound,
@@ -26,6 +27,7 @@
   import {
     FADE_TRANSITION,
     PANEL_TRANSITION,
+    panelReveal,
     viewTransition
   } from './lib/components/auth/transitions';
   import {
@@ -34,7 +36,11 @@
     rubberbandOffset
   } from './lib/components/auth/reorder';
   import { accountToOtpAuthUri } from './lib/auth/otpauth';
-  import { getAccountPageRanking, type PageContext } from './lib/auth/accountRanking';
+  import {
+    getAccountListView,
+    getAccountPageRanking,
+    type PageContext
+  } from './lib/auth/accountRanking';
   import { decodeQrFiles, renderQrDataUrl } from './lib/auth/qr';
   import type { AccountDraft, AuthenticatorAccount, ImportResult } from './lib/auth/types';
   import { authenticatorVault as vault } from './lib/state/authenticator.svelte';
@@ -118,6 +124,7 @@
   let pageScanError = $state('');
   let pageContext = $state.raw<PageContext | null>(null);
   let pageContextReady = $state(false);
+  let allCodesRevealed = $state(false);
   let pageContextRequest = 0;
   let browserWindowId: number | undefined;
 
@@ -126,16 +133,15 @@
     getAccountPageRanking(vault.sortedAccounts, manualSort ? null : pageContext)
   );
   const orderedAccounts = $derived.by(() => dragAccounts ?? pageRanking.accounts);
-  const filteredAccounts = $derived.by(() => {
-    const needle = query.trim().toLowerCase();
-    if (!needle) {
-      return orderedAccounts;
-    }
-    return orderedAccounts.filter(
-      (account) =>
-        account.label.toLowerCase().includes(needle) || account.issuer.toLowerCase().includes(needle)
-    );
-  });
+  const accountListView = $derived(
+    getAccountListView(orderedAccounts, pageRanking.suggestedAccountIds, {
+      query,
+      alwaysShowAll: vault.settings.alwaysShowAllCodes,
+      revealAll: allCodesRevealed
+    })
+  );
+  const filteredAccounts = $derived(accountListView.accounts);
+  const codesRevealed = $derived(accountListView.contextualAction === 'showMatches');
   const reorderDisabled = $derived(
     !manualSort || query.trim().length > 0 || filteredAccounts.length < 2
   );
@@ -261,10 +267,17 @@
     }
   }
 
+  // Revealing every code is a per-visit choice, so this never rewrites
+  // settings. Preferring the full list hides this control altogether.
+  function toggleContextualAccountView() {
+    allCodesRevealed = !allCodesRevealed;
+  }
+
   async function refreshPageContext(clearCurrent = true) {
     const request = ++pageContextRequest;
     if (clearCurrent) {
       pageContext = null;
+      allCodesRevealed = false;
     }
     if (vault.settings.accountSortMode === 'manual' || !hasRuntimeMessaging()) {
       pageContext = null;
@@ -277,7 +290,11 @@
         windowId: browserWindowId
       });
       if (request === pageContextRequest) {
-        pageContext = parsePageContext(response.pageContext);
+        const nextContext = parsePageContext(response.pageContext);
+        if (nextContext?.hostname !== pageContext?.hostname) {
+          allCodesRevealed = false;
+        }
+        pageContext = nextContext;
       }
     } catch {
       // Context is optional. Manual order is the quiet fallback when the
@@ -937,6 +954,26 @@
   <title>{tr('appName')}</title>
 </svelte:head>
 
+{#snippet accountRows(accounts: AuthenticatorAccount[])}
+  {#each accounts as account (account.id)}
+    <AccountRow
+      {account}
+      code={vault.codes[account.id]}
+      suggestedForSite={pageRanking.suggestedAccountIds.has(account.id)}
+      showReorder={manualSort}
+      reorderDisabled={reorderDisabled}
+      reorderPending={reorderSaving}
+      dragging={activeDragAccountId === account.id}
+      dragStyle={getAccountDragStyle(account)}
+      oncodecopy={copyCode}
+      onactions={(item) => (actionsFor = item)}
+      onreorderstart={startAccountDrag}
+      onreorderkey={handleAccountDragKey}
+      onreorderblur={handleAccountDragBlur}
+    />
+  {/each}
+{/snippet}
+
 <div class="contents" data-theme={themeOverride}>
 <main
   class="relative flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden bg-base-100 text-base-content"
@@ -969,7 +1006,12 @@
         >
           <AppBar onsettings={showSettings} />
 
-          <div class="flex grow flex-col overflow-y-auto pb-20" bind:this={scrollContainerElement}>
+          <!-- The reserved gutter keeps the list from shifting sideways when
+               revealing more codes makes the scrollbar appear. -->
+          <div
+            class="auth-scroll-area flex grow flex-col overflow-y-auto pb-20"
+            bind:this={scrollContainerElement}
+          >
             {#if vault.accounts.length > 0}
               <div class="auth-sticky-search sticky top-0 z-10 bg-base-100/95 px-3 py-2 backdrop-blur">
                 <label class="auth-search-input input input-md w-full items-center gap-2">
@@ -985,24 +1027,46 @@
                 aria-label={tr('accounts')}
                 bind:this={accountListElement}
               >
-                {#each filteredAccounts as account (account.id)}
-                  <AccountRow
-                    {account}
-                    code={vault.codes[account.id]}
-                    suggestedForSite={pageRanking.suggestedAccountIds.has(account.id)}
-                    showReorder={manualSort}
-                    reorderDisabled={reorderDisabled}
-                    reorderPending={reorderSaving}
-                    dragging={activeDragAccountId === account.id}
-                    dragStyle={getAccountDragStyle(account)}
-                    oncodecopy={copyCode}
-                    onactions={(item) => (actionsFor = item)}
-                    onreorderstart={startAccountDrag}
-                    onreorderkey={handleAccountDragKey}
-                    onreorderblur={handleAccountDragBlur}
-                  />
-                {/each}
+                {@render accountRows(filteredAccounts)}
               </ul>
+
+              {#if accountListView.contextualAction}
+                <!-- Sits between the site matches and the rest, so it stays in
+                     the same place whichever way the list is showing. -->
+                <div class="flex items-center gap-2 px-3 py-2.5">
+                  <span class="h-px grow bg-base-200/70" aria-hidden="true"></span>
+                  <button
+                    class="btn btn-xs h-7 shrink-0 gap-1.5 rounded-full border-0 bg-base-200/70 px-3 text-xs font-medium text-base-content/70 shadow-none hover:bg-base-200 hover:text-base-content"
+                    type="button"
+                    aria-controls="other-codes"
+                    aria-expanded={codesRevealed}
+                    onclick={toggleContextualAccountView}
+                  >
+                    {codesRevealed ? tr('showSiteMatches') : tr('showAllCodes')}
+                    {#if !codesRevealed}
+                      <span class="tabular-nums opacity-55">{accountListView.hiddenCount}</span>
+                    {/if}
+                    <ChevronDown
+                      class={['transition-transform duration-200', codesRevealed && 'rotate-180']}
+                      size={14}
+                      aria-hidden="true"
+                    />
+                  </button>
+                  <span class="h-px grow bg-base-200/70" aria-hidden="true"></span>
+                </div>
+
+                <div id="other-codes">
+                  {#if codesRevealed}
+                    <ul
+                      class="divide-y divide-base-200"
+                      aria-label={tr('otherCodes')}
+                      transition:panelReveal
+                    >
+                      {@render accountRows(accountListView.revealedAccounts)}
+                    </ul>
+                  {/if}
+                </div>
+              {/if}
             {:else if vault.accounts.length === 0}
               <div class="grid grow place-items-center p-8 text-center">
                 <div class="grid justify-items-center gap-3">

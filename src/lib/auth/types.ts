@@ -59,6 +59,7 @@ export interface AppSettings {
   hideCodes: boolean;
   autoPasteCodes: boolean;
   accountSortMode: AccountSortMode;
+  alwaysShowAllCodes: boolean;
 }
 
 export interface VaultEnvelope {
@@ -94,7 +95,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   showCountdownSeconds: false,
   hideCodes: false,
   autoPasteCodes: false,
-  accountSortMode: 'contextual'
+  accountSortMode: 'contextual',
+  alwaysShowAllCodes: false
 };
 
 export function normalizeAppSettings(settings: Partial<AppSettings> | undefined): AppSettings {
@@ -102,7 +104,8 @@ export function normalizeAppSettings(settings: Partial<AppSettings> | undefined)
     ...DEFAULT_SETTINGS,
     ...settings,
     hideCodes: settings?.hideCodes === true,
-    accountSortMode: settings?.accountSortMode === 'manual' ? 'manual' : 'contextual'
+    accountSortMode: settings?.accountSortMode === 'manual' ? 'manual' : 'contextual',
+    alwaysShowAllCodes: settings?.alwaysShowAllCodes === true
   };
 }
 
