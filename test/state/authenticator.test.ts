@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { loadStoredVault, saveStoredVault } from '../../src/lib/auth/storage';
-import type { AppSettings, AuthenticatorAccount } from '../../src/lib/auth/types';
+import { DEFAULT_SETTINGS, type AppSettings, type AuthenticatorAccount } from '../../src/lib/auth/types';
 import {
   createPlainVaultRecord,
   isEncryptedVaultRecord,
@@ -48,6 +48,37 @@ describe('AuthenticatorVault persistence and locking', () => {
     expect(reopened.passwordProtected).toBe(false);
     expect(reopened.accounts).toHaveLength(1);
     expect(reopened.accounts[0].label).toBe('alice@example.com');
+  });
+
+  test('uses the browser UI language for a new vault and persists it with the first change', async () => {
+    installMemoryStorage({ uiLanguage: 'fr-CA' });
+    const vault = new AuthenticatorVault();
+
+    await vault.initialize();
+
+    expect(vault.settings.language).toBe('fr');
+    expect(await loadStoredVault()).toBeNull();
+
+    await vault.importText(OTPAUTH_URI);
+
+    const reopened = new AuthenticatorVault();
+    await reopened.initialize();
+    expect(reopened.settings.language).toBe('fr');
+  });
+
+  test('preserves a saved language when the browser UI language differs', async () => {
+    installMemoryStorage({ uiLanguage: 'de-DE' });
+    await saveStoredVault(
+      createPlainVaultRecord({
+        accounts: [],
+        settings: { ...DEFAULT_SETTINGS, language: 'fr' }
+      })
+    );
+
+    const vault = new AuthenticatorVault();
+    await vault.initialize();
+
+    expect(vault.settings.language).toBe('fr');
   });
 
   test('failed plain persistence does not leave a fake imported account in memory', async () => {

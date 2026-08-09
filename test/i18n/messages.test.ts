@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, test } from 'vitest';
 import { LANGUAGES, MESSAGE_KEYS, t } from '../../src/lib/i18n/messages';
+import { getPreferredLanguage } from '../../src/lib/i18n/language';
 
 const LOCALE_MESSAGES = [
   'extensionName',
@@ -9,19 +10,6 @@ const LOCALE_MESSAGES = [
   'extensionDescription',
   'actionTitle'
 ] as const;
-const MANIFEST_LOCALE_BY_LANGUAGE: Record<string, string> = {
-  en: 'en',
-  es: 'es',
-  hi: 'hi',
-  ar: 'ar',
-  bn: 'bn',
-  pt: 'pt_BR',
-  ru: 'ru',
-  ja: 'ja',
-  fr: 'fr',
-  de: 'de',
-  zh: 'zh_CN'
-};
 const BROWSER_BRAND_PATTERN = /\b(?:Chrome|Chromium|Edge|Firefox|Web Store)\b/i;
 const MANIFEST_LOCALES_DIR = join(process.cwd(), 'assets', 'extension', '_locales');
 const CHARACTER_SEGMENTER = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
@@ -48,37 +36,57 @@ describe('localized copy', () => {
   });
 
   test('manifest locales include exported metadata', () => {
-    for (const { code } of LANGUAGES) {
-      const locale = MANIFEST_LOCALE_BY_LANGUAGE[code];
-      const filePath = join(MANIFEST_LOCALES_DIR, locale, 'messages.json');
-      expect(existsSync(filePath), locale).toBe(true);
+    for (const { locale } of LANGUAGES) {
+      const manifestLocale = locale.replaceAll('-', '_');
+      const filePath = join(MANIFEST_LOCALES_DIR, manifestLocale, 'messages.json');
+      expect(existsSync(filePath), manifestLocale).toBe(true);
 
       const messages = JSON.parse(readFileSync(filePath, 'utf8')) as Record<
         string,
         { message?: unknown }
       >;
       for (const key of LOCALE_MESSAGES) {
-        expect(messages[key]?.message, `${locale}.${key}`).toEqual(expect.any(String));
-        expect(messages[key].message, `${locale}.${key}`).toMatch(/\S/);
-        expect(messages[key].message, `${locale}.${key}`).not.toMatch(BROWSER_BRAND_PATTERN);
+        expect(messages[key]?.message, `${manifestLocale}.${key}`).toEqual(expect.any(String));
+        expect(messages[key].message, `${manifestLocale}.${key}`).toMatch(/\S/);
+        expect(messages[key].message, `${manifestLocale}.${key}`).not.toMatch(BROWSER_BRAND_PATTERN);
       }
     }
   });
 
   test('manifest short names stay within extension package limits', () => {
-    for (const { code } of LANGUAGES) {
-      const locale = MANIFEST_LOCALE_BY_LANGUAGE[code];
-      const filePath = join(MANIFEST_LOCALES_DIR, locale, 'messages.json');
+    for (const { locale } of LANGUAGES) {
+      const manifestLocale = locale.replaceAll('-', '_');
+      const filePath = join(MANIFEST_LOCALES_DIR, manifestLocale, 'messages.json');
       const messages = JSON.parse(readFileSync(filePath, 'utf8')) as Record<
         string,
         { message?: unknown }
       >;
       const shortName = messages.extensionShortName?.message;
 
-      expect(shortName, `${locale}.extensionShortName`).toEqual(expect.any(String));
-      expect(characterLength(String(shortName)), `${locale}.extensionShortName`).toBeLessThanOrEqual(
-        12
-      );
+      expect(shortName, `${manifestLocale}.extensionShortName`).toEqual(expect.any(String));
+      expect(
+        characterLength(String(shortName)),
+        `${manifestLocale}.extensionShortName`
+      ).toBeLessThanOrEqual(12);
     }
+  });
+});
+
+describe('preferred language selection', () => {
+  test('matches generic translations across regional locale variants', () => {
+    expect(getPreferredLanguage(['fr-CA'])).toBe('fr');
+    expect(getPreferredLanguage(['ES_mx'])).toBe('es');
+  });
+
+  test('matches region-specific translations without assuming a different variant', () => {
+    expect(getPreferredLanguage(['pt-BR'])).toBe('pt');
+    expect(getPreferredLanguage(['pt-PT'])).toBe('en');
+    expect(getPreferredLanguage(['zh-CN'])).toBe('zh');
+    expect(getPreferredLanguage(['zh-TW'])).toBe('en');
+  });
+
+  test('uses the first supported preference and falls back to English', () => {
+    expect(getPreferredLanguage(['it-IT', '', 'bn-BD'])).toBe('bn');
+    expect(getPreferredLanguage([undefined, 'it-IT'])).toBe('en');
   });
 });

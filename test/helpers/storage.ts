@@ -26,7 +26,9 @@ export class MemoryStorage implements Storage {
   }
 }
 
-export function installMemoryStorage(): { localStorage: MemoryStorage; sessionStorage: MemoryStorage } {
+export function installMemoryStorage(
+  { uiLanguage }: { uiLanguage?: string } = {}
+): { localStorage: MemoryStorage; sessionStorage: MemoryStorage } {
   const localStorage = new MemoryStorage();
   const sessionStorage = new MemoryStorage();
 
@@ -40,7 +42,14 @@ export function installMemoryStorage(): { localStorage: MemoryStorage; sessionSt
   });
   Object.defineProperty(globalThis, 'chrome', {
     configurable: true,
-    value: undefined
+    value:
+      uiLanguage === undefined
+        ? undefined
+        : {
+            i18n: {
+              getUILanguage: () => uiLanguage
+            }
+          }
   });
 
   return { localStorage, sessionStorage };

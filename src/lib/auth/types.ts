@@ -1,3 +1,5 @@
+import { getPreferredLanguage } from '../i18n/language';
+
 export type OtpType = 'totp' | 'hotp' | 'steam';
 
 export type OtpAlgorithm = 'SHA-1' | 'SHA-256' | 'SHA-512';
@@ -99,10 +101,18 @@ export const DEFAULT_SETTINGS: AppSettings = {
   alwaysShowAllCodes: false
 };
 
+export function createInitialSettings(): AppSettings {
+  return {
+    ...DEFAULT_SETTINGS,
+    language: getPreferredLanguage()
+  };
+}
+
 export function normalizeAppSettings(settings: Partial<AppSettings> | undefined): AppSettings {
   return {
     ...DEFAULT_SETTINGS,
     ...settings,
+    language: getPreferredLanguage([settings?.language]),
     hideCodes: settings?.hideCodes === true,
     accountSortMode: settings?.accountSortMode === 'manual' ? 'manual' : 'contextual',
     alwaysShowAllCodes: settings?.alwaysShowAllCodes === true
