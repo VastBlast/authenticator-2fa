@@ -134,10 +134,10 @@
       <span
         class={[
           'auth-code-value font-(family-name:--auth-code-font) text-[2.35rem] font-[450] leading-[0.95] mt-[0.3rem] tracking-normal lining-nums tabular-nums',
-          expiring ? 'text-error' : 'text-primary'
+          vault.settings.hideCodes ? 'text-base-content/35' : expiring ? 'text-error' : 'text-primary'
         ]}
       >
-        {displayCode}
+        {vault.settings.hideCodes ? '••• •••' : displayCode}
       </span>
     </span>
 
