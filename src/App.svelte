@@ -4,6 +4,8 @@
   import { fade } from 'svelte/transition';
   import {
     ClipboardPaste,
+    ChevronDown,
+    ChevronUp,
     Download,
     ImageUp,
     KeyRound,
@@ -34,7 +36,11 @@
     rubberbandOffset
   } from './lib/components/auth/reorder';
   import { accountToOtpAuthUri } from './lib/auth/otpauth';
-  import { getAccountPageRanking, type PageContext } from './lib/auth/accountRanking';
+  import {
+    getAccountListView,
+    getAccountPageRanking,
+    type PageContext
+  } from './lib/auth/accountRanking';
   import { decodeQrFiles, renderQrDataUrl } from './lib/auth/qr';
   import type { AccountDraft, AuthenticatorAccount, ImportResult } from './lib/auth/types';
   import { authenticatorVault as vault } from './lib/state/authenticator.svelte';
@@ -118,6 +124,7 @@
   let pageScanError = $state('');
   let pageContext = $state.raw<PageContext | null>(null);
   let pageContextReady = $state(false);
+  let allCodesRevealed = $state(false);
   let pageContextRequest = 0;
   let browserWindowId: number | undefined;
 
@@ -126,16 +133,13 @@
     getAccountPageRanking(vault.sortedAccounts, manualSort ? null : pageContext)
   );
   const orderedAccounts = $derived.by(() => dragAccounts ?? pageRanking.accounts);
-  const filteredAccounts = $derived.by(() => {
-    const needle = query.trim().toLowerCase();
-    if (!needle) {
-      return orderedAccounts;
-    }
-    return orderedAccounts.filter(
-      (account) =>
-        account.label.toLowerCase().includes(needle) || account.issuer.toLowerCase().includes(needle)
-    );
-  });
+  const accountListView = $derived(
+    getAccountListView(orderedAccounts, pageRanking.suggestedAccountIds, {
+      query,
+      revealAll: allCodesRevealed
+    })
+  );
+  const filteredAccounts = $derived(accountListView.accounts);
   const reorderDisabled = $derived(
     !manualSort || query.trim().length > 0 || filteredAccounts.length < 2
   );
@@ -265,6 +269,7 @@
     const request = ++pageContextRequest;
     if (clearCurrent) {
       pageContext = null;
+      allCodesRevealed = false;
     }
     if (vault.settings.accountSortMode === 'manual' || !hasRuntimeMessaging()) {
       pageContext = null;
@@ -277,7 +282,11 @@
         windowId: browserWindowId
       });
       if (request === pageContextRequest) {
-        pageContext = parsePageContext(response.pageContext);
+        const nextContext = parsePageContext(response.pageContext);
+        if (nextContext?.hostname !== pageContext?.hostname) {
+          allCodesRevealed = false;
+        }
+        pageContext = nextContext;
       }
     } catch {
       // Context is optional. Manual order is the quiet fallback when the
@@ -981,6 +990,7 @@
 
             {#if filteredAccounts.length > 0}
               <ul
+                id="account-list"
                 class="divide-y divide-base-200"
                 aria-label={tr('accounts')}
                 bind:this={accountListElement}
@@ -1003,6 +1013,26 @@
                   />
                 {/each}
               </ul>
+              {#if accountListView.contextualAction}
+                <div class="px-3 py-3">
+                  <button
+                    class="btn btn-block btn-sm"
+                    type="button"
+                    aria-controls="account-list"
+                    aria-expanded={accountListView.contextualAction === 'showMatches'}
+                    onclick={() =>
+                      (allCodesRevealed = accountListView.contextualAction === 'showAll')}
+                  >
+                    {#if accountListView.contextualAction === 'showAll'}
+                      {tr('showAllCodes')}
+                      <ChevronDown size={16} aria-hidden="true" />
+                    {:else}
+                      {tr('showSiteMatches')}
+                      <ChevronUp size={16} aria-hidden="true" />
+                    {/if}
+                  </button>
+                </div>
+              {/if}
             {:else if vault.accounts.length === 0}
               <div class="grid grow place-items-center p-8 text-center">
                 <div class="grid justify-items-center gap-3">

@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import {
+  getAccountListView,
   getAccountPageRanking,
   getAccountPageMatchScore,
   rankAccountsForPage
@@ -18,6 +19,53 @@ describe('contextual account ranking', () => {
       'Example'
     ]);
     expect(ranking.suggestedAccountIds).toEqual(new Set([accounts[1].id]));
+  });
+
+  test('shows only site matches until all codes are revealed', () => {
+    const accounts = [account('GitHub'), account('Instagram', 'alice'), account('Instagram', 'bob')];
+    const ranking = getAccountPageRanking(accounts, { hostname: 'instagram.com' });
+
+    const collapsed = getAccountListView(ranking.accounts, ranking.suggestedAccountIds, {
+      query: '',
+      revealAll: false
+    });
+    expect(labels(collapsed.accounts)).toEqual(['Instagram', 'Instagram']);
+    expect(collapsed.contextualAction).toBe('showAll');
+
+    const expanded = getAccountListView(ranking.accounts, ranking.suggestedAccountIds, {
+      query: '',
+      revealAll: true
+    });
+    expect(expanded.accounts).toEqual(ranking.accounts);
+    expect(expanded.contextualAction).toBe('showMatches');
+  });
+
+  test('falls back to all codes when every or no account matches', () => {
+    const accounts = [account('GitHub'), account('Instagram')];
+
+    expect(getAccountListView(accounts, new Set(), { query: '', revealAll: false })).toEqual({
+      accounts,
+      contextualAction: null
+    });
+    expect(
+      getAccountListView(accounts, new Set(accounts.map(({ id }) => id)), {
+        query: '',
+        revealAll: false
+      })
+    ).toEqual({ accounts, contextualAction: null });
+  });
+
+  test('searches every code without offering a redundant reveal action', () => {
+    const instagram = account('Instagram');
+    const github = account('GitHub', 'work account');
+    const accounts = [instagram, github];
+
+    expect(
+      getAccountListView(accounts, new Set([instagram.id]), {
+        query: ' WORK ',
+        revealAll: false
+      })
+    ).toEqual({ accounts: [github], contextualAction: null });
   });
 
   test('matches compact names, punctuation, diacritics, and public suffixes', () => {

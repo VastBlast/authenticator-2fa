@@ -34,6 +34,11 @@ export interface AccountPageRanking {
   suggestedAccountIds: ReadonlySet<string>;
 }
 
+export interface AccountListView {
+  accounts: AuthenticatorAccount[];
+  contextualAction: 'showAll' | 'showMatches' | null;
+}
+
 const NAME_NOISE = new Set([
   '2fa',
   'account',
@@ -136,6 +141,35 @@ export function getAccountPageRanking(
       scoredAccounts.filter(({ score }) => score > 0).map(({ account }) => account.id)
     )
   };
+}
+
+export function getAccountListView(
+  accounts: readonly AuthenticatorAccount[],
+  suggestedAccountIds: ReadonlySet<string>,
+  options: { query: string; revealAll: boolean }
+): AccountListView {
+  const needle = options.query.trim().toLowerCase();
+  if (needle) {
+    return {
+      accounts: accounts.filter(
+        (account) =>
+          account.label.toLowerCase().includes(needle) ||
+          account.issuer.toLowerCase().includes(needle)
+      ),
+      contextualAction: null
+    };
+  }
+
+  if (suggestedAccountIds.size > 0) {
+    const suggestedAccounts = accounts.filter((account) => suggestedAccountIds.has(account.id));
+    if (suggestedAccounts.length > 0 && suggestedAccounts.length < accounts.length) {
+      return options.revealAll
+        ? { accounts: [...accounts], contextualAction: 'showMatches' }
+        : { accounts: suggestedAccounts, contextualAction: 'showAll' };
+    }
+  }
+
+  return { accounts: [...accounts], contextualAction: null };
 }
 
 export function getAccountPageMatchScore(
