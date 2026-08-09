@@ -1,3 +1,5 @@
+import { DEFAULT_LANGUAGE, detectBrowserLanguage, resolveSupportedLanguage } from '../i18n/languages';
+
 export type OtpType = 'totp' | 'hotp' | 'steam';
 
 export type OtpAlgorithm = 'SHA-1' | 'SHA-256' | 'SHA-512';
@@ -90,7 +92,7 @@ export interface PlainVaultRecord {
 export type StoredVault = VaultEnvelope | PlainVaultRecord;
 
 export const DEFAULT_SETTINGS: AppSettings = {
-  language: 'en',
+  language: DEFAULT_LANGUAGE,
   theme: 'system',
   showCountdownSeconds: false,
   hideCodes: false,
@@ -99,10 +101,18 @@ export const DEFAULT_SETTINGS: AppSettings = {
   alwaysShowAllCodes: false
 };
 
+export function createDefaultAppSettings(): AppSettings {
+  return {
+    ...DEFAULT_SETTINGS,
+    language: detectBrowserLanguage()
+  };
+}
+
 export function normalizeAppSettings(settings: Partial<AppSettings> | undefined): AppSettings {
   return {
     ...DEFAULT_SETTINGS,
     ...settings,
+    language: resolveSupportedLanguage(settings?.language ? [settings.language] : []),
     hideCodes: settings?.hideCodes === true,
     accountSortMode: settings?.accountSortMode === 'manual' ? 'manual' : 'contextual',
     alwaysShowAllCodes: settings?.alwaysShowAllCodes === true

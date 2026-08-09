@@ -12,7 +12,7 @@ import type {
   VaultData,
   VaultEnvelope
 } from './types';
-import { DEFAULT_SETTINGS, normalizeAppSettings } from './types';
+import { createDefaultAppSettings, normalizeAppSettings } from './types';
 import {
   encryptVaultData,
   getVaultKeyFingerprint,
@@ -165,7 +165,7 @@ async function loadUnlockedStoredVault(): Promise<LoadedVault> {
   if (!stored) {
     return {
       type: 'plain',
-      data: { accounts: [], settings: { ...DEFAULT_SETTINGS } },
+      data: { accounts: [], settings: createDefaultAppSettings() },
       record: null
     };
   }

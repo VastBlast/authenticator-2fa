@@ -37,7 +37,7 @@ import type {
   VaultData,
   VaultEnvelope
 } from '../auth/types';
-import { DEFAULT_SETTINGS, normalizeAppSettings } from '../auth/types';
+import { createDefaultAppSettings, normalizeAppSettings } from '../auth/types';
 
 export class AuthenticatorVault {
   initialized = $state(false);
@@ -46,7 +46,7 @@ export class AuthenticatorVault {
   passwordProtected = $state(false);
   busy = $state(false);
   accounts = $state.raw<AuthenticatorAccount[]>([]);
-  settings = $state.raw<AppSettings>({ ...DEFAULT_SETTINGS });
+  settings = $state.raw<AppSettings>(createDefaultAppSettings());
   codes = $state<Record<string, OtpCode>>({});
   notice = $state('');
   noticeKey = $state(0);
@@ -305,7 +305,7 @@ export class AuthenticatorVault {
       this.plainVault = null;
       this.accounts = [];
       this.codes = {};
-      this.settings = { ...DEFAULT_SETTINGS };
+      this.settings = createDefaultAppSettings();
       this.hasVault = false;
       this.passwordProtected = false;
       this.locked = false;
@@ -346,7 +346,7 @@ export class AuthenticatorVault {
     this.plainVault = null;
     this.accounts = [];
     this.codes = {};
-    this.settings = { ...DEFAULT_SETTINGS };
+    this.settings = createDefaultAppSettings();
     this.hasVault = Boolean(stored);
     this.passwordProtected = false;
     this.locked = false;

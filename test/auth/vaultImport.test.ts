@@ -15,6 +15,11 @@ describe('importTextIntoStoredVault', () => {
   });
 
   test('imports into an empty plain vault', async () => {
+    Object.defineProperty(globalThis, 'chrome', {
+      configurable: true,
+      value: { i18n: { getUILanguage: () => 'pt-BR' } }
+    });
+
     const result = await importTextIntoStoredVault(ALICE_URI);
 
     expect(result.imported).toBe(1);
@@ -27,6 +32,7 @@ describe('importTextIntoStoredVault', () => {
     expect(stored.data.accounts).toHaveLength(1);
     expect(stored.data.accounts[0].label).toBe('alice@example.com');
     expect(stored.data.accounts[0].sortOrder).toBe(0);
+    expect(stored.data.settings.language).toBe('pt');
     expect(stored.data.settings.accountSortMode).toBe('contextual');
   });
 
