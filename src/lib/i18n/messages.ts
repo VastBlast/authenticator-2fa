@@ -104,19 +104,7 @@ export const MESSAGE_KEYS = [
 
 export type MessageKey = (typeof MESSAGE_KEYS)[number];
 
-export const LANGUAGES = [
-  { code: 'en', label: 'English' },
-  { code: 'es', label: 'Español' },
-  { code: 'hi', label: 'हिन्दी' },
-  { code: 'ar', label: 'العربية' },
-  { code: 'bn', label: 'বাংলা' },
-  { code: 'pt', label: 'Português' },
-  { code: 'ru', label: 'Русский' },
-  { code: 'ja', label: '日本語' },
-  { code: 'fr', label: 'Français' },
-  { code: 'de', label: 'Deutsch' },
-  { code: 'zh', label: '简体中文' }
-];
+export { LANGUAGES } from './languages';
 
 const en: Record<MessageKey, string> = {
   appName: 'Authenticator - 2FA',
