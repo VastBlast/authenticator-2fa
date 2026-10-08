@@ -36,7 +36,7 @@
     "fflate": "^0.8.3",
     "oxlint": "^1.71.0",
     "oxlint-tsgolint": "^7.0.2001",
-    "sharp": "^0.35.1",
+    "sharp": "^0.35.5",
     "svelte": "^5.56.3",
     "svelte-check": "^4.6.0",
     "tailwindcss": "^4.3.1",
