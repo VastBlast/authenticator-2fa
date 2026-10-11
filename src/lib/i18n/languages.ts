@@ -9,7 +9,8 @@ export const LANGUAGES = [
   { code: 'ja', label: '日本語' },
   { code: 'fr', label: 'Français' },
   { code: 'de', label: 'Deutsch' },
-  { code: 'zh', label: '简体中文' }
+  { code: 'zh', label: '简体中文' },
+  { code: 'tr', label: 'Türkçe' }
 ] as const;
 
 export type LanguageCode = (typeof LANGUAGES)[number]['code'];

@@ -1,0 +1,17 @@
+{
+  "extensionName": {
+    "message": "Authenticator - 2FA"
+  },
+  "extensionShortName": {
+    "message": "2FA Auth"
+  },
+  "extensionDescription": {
+    "message": "Güvenli girişler için şifreli 2FA kodları."
+  },
+  "actionTitle": {
+    "message": "Authenticator - 2FA'yı aç"
+  },
+  "commandOpenPopup": {
+    "message": "Açılır pencereyi aç"
+  }
+}

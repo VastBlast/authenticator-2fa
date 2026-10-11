@@ -7,7 +7,8 @@ const LOCALE_MESSAGES = [
   'extensionName',
   'extensionShortName',
   'extensionDescription',
-  'actionTitle'
+  'actionTitle',
+  'commandOpenPopup'
 ] as const;
 const MANIFEST_LOCALE_BY_LANGUAGE: Record<string, string> = {
   en: 'en',
@@ -20,7 +21,8 @@ const MANIFEST_LOCALE_BY_LANGUAGE: Record<string, string> = {
   ja: 'ja',
   fr: 'fr',
   de: 'de',
-  zh: 'zh_CN'
+  zh: 'zh_CN',
+  tr: 'tr'
 };
 const BROWSER_BRAND_PATTERN = /\b(?:Chrome|Chromium|Edge|Firefox|Web Store)\b/i;
 const MANIFEST_LOCALES_DIR = join(process.cwd(), 'assets', 'extension', '_locales');
