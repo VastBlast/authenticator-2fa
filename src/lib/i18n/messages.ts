@@ -2014,6 +2014,7 @@ const dictionaries: Record<string, Record<MessageKey, string>> = {
     syncCreateTitle: 'Kurtarma anahtarınızı kaydedin',
     syncRecoveryKey: 'Kurtarma anahtarı',
     syncRecoveryHint: 'Bu anahtara ve eşitlenen verilerinize sahip olan herkes hesaplarınızı okuyabilir. Anahtar sıfırlanamaz ve kaybolursa geri getirilemez, bu yüzden güvenli bir yerde saklayın.',
+    syncSavedKey: 'Kurtarma anahtarımı güvenli bir yere kaydettim.',
     syncEnable: 'Eşitlemeyi aç',
     syncJoinTitle: 'Bu cihazı bağla',
     syncJoinHint: 'Zaten eşitleme yapan bir cihazda tarayıcı eşitlemesini açın, kurtarma anahtarını gösterin ve buraya girin. Bu cihazdaki hesaplar korunur ve eşitlenenlerle birleştirilir.',
