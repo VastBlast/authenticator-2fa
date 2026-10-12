@@ -115,7 +115,7 @@ async function ensureBuiltApp() {
   try {
     await stat(join(appDir, 'index.html'));
   } catch {
-    throw new Error('Build the app before generating screenshots: npm run build');
+    throw new Error('Build the app before generating screenshots: pnpm run build');
   }
 }
 

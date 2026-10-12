@@ -34,21 +34,23 @@ See [sync security, recovery, and limits](docs/browser-sync.md).
 
 ## Development
 
+Use Node.js 24 and the pnpm version pinned in `package.json` (12.11.2).
+
 ```sh
-npm install
-npm run dev
+pnpm install
+pnpm run dev
 ```
 
 Useful commands:
 
 ```sh
-npm run check
-npm run test
-npm run build
-npm run package
+pnpm run check
+pnpm run test
+pnpm run build
+pnpm run package
 ```
 
-`npm run package` builds extension zips for `chrome`, `edge`, and `firefox` into `artifacts/`.
+`pnpm run package` builds extension zips for `chrome`, `edge`, and `firefox` into `artifacts/`.
 
 ## Store Assets
 
@@ -61,7 +63,7 @@ Project assets are grouped under `assets/` by lifecycle:
 Regenerate screenshots and promo tiles with:
 
 ```sh
-npm run store:screenshots
+pnpm run store:screenshots
 ```
 
 This command uses synthetic demo accounts and a local browser to render store-ready images.

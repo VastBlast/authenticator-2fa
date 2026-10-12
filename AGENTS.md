@@ -15,9 +15,9 @@ Guidance for code agents working on Authenticator - 2FA.
 - Keep shared logic testable, especially auth/import/storage/reorder/localization behavior.
 - Add or update Vitest coverage for meaningful logic changes.
 - Validate with relevant local commands before finishing:
-  - `npm run check`
-  - `npm run test`
-  - `npm run build`
+  - `pnpm run check`
+  - `pnpm run test`
+  - `pnpm run build`
 
 ## UI And UX
 
@@ -52,5 +52,5 @@ Guidance for code agents working on Authenticator - 2FA.
 
 ## Build Checks
 
-- For manifest, background, or content-script changes, inspect generated `dist/*/manifest.json` and relevant assets after `npm run build`.
+- For manifest, background, or content-script changes, inspect generated `dist/*/manifest.json` and relevant assets after `pnpm run build`.
 - Content scripts injected as files should remain self-contained unless the build is explicitly configured otherwise.

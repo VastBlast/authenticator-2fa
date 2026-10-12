@@ -23,14 +23,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
           node-version: 24
-          cache: npm
+          cache: pnpm
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Apply tag version
         shell: bash
@@ -41,17 +44,17 @@ jobs:
             exit 1
           fi
 
-          npm version "$version" --no-git-tag-version --allow-same-version
+          pnpm version "$version" --no-git-tag-version --allow-same-version
           echo "VERSION=$version" >> "$GITHUB_ENV"
 
       - name: Check and test
-        run: npm run test
+        run: pnpm run test
 
       - name: Generate icons
-        run: npm run icons
+        run: pnpm run icons
 
       - name: Build
-        run: npm run build
+        run: pnpm run build
 
       - name: Verify manifest versions
         shell: bash

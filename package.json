@@ -3,20 +3,21 @@
   "private": true,
   "version": "0.0.1",
   "type": "module",
+  "packageManager": "pnpm@12.11.2",
   "scripts": {
     "dev": "vite",
     "build": "vite build && node scripts/build-extension.mjs",
-    "build:check": "npm run check && npm run test && npm run build",
+    "build:check": "pnpm run check && pnpm run test && pnpm run build",
     "build:prod": "vite build --mode production && node scripts/build-extension.mjs",
     "preview": "vite preview",
     "icons": "node scripts/generate-icons.mjs",
-    "store:screenshots": "npm run build && node scripts/generate-store-screenshots.mjs",
+    "store:screenshots": "pnpm run build && node scripts/generate-store-screenshots.mjs",
     "lint": "oxlint --type-aware",
-    "check": "npm run lint && npm run test:types && svelte-check --tsconfig ./tsconfig.json",
-    "test": "npm run check && vitest run",
+    "check": "pnpm run lint && pnpm run test:types && svelte-check --tsconfig ./tsconfig.json",
+    "test": "pnpm run check && vitest run",
     "test:types": "tsc -p tsconfig.test.json",
     "clean": "node scripts/clean.mjs",
-    "package": "npm run clean && npm run build:prod && node scripts/package-extension.mjs"
+    "package": "pnpm run clean && pnpm run build:prod && node scripts/package-extension.mjs"
   },
   "dependencies": {
     "@lucide/svelte": "^1.18.0",

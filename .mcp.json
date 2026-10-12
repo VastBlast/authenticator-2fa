@@ -1,8 +1,8 @@
 {
   "mcpServers": {
     "svelte": {
-      "command": "npx",
-      "args": ["-y", "@sveltejs/mcp"]
+      "command": "pnpm",
+      "args": ["exec", "svelte-mcp"]
     }
   }
 }
