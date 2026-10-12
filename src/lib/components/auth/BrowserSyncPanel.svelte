@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onDestroy, tick, type Component } from 'svelte';
+  import { onDestroy, tick } from 'svelte';
   import { prefersReducedMotion } from 'svelte/motion';
   import { fade } from 'svelte/transition';
   import {
@@ -24,7 +24,7 @@
     Trash2,
     TriangleAlert,
     Unplug,
-    type IconProps
+    type LucideIcon
   } from '@lucide/svelte';
   import ViewHeader from './ViewHeader.svelte';
   import { FADE_TRANSITION, PANEL_TRANSITION, panelReveal } from './transitions';
@@ -40,7 +40,6 @@
 
   type Mode = 'idle' | 'create' | 'join';
   type Confirmation = 'stop' | 'delete';
-  type Icon = Component<IconProps>;
 
   const ERROR_MESSAGES = {
     unavailable: 'syncUnavailable',
@@ -446,7 +445,7 @@
 {/snippet}
 
 <!-- Compact rows are reminders on the status screen; full rows introduce the feature. -->
-{#snippet feature(FeatureIcon: Icon, text: string, compact: boolean)}
+{#snippet feature(FeatureIcon: LucideIcon, text: string, compact: boolean)}
   <li class="flex items-start gap-2.5">
     <FeatureIcon class={compact ? 'mt-px shrink-0 text-base-content/50' : 'mt-0.5 shrink-0 text-base-content/55'} size={compact ? 14 : 15} aria-hidden="true" />
     <span class={compact ? 'text-xs leading-snug text-base-content/65' : 'text-sm leading-snug text-base-content/80'}>{text}</span>
@@ -454,7 +453,7 @@
 {/snippet}
 
 <!-- A full-row action with a one-line explanation of its consequence. -->
-{#snippet choice(ChoiceIcon: Icon, title: string, hint: string, onclick: () => void, danger: boolean)}
+{#snippet choice(ChoiceIcon: LucideIcon, title: string, hint: string, onclick: () => void, danger: boolean)}
   <button
     class={[
       'flex w-full items-center gap-3 rounded-box border border-base-300 p-3 text-start transition-[background-color,transform] duration-150 hover:bg-base-200/50 active:scale-[0.985] disabled:pointer-events-none disabled:opacity-60 motion-reduce:active:scale-100',
@@ -502,7 +501,7 @@
   </div>
 {/snippet}
 
-{#snippet callout(CalloutIcon: Icon, text: string, tone: 'warning' | 'neutral')}
+{#snippet callout(CalloutIcon: LucideIcon, text: string, tone: 'warning' | 'neutral')}
   <div
     class={[
       'flex items-start gap-2 rounded-box border p-3 text-xs leading-snug',
