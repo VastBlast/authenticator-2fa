@@ -1,5 +1,7 @@
 <script lang="ts">
-  import { EllipsisVertical, GripVertical, RefreshCw } from '@lucide/svelte';
+  import EllipsisVertical from '@lucide/svelte/icons/ellipsis-vertical';
+  import GripVertical from '@lucide/svelte/icons/grip-vertical';
+  import RefreshCw from '@lucide/svelte/icons/refresh-cw';
   import CountdownRing from './CountdownRing.svelte';
   import { authenticatorVault as vault } from '../../state/authenticator.svelte';
   import { tr } from '../../i18n/messages';

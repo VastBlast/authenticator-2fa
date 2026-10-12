@@ -1,16 +1,14 @@
 <script lang="ts">
   import { fade } from 'svelte/transition';
-  import {
-    ChevronRight,
-    Cloud,
-    DatabaseBackup,
-    KeyRound,
-    Monitor,
-    Moon,
-    ShieldCheck,
-    Sun,
-    Trash2
-  } from '@lucide/svelte';
+  import ChevronRight from '@lucide/svelte/icons/chevron-right';
+  import Cloud from '@lucide/svelte/icons/cloud';
+  import DatabaseBackup from '@lucide/svelte/icons/database-backup';
+  import KeyRound from '@lucide/svelte/icons/key-round';
+  import Monitor from '@lucide/svelte/icons/monitor';
+  import Moon from '@lucide/svelte/icons/moon';
+  import ShieldCheck from '@lucide/svelte/icons/shield-check';
+  import Sun from '@lucide/svelte/icons/sun';
+  import Trash from '@lucide/svelte/icons/trash';
   import ImportExportPanel from './ImportExportPanel.svelte';
   import BrowserSyncPanel from './BrowserSyncPanel.svelte';
   import Toast from './Toast.svelte';
@@ -475,7 +473,7 @@
           <p class="text-xs text-base-content/60">{tr('syncLocalDeleteHint')}</p>
         {/if}
         <button class="btn btn-error btn-block btn-sm" type="button" onclick={resetVault} disabled={securityPending || resetConfirmation !== 'DELETE'}>
-          <Trash2 size={16} aria-hidden="true" />
+          <Trash size={16} aria-hidden="true" />
           {tr('deleteVault')}
         </button>
       </div>

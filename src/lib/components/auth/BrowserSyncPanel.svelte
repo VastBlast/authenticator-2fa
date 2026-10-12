@@ -2,30 +2,28 @@
   import { onDestroy, tick } from 'svelte';
   import { prefersReducedMotion } from 'svelte/motion';
   import { fade } from 'svelte/transition';
-  import {
-    Check,
-    ChevronRight,
-    CircleAlert,
-    Cloud,
-    CloudAlert,
-    CloudCheck,
-    CloudOff,
-    CloudSync,
-    Copy,
-    Eye,
-    EyeOff,
-    Info,
-    KeyRound,
-    ListChecks,
-    LockKeyhole,
-    Plus,
-    RefreshCw,
-    ShieldCheck,
-    Trash2,
-    TriangleAlert,
-    Unplug,
-    type LucideIcon
-  } from '@lucide/svelte';
+  import type { LucideIcon } from '@lucide/svelte';
+  import Check from '@lucide/svelte/icons/check';
+  import ChevronRight from '@lucide/svelte/icons/chevron-right';
+  import CircleAlert from '@lucide/svelte/icons/circle-alert';
+  import Cloud from '@lucide/svelte/icons/cloud';
+  import CloudAlert from '@lucide/svelte/icons/cloud-alert';
+  import CloudCheck from '@lucide/svelte/icons/cloud-check';
+  import CloudOff from '@lucide/svelte/icons/cloud-off';
+  import CloudSync from '@lucide/svelte/icons/cloud-sync';
+  import Copy from '@lucide/svelte/icons/copy';
+  import Eye from '@lucide/svelte/icons/eye';
+  import EyeOff from '@lucide/svelte/icons/eye-off';
+  import Info from '@lucide/svelte/icons/info';
+  import KeyRound from '@lucide/svelte/icons/key-round';
+  import ListChecks from '@lucide/svelte/icons/list-checks';
+  import LockKeyhole from '@lucide/svelte/icons/lock-keyhole';
+  import Plus from '@lucide/svelte/icons/plus';
+  import RefreshCw from '@lucide/svelte/icons/refresh-cw';
+  import ShieldCheck from '@lucide/svelte/icons/shield-check';
+  import Trash from '@lucide/svelte/icons/trash';
+  import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
+  import Unplug from '@lucide/svelte/icons/unplug';
   import ViewHeader from './ViewHeader.svelte';
   import { FADE_TRANSITION, PANEL_TRANSITION, panelReveal } from './transitions';
   import { getSyncStatusKey, getSyncStatusTone, SYNC_STATUS_DOT } from './syncStatus';
@@ -439,7 +437,7 @@
       </div>
     {:else}
       {@render choice(Unplug, tr('syncStop'), tr('syncStopDescription'), () => (confirmation = 'stop'), false)}
-      {@render choice(Trash2, tr('syncDelete'), tr('syncDeleteDescription'), () => (confirmation = 'delete'), true)}
+      {@render choice(Trash, tr('syncDelete'), tr('syncDeleteDescription'), () => (confirmation = 'delete'), true)}
     {/if}
   </section>
 {/snippet}

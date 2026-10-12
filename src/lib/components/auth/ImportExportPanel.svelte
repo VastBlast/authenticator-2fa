@@ -1,6 +1,7 @@
 <script lang="ts">
   import { fade } from 'svelte/transition';
-  import { Download, Upload } from '@lucide/svelte';
+  import Download from '@lucide/svelte/icons/download';
+  import Upload from '@lucide/svelte/icons/upload';
   import ExportPanel from './ExportPanel.svelte';
   import ImportPanel from './ImportPanel.svelte';
   import ViewHeader from './ViewHeader.svelte';

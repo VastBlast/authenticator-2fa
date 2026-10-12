@@ -1,6 +1,9 @@
 <script lang="ts">
   import { fade } from 'svelte/transition';
-  import { CircleAlert, CircleCheck, FileLock2, Upload } from '@lucide/svelte';
+  import CircleAlert from '@lucide/svelte/icons/circle-alert';
+  import CircleCheck from '@lucide/svelte/icons/circle-check';
+  import FileLock from '@lucide/svelte/icons/file-lock';
+  import Upload from '@lucide/svelte/icons/upload';
   import PasswordField from './PasswordField.svelte';
   import { getImportFailureMessage } from './importFeedback';
   import { FADE_TRANSITION } from './transitions';
@@ -191,7 +194,7 @@
       {@attach focusPassword}
     >
       <div class="flex items-center gap-2">
-        <FileLock2 class="shrink-0 text-base-content/55" size={20} aria-hidden="true" />
+        <FileLock class="shrink-0 text-base-content/55" size={20} aria-hidden="true" />
         <div class="min-w-0 grow">
           <p class="truncate text-sm font-semibold">{currentBackup.name}</p>
           <p class="text-xs text-base-content/60">{tr('importEncryptedPrompt')}</p>

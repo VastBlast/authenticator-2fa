@@ -1,6 +1,10 @@
 <script lang="ts">
   import { fade } from 'svelte/transition';
-  import { CircleAlert, CircleCheck, Download, FileText, ShieldCheck } from '@lucide/svelte';
+  import CircleAlert from '@lucide/svelte/icons/circle-alert';
+  import CircleCheck from '@lucide/svelte/icons/circle-check';
+  import Download from '@lucide/svelte/icons/download';
+  import FileText from '@lucide/svelte/icons/file-text';
+  import ShieldCheck from '@lucide/svelte/icons/shield-check';
   import PasswordField from './PasswordField.svelte';
   import { FADE_TRANSITION, panelReveal } from './transitions';
   import { createEncryptedBackupFile, createPlainOtpAuthFile, downloadFile } from '../../auth/backup';

@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { Lock, Settings } from '@lucide/svelte';
+  import Lock from '@lucide/svelte/icons/lock';
+  import Settings from '@lucide/svelte/icons/settings';
   import appIconUrl from '../../../../assets/brand/icons/authenticator-2fa-icon.svg?url';
   import { authenticatorVault as vault } from '../../state/authenticator.svelte';
   import { tr } from '../../i18n/messages';

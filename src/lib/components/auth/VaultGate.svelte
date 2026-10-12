@@ -1,7 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { fade } from 'svelte/transition';
-  import { KeyRound, LockKeyhole } from '@lucide/svelte';
+  import KeyRound from '@lucide/svelte/icons/key-round';
+  import LockKeyhole from '@lucide/svelte/icons/lock-keyhole';
   import { FADE_TRANSITION } from './transitions';
   import { tr } from '../../i18n/messages';
 

@@ -2,21 +2,19 @@
   import { onDestroy, onMount, tick, untrack } from 'svelte';
   import { prefersReducedMotion } from 'svelte/motion';
   import { fade } from 'svelte/transition';
-  import {
-    ClipboardPaste,
-    ChevronDown,
-    Download,
-    ImageUp,
-    KeyRound,
-    Pencil,
-    Plus,
-    QrCode,
-    ScanLine,
-    Search,
-    Trash2,
-    Upload,
-    X
-  } from '@lucide/svelte';
+  import ClipboardPaste from '@lucide/svelte/icons/clipboard-paste';
+  import ChevronDown from '@lucide/svelte/icons/chevron-down';
+  import Download from '@lucide/svelte/icons/download';
+  import ImageUp from '@lucide/svelte/icons/image-up';
+  import KeyRound from '@lucide/svelte/icons/key-round';
+  import Pencil from '@lucide/svelte/icons/pencil';
+  import Plus from '@lucide/svelte/icons/plus';
+  import QrCode from '@lucide/svelte/icons/qr-code';
+  import ScanLine from '@lucide/svelte/icons/scan-line';
+  import Search from '@lucide/svelte/icons/search';
+  import Trash from '@lucide/svelte/icons/trash';
+  import Upload from '@lucide/svelte/icons/upload';
+  import X from '@lucide/svelte/icons/x';
   import AccountForm from './lib/components/auth/AccountForm.svelte';
   import AccountRow from './lib/components/auth/AccountRow.svelte';
   import AppBar from './lib/components/auth/AppBar.svelte';
@@ -1193,7 +1191,7 @@
             actionsFor = null;
           }}
         >
-          <Trash2 size={18} aria-hidden="true" />{tr('delete')}
+          <Trash size={18} aria-hidden="true" />{tr('delete')}
         </button>
       </li>
     </ul>

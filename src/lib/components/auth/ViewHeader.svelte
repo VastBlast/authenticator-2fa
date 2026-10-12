@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
-  import { ArrowLeft } from '@lucide/svelte';
+  import ArrowLeft from '@lucide/svelte/icons/arrow-left';
   import { tr } from '../../i18n/messages';
 
   interface Props {

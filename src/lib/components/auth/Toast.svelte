@@ -1,7 +1,8 @@
 <script lang="ts">
   import { onDestroy, untrack } from 'svelte';
   import { prefersReducedMotion } from 'svelte/motion';
-  import { CircleAlert, CircleCheck } from '@lucide/svelte';
+  import CircleAlert from '@lucide/svelte/icons/circle-alert';
+  import CircleCheck from '@lucide/svelte/icons/circle-check';
 
   type Variant = 'notice' | 'error';
 
