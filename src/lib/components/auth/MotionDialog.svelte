@@ -23,6 +23,11 @@
   }: Props = $props();
   let outroing = false;
 
+  function openModal(dialog: HTMLDialogElement) {
+    dialog.showModal();
+    return () => dialog.close();
+  }
+
   function closeFromCancel(event: Event) {
     event.preventDefault();
     onclose();
@@ -41,8 +46,8 @@
 
 <dialog
   class={['modal modal-open motion-dialog', placement === 'sheet' ? 'modal-bottom' : 'modal-middle']}
-  open
   oncancel={closeFromCancel}
+  {@attach openModal}
 >
   <div
     class={['modal-box motion-dialog-surface', surfaceClass]}

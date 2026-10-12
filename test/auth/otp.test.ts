@@ -77,6 +77,12 @@ test('otpauth parsing normalizes URL-encoded padding and common secret formattin
   await expect(generateOtpCode(account, 59_000)).resolves.toMatchObject({ value: '850668' });
 });
 
+test.each(['C++', 'Team + Work', 'Test %20'])('otpauth export and import preserves issuer %s', (issuer) => {
+  const account = createAccount({ issuer, label: 'Alice', secret: rfcSecret });
+
+  expect(parseOtpAuthUri(accountToOtpAuthUri(account))).toMatchObject({ issuer, label: 'Alice' });
+});
+
 test.each([
   ['digits=0', 'Digits must be between 5 and 10.'],
   ['period=0', 'Period must be between 5 and 300 seconds.']

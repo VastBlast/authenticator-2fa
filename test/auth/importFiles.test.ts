@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'vitest';
 import { createEncryptedBackupFile } from '../../src/lib/auth/backup';
 import { MAX_IMPORT_FILES, readImportFiles } from '../../src/lib/auth/importFiles';
+import { importAnyText } from '../../src/lib/auth/importText';
+import { createAccount } from '../../src/lib/auth/otp';
 import type { AppSettings } from '../../src/lib/auth/types';
 import { DEFAULT_SETTINGS } from '../../src/lib/auth/types';
 
@@ -9,14 +11,20 @@ const PASSWORD = 'correct horse battery staple';
 const settings: AppSettings = { ...DEFAULT_SETTINGS };
 
 describe('readImportFiles', () => {
-  test('collects plain text files into a single importable blob', async () => {
-    const selection = await readImportFiles([
+  test.each([false, true])('keeps JSON and URI imports valid in either file order (reversed: %s)', async (reverse) => {
+    const account = createAccount({ label: 'Bob', secret: 'JBSWY3DPEHPK3PXP', type: 'hotp', counter: 42 });
+    const files = [
       textFile('codes.txt', ALICE_URI),
       textFile('empty.txt', '   '),
-      textFile('vault.json', '{"accounts":[]}')
-    ]);
+      textFile('vault.json', JSON.stringify({ accounts: [account] }, null, 2)),
+      textFile('empty-vault.json', '{"accounts":[]}')
+    ];
+    const selection = await readImportFiles(reverse ? files.reverse() : files);
+    const accounts = selection.texts.flatMap((text) => importAnyText(text).accounts);
 
-    expect(selection.text).toBe(`${ALICE_URI}\n{"accounts":[]}`);
+    expect(accounts).toHaveLength(2);
+    expect(accounts).toContainEqual(account);
+    expect(accounts.some(({ label }) => label === 'alice@example.com')).toBe(true);
     expect(selection.encrypted).toEqual([]);
     expect(selection.errors).toEqual([]);
   });
@@ -28,7 +36,7 @@ describe('readImportFiles', () => {
       textFile('codes.txt', ALICE_URI)
     ]);
 
-    expect(selection.text).toBe(ALICE_URI);
+    expect(selection.texts).toEqual([ALICE_URI]);
     expect(selection.encrypted).toHaveLength(1);
     expect(selection.encrypted[0].name).toBe('backup.json');
     expect(selection.encrypted[0].text).toContain('2fa-authenticator');
@@ -40,7 +48,7 @@ describe('readImportFiles', () => {
       textFile('codes.txt', ALICE_URI)
     ]);
 
-    expect(selection.text).toBe(ALICE_URI);
+    expect(selection.texts).toEqual([ALICE_URI]);
     expect(selection.errors).toEqual(['huge.txt: File is too large to import.']);
   });
 
@@ -50,7 +58,7 @@ describe('readImportFiles', () => {
       new File([new Uint8Array(8)], 'screenshot.png', { type: 'image/png' })
     ]);
 
-    expect(selection.text).toBe(ALICE_URI);
+    expect(selection.texts).toEqual([ALICE_URI]);
     expect(selection.errors).toHaveLength(1);
     expect(selection.encrypted).toEqual([]);
   });

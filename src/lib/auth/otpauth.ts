@@ -57,11 +57,7 @@ export function parseOtpAuthUri(uri: string): AuthenticatorAccount {
       ? 'steam'
       : parseOtpType(url.hostname.toLowerCase());
   const labelPart = decodeURIComponent(url.pathname.replace(/^\/+/, ''));
-  const issuerParameter = url.searchParams.get('issuer');
-  const { issuer, label } = parseOtpLabel(
-    labelPart,
-    url.searchParams.has('issuer') ? decodeParameter(issuerParameter) : null
-  );
+  const { issuer, label } = parseOtpLabel(labelPart, url.searchParams.get('issuer'));
   const secret = url.searchParams.get('secret');
 
   if (!secret) {
@@ -302,11 +298,4 @@ function parseOptionalNonNegativeInteger(value: string | null, parameter: string
     throw new Error(`${parameter} must be a non-negative whole number.`);
   }
   return numeric;
-}
-
-function decodeParameter(value: string | null): string {
-  if (!value) {
-    return '';
-  }
-  return value.replace(/\+/g, ' ').trim();
 }

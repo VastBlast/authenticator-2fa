@@ -49,18 +49,22 @@
 
     void run(async () => {
       const selection = await readImportFiles(files);
-      const result = selection.text
-        ? await onimport(selection.text)
-        : { imported: 0, skipped: 0, errors: [] };
+      const result: ImportSummary = { imported: 0, skipped: 0, errors: selection.errors };
+      for (const text of selection.texts) {
+        try {
+          const imported = await onimport(text);
+          result.imported += imported.imported;
+          result.skipped += imported.skipped;
+          result.errors.push(...imported.errors);
+        } catch (cause) {
+          result.errors.push(getErrorMessage(cause, tr('importFailed')));
+        }
+      }
 
       // Locked backups on their own are not a result yet: they still need a
       // password, and the prompt below says so.
-      if (selection.text || selection.errors.length > 0 || selection.encrypted.length === 0) {
-        addToSummary({
-          imported: result.imported,
-          skipped: result.skipped,
-          errors: [...result.errors, ...selection.errors]
-        });
+      if (selection.texts.length > 0 || result.errors.length > 0 || selection.encrypted.length === 0) {
+        addToSummary(result);
       }
 
       password = '';

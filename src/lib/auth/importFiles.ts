@@ -17,8 +17,8 @@ export interface EncryptedBackupFile {
 }
 
 export interface ImportFileSelection {
-  /** Importable text collected from every file that needs no password. */
-  text: string;
+  /** Separate documents so JSON files remain valid alongside other imports. */
+  texts: string[];
   /** Backups that still need a password before they can be imported. */
   encrypted: EncryptedBackupFile[];
   /** Reasons individual files were left out. */
@@ -27,7 +27,7 @@ export interface ImportFileSelection {
 
 /**
  * Turns a mixed drop of QR images, otpauth/JSON text, and encrypted backups
- * into one importable blob of text plus the backups that need a password.
+ * into importable documents plus the backups that need a password.
  */
 export async function readImportFiles(files: File[]): Promise<ImportFileSelection> {
   if (files.length > MAX_IMPORT_FILES) {
@@ -72,7 +72,7 @@ export async function readImportFiles(files: File[]): Promise<ImportFileSelectio
     }
   }
 
-  return { text: texts.join('\n'), encrypted, errors };
+  return { texts, encrypted, errors };
 }
 
 function isImageFile(file: File): boolean {
