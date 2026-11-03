@@ -2,8 +2,10 @@
   import { fade } from 'svelte/transition';
   import CircleAlert from '@lucide/svelte/icons/circle-alert';
   import CircleCheck from '@lucide/svelte/icons/circle-check';
+  import ExternalLink from '@lucide/svelte/icons/external-link';
   import FileLock from '@lucide/svelte/icons/file-lock';
   import Upload from '@lucide/svelte/icons/upload';
+  import FilePickerButton from './FilePickerButton.svelte';
   import PasswordField from './PasswordField.svelte';
   import { getImportFailureMessage } from './importFeedback';
   import { FADE_TRANSITION } from './transitions';
@@ -28,7 +30,6 @@
 
   let { onimport, onimportencrypted }: Props = $props();
 
-  let fileInput = $state<HTMLInputElement | null>(null);
   let pasteText = $state('');
   let password = $state('');
   let passwordError = $state('');
@@ -141,11 +142,9 @@
     };
   }
 
-  function selectFiles(event: Event & { currentTarget: HTMLInputElement }) {
-    const files = Array.from(event.currentTarget.files ?? []);
-    // Reset so picking the same file twice still fires a change event.
-    event.currentTarget.value = '';
-    importFiles(files);
+  function showError(message: string) {
+    summary = null;
+    error = message;
   }
 
   // Dropping anywhere on this screen imports, so a near miss still works.
@@ -227,35 +226,41 @@
       </div>
     </form>
   {:else}
-    <button
+    <FilePickerButton
       class={[
         'grid w-full cursor-pointer place-items-center gap-1.5 rounded-box border-2 border-dashed px-4 py-7 text-center transition-colors',
         dropActive
           ? 'border-primary bg-primary/10'
           : 'border-base-300 bg-base-200/40 hover:border-base-content/25 hover:bg-base-200/70'
       ]}
-      type="button"
-      disabled={busy}
-      onclick={() => fileInput?.click()}
-    >
-      <span class="grid size-11 place-items-center rounded-full bg-base-100 text-base-content/55 shadow-sm">
-        {#if busy}
-          <span class="loading loading-spinner loading-sm"></span>
-        {:else}
-          <Upload size={19} aria-hidden="true" />
-        {/if}
-      </span>
-      <span class="text-sm font-semibold">{busy ? tr('importing') : tr('importDropTitle')}</span>
-      <span class="max-w-64 text-xs leading-snug text-base-content/60">{tr('importDropHint')}</span>
-    </button>
-    <input
-      class="hidden"
-      bind:this={fileInput}
-      type="file"
       accept={FILE_ACCEPT}
-      multiple
-      onchange={selectFiles}
-    />
+      route="import"
+      disabled={busy}
+      onfiles={importFiles}
+      onerror={showError}
+    >
+      {#snippet children(opensWindow)}
+        <span class="grid size-11 place-items-center rounded-full bg-base-100 text-base-content/55 shadow-sm">
+          {#if busy}
+            <span class="loading loading-spinner loading-sm"></span>
+          {:else}
+            <Upload size={19} aria-hidden="true" />
+          {/if}
+        </span>
+        <span class="flex items-center gap-1.5 text-sm font-semibold">
+          {#if busy}
+            {tr('importing')}
+          {:else if opensWindow}
+            <!-- Dropping needs focus elsewhere, which closes the popup. -->
+            {tr('importChooseFiles')}
+            <ExternalLink class="text-base-content/55" size={14} aria-hidden="true" />
+          {:else}
+            {tr('importDropTitle')}
+          {/if}
+        </span>
+        <span class="max-w-64 text-xs leading-snug text-base-content/60">{tr('importDropHint')}</span>
+      {/snippet}
+    </FilePickerButton>
   {/if}
 
   {#if summary}

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import { fade } from 'svelte/transition';
   import ChevronRight from '@lucide/svelte/icons/chevron-right';
   import Cloud from '@lucide/svelte/icons/cloud';
@@ -20,6 +21,8 @@
   import type { AppSettings, ThemePreference } from '../../auth/types';
 
   interface Props {
+    /** Subscreen shown when settings first open. */
+    initialPanel?: 'transfer';
     onback: (event?: MouseEvent) => void;
     oncontextualsortchange: (enabled: boolean) => void | Promise<void>;
   }
@@ -30,7 +33,7 @@
     { theme: 'dark', icon: Moon }
   ] as const;
 
-  let { onback, oncontextualsortchange }: Props = $props();
+  let { initialPanel, onback, oncontextualsortchange }: Props = $props();
 
   type Intent = 'idle' | 'enabling' | 'disabling' | 'changing';
 
@@ -38,7 +41,7 @@
   let newPassword = $state('');
   let confirmNewPassword = $state('');
   let resetConfirmation = $state('');
-  let showTransfer = $state(false);
+  let showTransfer = $state(untrack(() => initialPanel === 'transfer'));
   let showSync = $state(false);
   let returnToSync = $state(false);
   let sortSaving = $state(false);

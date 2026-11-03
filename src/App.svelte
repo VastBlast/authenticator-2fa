@@ -5,6 +5,7 @@
   import ClipboardPaste from '@lucide/svelte/icons/clipboard-paste';
   import ChevronDown from '@lucide/svelte/icons/chevron-down';
   import Download from '@lucide/svelte/icons/download';
+  import ExternalLink from '@lucide/svelte/icons/external-link';
   import ImageUp from '@lucide/svelte/icons/image-up';
   import KeyRound from '@lucide/svelte/icons/key-round';
   import Pencil from '@lucide/svelte/icons/pencil';
@@ -18,6 +19,7 @@
   import AccountForm from './lib/components/auth/AccountForm.svelte';
   import AccountRow from './lib/components/auth/AccountRow.svelte';
   import AppBar from './lib/components/auth/AppBar.svelte';
+  import FilePickerButton from './lib/components/auth/FilePickerButton.svelte';
   import MotionDialog from './lib/components/auth/MotionDialog.svelte';
   import SettingsView from './lib/components/auth/SettingsView.svelte';
   import Toast from './lib/components/auth/Toast.svelte';
@@ -44,6 +46,7 @@
   } from './lib/auth/accountRanking';
   import { decodeQrFiles, renderQrDataUrl } from './lib/auth/qr';
   import type { AccountDraft, AuthenticatorAccount, ImportResult } from './lib/auth/types';
+  import { getPageWindowId, readAppRoute } from './lib/extension/appWindow';
   import { authenticatorVault as vault } from './lib/state/authenticator.svelte';
   import { tr } from './lib/i18n/messages';
 
@@ -129,6 +132,9 @@
   let allCodesRevealed = $state(false);
   let pageContextRequest = 0;
   let browserWindowId: number | undefined;
+  // Set when the popup handed this window a task it could not finish itself.
+  let pendingRoute = readAppRoute(window.location.href);
+  let settingsPanel = $state<'transfer'>();
 
   const manualSort = $derived(vault.settings.accountSortMode === 'manual');
   const pageRanking = $derived.by(() =>
@@ -154,6 +160,7 @@
   function showSettings(event: MouseEvent) {
     cleanupAccountDrag();
     animateViewTransition = event.detail > 0;
+    settingsPanel = undefined;
     view = 'settings';
   }
 
@@ -256,12 +263,13 @@
 
   async function initializeApp() {
     try {
-      browserWindowId = await getCurrentBrowserWindowId();
+      browserWindowId = await getPageWindowId();
       await vault.initialize();
       await refreshPageContext();
     } finally {
       pageContextReady = true;
     }
+    openPendingRoute();
   }
 
   async function createVault(password: string) {
@@ -272,6 +280,7 @@
     } finally {
       pageContextReady = true;
     }
+    openPendingRoute();
   }
 
   async function unlockVault(password: string) {
@@ -281,6 +290,23 @@
       await refreshPageContext();
     } finally {
       pageContextReady = true;
+    }
+    openPendingRoute();
+  }
+
+  /** Opens the screen this window was created for, once the vault is usable. */
+  function openPendingRoute() {
+    const route = pendingRoute;
+    if (!route || vault.locked) {
+      return;
+    }
+
+    pendingRoute = null;
+    if (route === 'add-qr') {
+      openAddDialog('qr');
+    } else {
+      settingsPanel = 'transfer';
+      view = 'settings';
     }
   }
 
@@ -397,7 +423,11 @@
     }
 
     try {
-      const response = await sendRuntimeMessage({ type: 'paste-code', code: value });
+      const response = await sendRuntimeMessage({
+        type: 'paste-code',
+        code: value,
+        windowId: browserWindowId
+      });
       vault.showNotice(response.pasted ? tr('copiedAndPasted') : tr('copied'));
     } catch {
       vault.showNotice(tr('copied'));
@@ -421,15 +451,8 @@
     qrDataUrl = '';
   }
 
-  async function importAddQrImages(event: Event) {
-    const target = event.target as HTMLInputElement;
-    const files = Array.from(target.files ?? []);
-    target.value = '';
-    if (files.length === 0) {
-      return;
-    }
-
-    await runAddImport(async () => {
+  function importQrImages(files: File[]) {
+    void runAddImport(async () => {
       const decoded = await decodeQrFiles(files);
       return vault.importText(decoded.join('\n'));
     });
@@ -482,7 +505,7 @@
 
     pageScanState = 'starting';
     try {
-      await sendRuntimeMessage({ type: 'start-page-scan' });
+      await sendRuntimeMessage({ type: 'start-page-scan', windowId: browserWindowId });
       pageScanState = 'waiting';
       pageScanMessage = '';
       showAdd = false;
@@ -519,18 +542,6 @@
         } else {
           resolve(response ?? { ok: true });
         }
-      });
-    });
-  }
-
-  function getCurrentBrowserWindowId(): Promise<number | undefined> {
-    if (typeof chrome === 'undefined' || typeof chrome.windows?.getCurrent !== 'function') {
-      return Promise.resolve(undefined);
-    }
-
-    return new Promise((resolve) => {
-      chrome.windows.getCurrent((currentWindow) => {
-        resolve(chrome.runtime.lastError ? undefined : currentWindow.id);
       });
     });
   }
@@ -1028,7 +1039,11 @@
           class="absolute inset-0 z-10 flex min-h-0 flex-col overflow-hidden bg-base-100"
           transition:viewTransition={{ x: 20, instant: !animateViewTransition }}
         >
-          <SettingsView onback={showCodes} oncontextualsortchange={setContextualSorting} />
+          <SettingsView
+            initialPanel={settingsPanel}
+            onback={showCodes}
+            oncontextualsortchange={setContextualSorting}
+          />
         </div>
       {:else}
         <div
@@ -1240,20 +1255,22 @@
           {pageScanState === 'starting' ? tr('scanPage') : tr('scanPageStart')}
         </button>
 
-        <label class="grid gap-1 text-sm font-medium">
-          <span class="flex items-center gap-2">
+        <FilePickerButton
+          class="btn btn-block"
+          accept="image/*"
+          route="add-qr"
+          disabled={addBusy}
+          onfiles={importQrImages}
+          onerror={(message) => (addError = message)}
+        >
+          {#snippet children(opensWindow)}
             <ImageUp size={16} aria-hidden="true" />
-            {tr('qrImage')}
-          </span>
-          <input
-            class="file-input file-input-sm w-full"
-            type="file"
-            accept="image/*"
-            multiple
-            disabled={addBusy}
-            onchange={importAddQrImages}
-          />
-        </label>
+            {tr('uploadQrImage')}
+            {#if opensWindow}
+              <ExternalLink class="opacity-60" size={14} aria-hidden="true" />
+            {/if}
+          {/snippet}
+        </FilePickerButton>
 
         {#if pageScanMessage}
           <div class="alert alert-info py-2 text-sm" transition:fade={FADE_TRANSITION} role="status">{pageScanMessage}</div>

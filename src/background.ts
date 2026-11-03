@@ -15,12 +15,12 @@ interface MessageResponse {
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type === 'paste-code') {
-    respond(sendResponse, pasteCodeIntoActivePage(message.code));
+    respond(sendResponse, pasteCodeIntoActivePage(message.code, readWindowId(message.windowId)));
     return true;
   }
 
   if (message?.type === 'start-page-scan') {
-    respond(sendResponse, startPageScan());
+    respond(sendResponse, startPageScan(readWindowId(message.windowId)));
     return true;
   }
 
@@ -89,8 +89,8 @@ function notifyActivePageChanged(windowId: number, clearCurrent: boolean): void 
   sendRuntimeMessage({ type: 'active-page-context-changed', windowId, clearCurrent });
 }
 
-async function startPageScan(): Promise<void> {
-  const tab = await getActiveTab();
+async function startPageScan(windowId: number | undefined): Promise<void> {
+  const tab = await getActiveTab(windowId);
   if (!tab?.id) {
     throw new Error('No active tab is available to scan.');
   }
@@ -103,12 +103,15 @@ async function startPageScan(): Promise<void> {
   await sendTabMessage(tab.id, { type: 'page-scan:start' });
 }
 
-async function pasteCodeIntoActivePage(code: unknown): Promise<Partial<MessageResponse>> {
+async function pasteCodeIntoActivePage(
+  code: unknown,
+  windowId: number | undefined
+): Promise<Partial<MessageResponse>> {
   if (typeof code !== 'string' || code.length === 0 || code.length > 32) {
     throw new Error('Auto-paste code is invalid.');
   }
 
-  const tab = await getActiveTab();
+  const tab = await getActiveTab(windowId);
   if (!tab?.id) {
     throw new Error('No active tab is available for auto-paste.');
   }
