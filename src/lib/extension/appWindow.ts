@@ -1,4 +1,4 @@
-import { isAndroid } from './platform';
+import { getFirefoxVersion, isAndroid } from './platform';
 
 /** Screens the app can open on directly, for tasks handed over from the popup. */
 const APP_ROUTES = ['add-qr', 'import'] as const;
@@ -9,7 +9,10 @@ const ROUTE_PARAM = 'open';
 const PAGE_WINDOW_PARAM = 'window';
 // Outer size, so the 400×532 popup layout fits alongside the window frame.
 const APP_WINDOW_SIZE = { width: 440, height: 680 } as const;
-const OPEN_WINDOW_FAILED = 'Could not open a new window.';
+const OPEN_PAGE_FAILED = 'Could not open a new window or tab.';
+// Firefox for Android hands files picked in a popup to the page from this
+// version on (bug 1962923); earlier versions silently drop them.
+const FIREFOX_ANDROID_POPUP_FILES_VERSION = 153;
 
 /** User-Agent Client Hints, which only Chromium-based browsers provide. */
 interface UserAgentData {
@@ -17,29 +20,35 @@ interface UserAgentData {
   platform: string;
 }
 
-let popupWindow: boolean | undefined;
+/** Where choosing files continues when this page cannot receive the files. */
+export type FilePickerHandoff = 'window' | 'tab';
 
-/**
- * Finds out whether this page is a desktop toolbar popup: a small window that
- * the browser sizes to the page and closes whenever it loses focus. Android
- * browsers show the popup full screen instead, where it acts like any other
- * page. Pages run this once before rendering, which later checks rely on.
- */
-export async function detectPopupWindow(): Promise<boolean> {
-  popupWindow = isToolbarPopup() && !(await isAndroid());
-  return popupWindow;
+/** How the browser shows this page. */
+export interface PageSurface {
+  /**
+   * A desktop toolbar popup: a small window that the browser sizes to the
+   * page and closes whenever it loses focus. Android browsers show the popup
+   * full screen instead, where it acts like any other page.
+   */
+  popupWindow: boolean;
+  /** Where choosing files continues, or null where this page picks them itself. */
+  filePickerHandoff: FilePickerHandoff | null;
 }
 
-/**
- * Whether choosing files here has to continue in a separate window. A popup
- * window closes when a native file picker takes focus, destroying the page
- * before the picker can report back, except in Chromium on Windows.
- */
-export function needsFilePickerWindow(): boolean {
-  if (popupWindow === undefined) {
-    throw new Error('detectPopupWindow() has to finish before the app renders.');
+let surface: PageSurface | undefined;
+
+/** Finds out how the browser shows this page. Pages run this once before rendering. */
+export async function detectPageSurface(): Promise<PageSurface> {
+  surface = await readPageSurface();
+  return surface;
+}
+
+/** Where choosing files has to continue, or null when this page can pick them itself. */
+export function getFilePickerHandoff(): FilePickerHandoff | null {
+  if (!surface) {
+    throw new Error('detectPageSurface() has to finish before the app renders.');
   }
-  return popupWindow && !isChromiumOnWindows();
+  return surface.filePickerHandoff;
 }
 
 /** Route a page URL asks to open on, ignoring anything unrecognized. */
@@ -68,11 +77,10 @@ export function getPageWindowId(): Promise<number | undefined> {
 }
 
 /**
- * Continues on `route` in a separate extension window, which stays open while
- * native dialogs have focus and keeps acting on this page's browser window,
- * then closes this popup window.
+ * Continues on `route` in a separate extension window or tab, which can pick
+ * files and keeps acting on this page's browser window, then closes this popup.
  */
-export async function openAppWindow(route: AppRoute): Promise<void> {
+export async function openAppPage(route: AppRoute, target: FilePickerHandoff): Promise<void> {
   const url = new URL(window.location.href);
   url.search = new URLSearchParams({ [ROUTE_PARAM]: route }).toString();
   url.hash = '';
@@ -82,16 +90,39 @@ export async function openAppWindow(route: AppRoute): Promise<void> {
   }
 
   await new Promise<void>((resolve, reject) => {
-    chrome.windows.create({ url: url.href, type: 'popup', ...APP_WINDOW_SIZE }, () => {
+    const settle = () => {
       const error = chrome.runtime.lastError;
       if (error) {
-        reject(new Error(error.message || OPEN_WINDOW_FAILED));
+        reject(new Error(error.message || OPEN_PAGE_FAILED));
       } else {
         resolve();
       }
-    });
+    };
+
+    if (target === 'window') {
+      chrome.windows.create({ url: url.href, type: 'popup', ...APP_WINDOW_SIZE }, settle);
+    } else {
+      chrome.tabs.create({ url: url.href }, settle);
+    }
   });
   window.close();
+}
+
+async function readPageSurface(): Promise<PageSurface> {
+  if (!isToolbarPopup()) {
+    return { popupWindow: false, filePickerHandoff: null };
+  }
+
+  if (!(await isAndroid())) {
+    // The popup window closes when a native file picker takes focus, destroying
+    // the page before the picker can report back, except in Chromium on Windows.
+    return { popupWindow: true, filePickerHandoff: isChromiumOnWindows() ? null : 'window' };
+  }
+
+  // Android browsers have tabs but no windows to continue in.
+  const firefoxVersion = await getFirefoxVersion();
+  const dropsFiles = firefoxVersion !== undefined && firefoxVersion < FIREFOX_ANDROID_POPUP_FILES_VERSION;
+  return { popupWindow: false, filePickerHandoff: dropsFiles ? 'tab' : null };
 }
 
 function isToolbarPopup(): boolean {

@@ -2,32 +2,33 @@
   import type { Snippet } from 'svelte';
   import type { ClassValue } from 'svelte/elements';
   import { getErrorMessage } from '../../auth/errors';
-  import { needsFilePickerWindow, openAppWindow, type AppRoute } from '../../extension/appWindow';
+  import { getFilePickerHandoff, openAppPage, type AppRoute } from '../../extension/appWindow';
   import { tr } from '../../i18n/messages';
 
   interface Props {
     accept: string;
-    /** Screen that continues in its own window when this page cannot host the picker. */
+    /** Screen that continues in its own window or tab when this page cannot receive files. */
     route: AppRoute;
     class?: ClassValue;
     disabled?: boolean;
     onfiles: (files: File[]) => void;
     onerror: (message: string) => void;
-    /** Receives whether choosing files opens a new window. */
-    children: Snippet<[opensWindow: boolean]>;
+    /** Receives whether choosing files opens a new window or tab. */
+    children: Snippet<[opensElsewhere: boolean]>;
   }
 
   let { accept, route, class: className, disabled = false, onfiles, onerror, children }: Props = $props();
 
-  const opensWindow = needsFilePickerWindow();
+  const HANDOFF_TITLES = { window: 'opensInNewWindow', tab: 'opensInNewTab' } as const;
+  const handoff = getFilePickerHandoff();
   let input = $state<HTMLInputElement>();
 
   function choose() {
-    if (!opensWindow) {
+    if (!handoff) {
       input?.click();
       return;
     }
-    openAppWindow(route).catch((error: unknown) => {
+    openAppPage(route, handoff).catch((error: unknown) => {
       onerror(getErrorMessage(error, tr('importFailed')));
     });
   }
@@ -45,12 +46,12 @@
 <button
   class={className}
   type="button"
-  title={opensWindow ? tr('opensInNewWindow') : undefined}
+  title={handoff ? tr(HANDOFF_TITLES[handoff]) : undefined}
   {disabled}
   onclick={choose}
 >
-  {@render children(opensWindow)}
+  {@render children(handoff !== null)}
 </button>
-{#if !opensWindow}
+{#if !handoff}
   <input class="hidden" bind:this={input} type="file" {accept} multiple onchange={select} />
 {/if}

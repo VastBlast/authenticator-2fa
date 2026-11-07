@@ -1,7 +1,7 @@
 import './app.css'
 import App from './App.svelte'
 import { mount } from 'svelte'
-import { detectPopupWindow } from './lib/extension/appWindow'
+import { detectPageSurface } from './lib/extension/appWindow'
 
 const target = document.getElementById('app')
 if (!target) {
@@ -10,7 +10,8 @@ if (!target) {
 
 // A desktop toolbar popup takes its window size from the page. Everywhere
 // else the browser sizes the page, and the app fills whatever space it gets.
-if (!(await detectPopupWindow())) {
+const { popupWindow } = await detectPageSurface()
+if (!popupWindow) {
   document.documentElement.classList.add('auth-fill-viewport')
 }
 

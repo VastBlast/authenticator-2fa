@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { MediaQuery } from 'svelte/reactivity';
   import { fade } from 'svelte/transition';
   import CircleAlert from '@lucide/svelte/icons/circle-alert';
   import CircleCheck from '@lucide/svelte/icons/circle-check';
@@ -40,6 +41,8 @@
   let dropActive = $state(false);
 
   const currentBackup = $derived(pendingBackups[0] ?? null);
+  // Dragging files in takes a mouse or similar; touch screens only pick them.
+  const finePointer = new MediaQuery('any-pointer: fine');
 
   // The password prompt takes over the drop zone, so focus follows it.
   function focusPassword(node: HTMLElement) {
@@ -239,7 +242,7 @@
       onfiles={importFiles}
       onerror={showError}
     >
-      {#snippet children(opensWindow)}
+      {#snippet children(opensElsewhere)}
         <span class="grid size-11 place-items-center rounded-full bg-base-100 text-base-content/55 shadow-sm">
           {#if busy}
             <span class="loading loading-spinner loading-sm"></span>
@@ -250,12 +253,12 @@
         <span class="flex items-center gap-1.5 text-sm font-semibold">
           {#if busy}
             {tr('importing')}
-          {:else if opensWindow}
-            <!-- Dropping needs focus elsewhere, which closes the popup. -->
+          {:else if opensElsewhere}
+            <!-- Only the new window or tab receives files, so none drop here. -->
             {tr('importChooseFiles')}
             <ExternalLink class="text-base-content/55" size={14} aria-hidden="true" />
           {:else}
-            {tr('importDropTitle')}
+            {finePointer.current ? tr('importDropTitle') : tr('importChooseFiles')}
           {/if}
         </span>
         <span class="max-w-64 text-xs leading-snug text-base-content/60">{tr('importDropHint')}</span>
