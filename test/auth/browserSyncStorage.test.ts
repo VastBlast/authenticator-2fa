@@ -69,7 +69,7 @@ afterEach(() => vi.unstubAllGlobals());
 describe('Browser Sync storage transport', () => {
   test('reports unavailable browser sync instead of using an unsafe local fallback', async () => {
     vi.stubGlobal('chrome', undefined);
-    expect(browserSyncAvailable()).toBe(false);
+    await expect(browserSyncAvailable()).resolves.toBe(false);
     await expect(readBrowserSyncItems()).rejects.toMatchObject({ code: 'unavailable' });
     await expect(writeBrowserSyncItems({}, { account: {} })).rejects.toMatchObject({ code: 'unavailable' });
   });

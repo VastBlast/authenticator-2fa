@@ -1263,10 +1263,10 @@
           onfiles={importQrImages}
           onerror={(message) => (addError = message)}
         >
-          {#snippet children(opensWindow)}
+          {#snippet children(opensElsewhere)}
             <ImageUp size={16} aria-hidden="true" />
             {tr('uploadQrImage')}
-            {#if opensWindow}
+            {#if opensElsewhere}
               <ExternalLink class="opacity-60" size={14} aria-hidden="true" />
             {/if}
           {/snippet}
