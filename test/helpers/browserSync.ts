@@ -49,8 +49,11 @@ export function createBrowserSyncNetwork() {
   const cloud: Record<string, unknown> = {};
   return {
     cloud,
-    createDevice() {
-      const runtime = { lastError: undefined as { message: string } | undefined };
+    createDevice({ os = 'linux' }: { os?: chrome.runtime.PlatformInfo['os'] } = {}) {
+      const runtime = {
+        lastError: undefined as { message: string } | undefined,
+        getPlatformInfo: (callback: (info: Pick<chrome.runtime.PlatformInfo, 'os'>) => void) => callback({ os })
+      };
       const local = new MockStorageArea({}, runtime);
       const session = new MockStorageArea({}, runtime);
       const sync = new MockStorageArea(cloud, runtime);

@@ -57,7 +57,8 @@ chrome.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
     notifyActivePageChanged(tab.windowId, false);
   }
 });
-chrome.windows.onFocusChanged.addListener((windowId) => {
+// Mobile browsers have no window management; tab activation covers them.
+chrome.windows?.onFocusChanged.addListener((windowId) => {
   if (windowId !== chrome.windows.WINDOW_ID_NONE) {
     notifyActivePageChanged(windowId, true);
   }

@@ -1,3 +1,5 @@
+import { isAndroid } from '../extension/platform';
+
 export type BrowserSyncErrorCode = 'unavailable' | 'passwordRequired' | 'invalidKey' | 'notFound' | 'quota' | 'invalidData' | 'storage';
 
 export class BrowserSyncError extends Error {
@@ -6,12 +8,16 @@ export class BrowserSyncError extends Error {
   }
 }
 
-export function browserSyncAvailable(): boolean {
-  return typeof chrome !== 'undefined' && Boolean(chrome.storage?.sync);
+/**
+ * Whether this browser carries extension storage between devices. Firefox for
+ * Android provides `storage.sync` but keeps it on the device.
+ */
+export async function browserSyncAvailable(): Promise<boolean> {
+  return typeof chrome !== 'undefined' && Boolean(chrome.storage?.sync) && !(await isAndroid());
 }
 
 export async function readBrowserSyncItems(): Promise<Record<string, unknown>> {
-  if (!browserSyncAvailable()) throw new BrowserSyncError('unavailable');
+  if (!(await browserSyncAvailable())) throw new BrowserSyncError('unavailable');
   return new Promise((resolve, reject) => {
     chrome.storage.sync.get(null, (items) => settle(() => resolve(items), reject));
   });
@@ -23,7 +29,7 @@ export async function writeBrowserSyncItems(
   updates: Record<string, unknown>
 ): Promise<void> {
   if (Object.keys(updates).length === 0) return;
-  if (!browserSyncAvailable()) throw new BrowserSyncError('unavailable');
+  if (!(await browserSyncAvailable())) throw new BrowserSyncError('unavailable');
   const combined = { ...current, ...updates };
   const sizes = Object.entries(combined).map(([key, value]) =>
     new TextEncoder().encode(key + JSON.stringify(value)).byteLength

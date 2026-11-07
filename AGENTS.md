@@ -23,7 +23,7 @@ Guidance for code agents working on Authenticator - 2FA.
 
 - Use Tailwind and daisyUI consistently.
 - Take product UX inspiration from Google Authenticator: simple account list, clear codes, minimal friction, and calm security-focused interactions. Do not copy brand assets or imply affiliation.
-- The UI must work in small extension windows without clipping, overlap, or hidden controls.
+- The UI must work in small extension windows and full-screen phone popups without clipping, overlap, or hidden controls.
 - Build direct usable workflows, not marketing or explainer screens.
 - Keep add/import/export/settings flows simple and avoid duplicate paths for the same user task.
 - Preserve accessibility for mouse, keyboard, and touch interactions.
@@ -31,6 +31,7 @@ Guidance for code agents working on Authenticator - 2FA.
 ## Extension Review
 
 - Keep permissions minimal and justify any new permission through actual behavior.
+- The Firefox package also serves Firefox for Android. Feature-detect desktop-only APIs such as `windows`, and use `isAndroid()` for behavior that differs on Android.
 - Keep CSP tight. Do not introduce remote code or unnecessary network access.
 - Avoid named third-party browser references in user-facing copy unless explicitly requested.
 - Exported manifests should localize name, short name, description, action title, and command descriptions via `_locales`.

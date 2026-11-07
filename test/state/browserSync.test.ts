@@ -39,6 +39,19 @@ describe('Browser Sync vault integration', () => {
     expect(first.settings.hideCodes).toBe(true);
   });
 
+  test('stays off on Android, where extension storage never leaves the device', async () => {
+    const network = createBrowserSyncNetwork();
+    const desktop = await createProtectedVault(network.createDevice(), ['Alice']);
+    expect(desktop.syncAvailable).toBe(true);
+
+    const phone = await createProtectedVault(network.createDevice({ os: 'android' }), ['Bob']);
+    expect(phone.syncAvailable).toBe(false);
+    await phone.startBrowserSync(generateSyncRecoveryKey(), false);
+    expect(phone.syncEnabled).toBe(false);
+    expect(phone.syncError).toBe('unavailable');
+    expect(network.cloud).toEqual({});
+  });
+
   test('preserves independently edited backup credentials with the same ID when joining', async () => {
     const network = createBrowserSyncNetwork();
     const firstDevice = network.createDevice();

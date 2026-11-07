@@ -10,7 +10,7 @@ Browser Sync is optional and uses the existing storage permission. It adds no ac
 
 ## Behavior and limits
 
-- Sync works within the same browser provider and extension identity on supported devices. It does not bridge providers; platform support varies.
+- Sync works within the same browser provider and extension identity on supported devices. It does not bridge providers; platform support varies. Firefox for Android keeps extension storage on the device, so Browser Sync is unavailable there.
 - Changes merge while the extension is open and unlocked. The browser handles delivery. A successful check cannot confirm another device received the changes.
 - Each device writes separate encrypted records. Concurrent edits resolve deterministically; deletions win against offline edits. Restores and credential replacements get fresh identities. Encrypted origin fingerprints recognize delayed copies without confusing different credentials. Preferences and ordering stay local.
 - When older deletion records lack origin fingerprints, joining keeps local copies rather than guessing which credentials were deleted.

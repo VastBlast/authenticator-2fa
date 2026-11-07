@@ -62,13 +62,13 @@ export class AuthenticatorVault {
   error = $state('');
   syncStatus = $state<'off' | 'syncing' | 'ready' | 'pending' | 'error'>('off');
   syncError = $state<BrowserSyncErrorCode | ''>('');
+  syncAvailable = $state(false);
   private browserSync = $state.raw<BrowserSyncState | undefined>();
   private storedSnapshot = 'null';
   private nextSyncAttempt = 0;
 
   syncEnabled = $derived(Boolean(this.browserSync));
 
-  get syncAvailable(): boolean { return browserSyncAvailable(); }
   get syncRecoveryKey(): string { return this.browserSync?.recoveryKey ?? ''; }
 
   private key: CryptoKey | null = null;
@@ -86,6 +86,7 @@ export class AuthenticatorVault {
   private async initializeNow(): Promise<void> {
     this.busy = true;
     try {
+      this.syncAvailable = await browserSyncAvailable();
       const stored = await loadStoredVault();
       await this.applyStoredVault(stored);
       if (!this.locked) {

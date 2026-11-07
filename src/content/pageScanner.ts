@@ -53,6 +53,8 @@ function showOverlay(): void {
     'inset:0',
     'z-index:2147483647',
     `pointer-events:${bodyPointerEventsLocked ? 'none' : 'auto'}`,
+    // Touch drags select an area instead of scrolling or zooming the page.
+    'touch-action:none',
     'cursor:crosshair',
     'background:rgba(9,12,20,.38)'
   ].join(';');

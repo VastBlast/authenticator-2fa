@@ -12,6 +12,8 @@ Browser extension for generating and managing two-factor authentication codes.
 [![Install from Microsoft Edge Add-ons](https://img.shields.io/badge/Install%20from-Microsoft%20Edge%20Add--ons-0078D7?style=for-the-badge&logo=microsoftedge&logoColor=white)](https://microsoftedge.microsoft.com/addons/detail/lngkiejjggjenmeelgcadhilloeffkdl)
 [![Install from Firefox Add-ons](https://img.shields.io/badge/Install%20from-Firefox%20Add--ons-FF7139?style=for-the-badge&logo=firefoxbrowser&logoColor=white)](https://addons.mozilla.org/en-US/firefox/addon/authenticator-2fa/)
 
+The Firefox add-on works in Firefox for Android too.
+
 ## Features
 
 - Generate TOTP, HOTP, and Steam-style 2FA codes.
@@ -28,7 +30,7 @@ Browser extension for generating and managing two-factor authentication codes.
 
 Open **Settings → Browser Sync**, set a local vault password, choose **Set up sync**, and save the generated recovery key. On another supported device, sign into the same browser account, choose **Connect to existing sync**, and enter that key. Enable extension syncing in your browser settings.
 
-Sync works within one browser provider. Accounts, edits, and deletions sync while the extension is open and unlocked; preferences and ordering stay local. Keep independent backups and use HOTP accounts on one device at a time.
+Sync works within one browser provider and is unavailable in Firefox for Android, which keeps extension storage on the device. Accounts, edits, and deletions sync while the extension is open and unlocked; preferences and ordering stay local. Keep independent backups and use HOTP accounts on one device at a time.
 
 See [sync security, recovery, and limits](docs/browser-sync.md).
 

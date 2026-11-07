@@ -3,6 +3,8 @@ import { join } from 'node:path';
 
 const appDir = 'dist/app';
 const targets = ['chrome', 'edge', 'firefox'];
+// Firefox 126 lets `activeTab` capture the visible tab for page scans.
+const FIREFOX_MIN_VERSION = '126.0';
 const packageJson = JSON.parse(await readFile('package.json', 'utf8'));
 
 for (const target of targets) {
@@ -65,13 +67,18 @@ function createManifest(target) {
   }
 
   if (target === 'firefox') {
+    // One package serves Firefox on desktop and Android. Android ignores the
+    // desktop-only `commands` key; the app checks for desktop-only APIs.
     manifest.browser_specific_settings = {
       gecko: {
         id: 'authenticator@example.local',
-        strict_min_version: '126.0',
+        strict_min_version: FIREFOX_MIN_VERSION,
         data_collection_permissions: {
           required: ['none'],
         },
+      },
+      gecko_android: {
+        strict_min_version: FIREFOX_MIN_VERSION,
       },
     };
     manifest.background = {

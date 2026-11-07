@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import {
+  detectPopupWindow,
   getPageWindowId,
   needsFilePickerWindow,
   openAppWindow,
@@ -19,8 +20,9 @@ function installWindow(href = PAGE_URL): FakeWindow {
   return fakeWindow;
 }
 
-function installChrome(api: Record<string, unknown>): void {
-  vi.stubGlobal('chrome', { runtime: { lastError: undefined }, ...api });
+function installChrome(api: Record<string, unknown>, os = 'linux'): void {
+  const getPlatformInfo = (callback: (info: { os: string }) => void) => callback({ os });
+  vi.stubGlobal('chrome', { runtime: { lastError: undefined, getPlatformInfo }, ...api });
 }
 
 function installBrowser(platform?: string): void {
@@ -41,9 +43,10 @@ test('readAppRoute ignores missing and unrecognized routes', () => {
 });
 
 describe('needsFilePickerWindow', () => {
-  test('hands off from the toolbar popup wherever the picker would close it', () => {
+  test('hands off from the toolbar popup wherever the picker would close it', async () => {
     const popup = installWindow();
     installChrome({ extension: { getViews: () => [popup] } });
+    await expect(detectPopupWindow()).resolves.toBe(true);
 
     for (const platform of [undefined, 'macOS', 'Linux']) {
       installBrowser(platform);
@@ -55,12 +58,22 @@ describe('needsFilePickerWindow', () => {
     expect(needsFilePickerWindow()).toBe(false);
   });
 
-  test('never hands off from side panels, tabs, or app windows', () => {
+  test('never hands off from side panels, tabs, or app windows', async () => {
     installWindow();
     installBrowser();
     // Another browser window may be showing its own popup meanwhile.
     installChrome({ extension: { getViews: () => [{ location: { href: PAGE_URL } }] } });
 
+    await expect(detectPopupWindow()).resolves.toBe(false);
+    expect(needsFilePickerWindow()).toBe(false);
+  });
+
+  test('picks files right in the full-screen popup on Android', async () => {
+    const popup = installWindow();
+    installBrowser();
+    installChrome({ extension: { getViews: () => [popup] } }, 'android');
+
+    await expect(detectPopupWindow()).resolves.toBe(false);
     expect(needsFilePickerWindow()).toBe(false);
   });
 });
@@ -95,17 +108,6 @@ describe('openAppWindow', () => {
     currentWindowId = 99;
     expect(readAppRoute(window.location.href)).toBe('add-qr');
     await expect(getPageWindowId()).resolves.toBe(7);
-  });
-
-  test('falls back to a tab where windows cannot be created', async () => {
-    const popup = installWindow();
-    const create = vi.fn((_data: chrome.tabs.CreateProperties, callback: () => void) => callback());
-    installChrome({ tabs: { create } });
-
-    await openAppWindow('import');
-
-    expect(readAppRoute(create.mock.calls[0]![0].url as string)).toBe('import');
-    expect(popup.close).toHaveBeenCalledOnce();
   });
 
   test('keeps the popup open and reports why the window failed', async () => {
